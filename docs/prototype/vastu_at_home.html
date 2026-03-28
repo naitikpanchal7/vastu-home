@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vastu@home</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0b;--bg2:#161410;--bg3:#1e1b16;--bg4:#252018;
+  --border:rgba(200,175,120,0.15);--border2:rgba(200,175,120,0.08);
+  --gold:#c8af78;--gold2:#e8d4a0;--gold3:#a08050;
+  --text:#e8e0d0;--text2:#b0a080;--text3:#706050;
+  --saffron:#e8912a;--red:#c04040;--green:#4a8a4a;
+  /* Authentic zone colors per classical Vastu */
+  --zN:#4a90c4;--zNNE:#5ba8d8;--zNE:#6ec6e8;
+  --zENE:#5aaa6a;--zE:#48a858;--zESE:#72b872;
+  --zSE:#e85050;--zSSE:#d04848;--zS:#c03838;
+  --zSSW:#c8a028;--zSW:#b09020;--zWSW:#b8b8b8;
+  --zW:#a0a8b8;--zWNW:#8898b0;--zNW:#7898b0;--zNNW:#6890c0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px}
+.app{display:flex;height:100vh;width:100vw;overflow:hidden}
+
+/* ─── SIDEBAR ─── */
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.22s cubic-bezier(.4,0,.2,1);overflow:hidden;z-index:20;position:relative}
+.sidebar.collapsed{width:52px}
+.sb-toggle{position:absolute;top:14px;right:-11px;width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:30;font-size:10px;color:var(--text3);transition:all .15s}
+.sb-toggle:hover{border-color:var(--gold3);color:var(--gold2)}
+.logo-area{padding:15px 12px 12px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:9px;flex-shrink:0;min-height:54px;overflow:hidden;white-space:nowrap}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--gold3),var(--saffron));border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--bg);flex-shrink:0}
+.logo-text{overflow:hidden;transition:opacity .15s,width .22s}
+.sidebar.collapsed .logo-text{opacity:0;width:0}
+.logo-wm{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold2)}
+.logo-wm span{color:var(--gold3)}
+.logo-sub{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.nav{padding:7px 0;flex:1;overflow:hidden}
+.nav-sec{padding:9px 14px 3px;font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;white-space:nowrap;transition:opacity .15s,height .15s,padding .15s}
+.sidebar.collapsed .nav-sec{opacity:0;height:0;padding-top:0;padding-bottom:0;overflow:hidden}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;color:var(--text2);font-size:12px;transition:all .12s;border-left:2px solid transparent;white-space:nowrap;overflow:hidden}
+.nav-item:hover{color:var(--text);background:rgba(200,175,120,0.05)}
+.nav-item.active{color:var(--gold2);background:rgba(200,175,120,0.08);border-left-color:var(--gold)}
+.nav-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.nav-label{transition:opacity .15s;overflow:hidden;white-space:nowrap}
+.sidebar.collapsed .nav-label{opacity:0;width:0}
+.sb-bottom{padding:9px;border-top:1px solid var(--border2);flex-shrink:0;overflow:hidden}
+.user-chip{display:flex;align-items:center;gap:8px;padding:7px 8px;background:var(--bg3);border-radius:7px;cursor:pointer;overflow:hidden}
+.user-avatar{width:27px;height:27px;background:linear-gradient(135deg,var(--gold3),var(--saffron));border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;color:var(--bg);flex-shrink:0}
+.user-info{overflow:hidden;transition:opacity .15s;white-space:nowrap;flex:1;min-width:0}
+.sidebar.collapsed .user-info{opacity:0;width:0}
+.user-name-display{font-size:11px;color:var(--text);font-weight:500;display:flex;align-items:center;gap:4px}
+.user-name-input{font-size:11px;color:var(--text);font-weight:500;background:transparent;border:none;border-bottom:1px solid var(--gold3);outline:none;font-family:'DM Sans',sans-serif;width:100%;padding:0}
+.user-plan{font-size:9px;color:var(--gold3)}
+.edit-name-btn{font-size:9px;color:var(--text3);cursor:pointer;opacity:0.5}
+.edit-name-btn:hover{color:var(--gold);opacity:1}
+
+/* ─── MAIN ─── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:44px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:9px;flex-shrink:0}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:500;color:var(--text);flex:1}
+.topbar-title span{color:var(--text3);font-weight:300;font-size:11px;margin-left:7px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .13s}
+.btn-primary{background:var(--gold);color:var(--bg)}.btn-primary:hover{background:var(--gold2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{color:var(--text);border-color:var(--gold3)}
+.btn-danger{background:rgba(192,64,64,0.15);color:var(--red);border:1px solid rgba(192,64,64,0.3)}.btn-danger:hover{background:rgba(192,64,64,0.25)}
+.spacer{flex:1}
+
+/* ─── SCREENS ─── */
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.screen.active{display:flex}
+
+/* ─── DASHBOARD ─── */
+.dash-body{padding:18px;flex:1;overflow-y:auto}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:13px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:14px 16px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold3),var(--saffron),transparent)}
+.stat-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+.stat-value{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:500;color:var(--gold2);line-height:1}
+.stat-sub{font-size:9px;color:var(--text3);margin-top:2px}
+
+.dash-card{background:var(--bg3);border:1px solid var(--border);border-radius:9px;margin-bottom:12px;overflow:hidden}
+.dash-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none}
+.dash-card-hdr:hover{background:rgba(200,175,120,0.03)}
+.dash-card.open .dash-card-hdr{border-bottom:1px solid var(--border2)}
+.dash-card-title{font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:7px}
+.dash-card-right{display:flex;align-items:center;gap:9px}
+.dash-card-sub{font-size:10px;color:var(--text3)}
+.dash-card-arrow{font-size:9px;color:var(--text3);transition:transform .2s}
+.dash-card.open .dash-card-arrow{transform:rotate(180deg)}
+.dash-card-body{display:none;padding:12px 14px}
+.dash-card.open .dash-card-body{display:block}
+
+.proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.proj-card{background:var(--bg4);border:1px solid var(--border2);border-radius:7px;overflow:hidden;cursor:pointer;transition:all .16s}
+.proj-card:hover{border-color:var(--gold3);transform:translateY(-1px)}
+.proj-thumb{height:70px;background:var(--bg2);display:flex;align-items:center;justify-content:center}
+.proj-info{padding:8px 10px}
+.proj-name{font-size:11px;font-weight:500;color:var(--text);margin-bottom:2px}
+.proj-client{font-size:10px;color:var(--text3)}
+.proj-meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.badge{font-size:8px;padding:2px 6px;border-radius:20px;font-weight:500;text-transform:uppercase}
+.badge-draft{background:rgba(106,80,40,.4);color:var(--saffron)}
+.badge-done{background:rgba(40,100,50,.4);color:#6dc87a}
+.badge-active{background:rgba(60,100,160,.4);color:#7ab0e8}
+
+.activity-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border2)}
+.activity-item:last-child{border-bottom:none}
+.act-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.act-text{font-size:11px;color:var(--text2);line-height:1.5}
+.act-time{font-size:9px;color:var(--text3);margin-top:1px}
+.sub-plan{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--gold2);margin-bottom:2px}
+.sub-renews{font-size:9px;color:var(--text3);margin-bottom:10px}
+.ubar-wrap{margin-bottom:9px}
+.ubar-label{display:flex;justify-content:space-between;font-size:9px;color:var(--text2);margin-bottom:3px}
+.ubar{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.ubar-fill{height:100%;background:linear-gradient(90deg,var(--gold3),var(--saffron));border-radius:2px}
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qa-btn{padding:8px 9px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;cursor:pointer;transition:all .13s;color:var(--text2);font-size:10px;font-family:'DM Sans',sans-serif;text-align:center}
+.qa-btn:hover{border-color:var(--gold3);color:var(--gold2)}
+.qa-icon{font-size:15px;display:block;margin-bottom:2px}
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:48px;padding-top:4px}
+.mbar{flex:1;border-radius:2px 2px 0 0;cursor:pointer}
+.chart-labels{display:flex;gap:3px;margin-top:3px}
+.clbl{flex:1;text-align:center;font-size:7px;color:var(--text3)}
+
+/* ─── PROJECTS PAGE ─── */
+.projects-page{padding:18px;flex:1;overflow-y:auto}
+.proj-header{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.search-input{flex:1;max-width:300px;padding:7px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;outline:none}
+.search-input:focus{border-color:var(--gold3)}
+.filter-btns{display:flex;gap:5px}
+.fb{padding:5px 10px;border-radius:5px;font-size:10px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;transition:all .13s}
+.fb:hover{border-color:var(--gold3);color:var(--gold2)}
+.fb.active{background:rgba(200,175,120,.12);border-color:var(--gold);color:var(--gold2)}
+.projects-list-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.pcl{background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:all .16s}
+.pcl:hover{border-color:var(--gold3);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.pcl-thumb{height:90px;background:var(--bg2);display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border2)}
+.pcl-info{padding:10px 12px}
+.pcl-name{font-size:11px;font-weight:500;color:var(--text);margin-bottom:2px}
+.pcl-client{font-size:9px;color:var(--text3);margin-bottom:6px}
+.pcl-footer{display:flex;align-items:center;justify-content:space-between}
+.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state-icon{font-size:36px;opacity:.3;margin-bottom:12px}
+.empty-state-text{font-size:12px}
+
+/* ─── CANVAS SCREEN ─── */
+#screen-canvas{overflow:hidden}
+.canvas-topbar{height:42px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 11px;gap:7px;flex-shrink:0;overflow:hidden}
+.canvas-proj-name{font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:500;color:var(--text);white-space:nowrap}
+.canvas-client{font-size:9px;color:var(--text3);white-space:nowrap}
+.sep{width:1px;height:16px;background:var(--border);flex-shrink:0}
+.north-chip{display:flex;align-items:center;gap:5px;padding:4px 7px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;color:var(--gold2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.north-chip:hover{border-color:var(--gold3)}
+.north-inline-input{width:54px;padding:3px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--gold2);font-family:'DM Mono',monospace;font-size:11px;font-weight:600;outline:none;-moz-appearance:textfield}
+.north-inline-input:focus{border-color:var(--gold3)}
+.north-inline-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.tool-grp{display:flex;gap:2px}
+.tool-btn{width:27px;height:27px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;color:var(--text2);transition:all .12s;position:relative}
+.tool-btn:hover{border-color:var(--gold3);color:var(--gold2)}
+.tool-btn.active{background:rgba(200,175,120,.15);border-color:var(--gold);color:var(--gold2)}
+.tool-btn[title]:hover::after{content:attr(title);position:absolute;top:32px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:9px;color:var(--text);white-space:nowrap;z-index:100;pointer-events:none}
+
+/* ─── CANVAS WORKSPACE ─── */
+.canvas-workspace{flex:1;display:flex;overflow:hidden;min-height:0;position:relative}
+.left-panel{width:52px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .2s;z-index:5}
+.left-panel.expanded{width:186px}
+.lp-toggle{padding:9px;display:flex;justify-content:center;border-bottom:1px solid var(--border2);cursor:pointer;color:var(--text3);font-size:12px;transition:color .15s;flex-shrink:0}
+.lp-toggle:hover{color:var(--gold2)}
+.lp-icon-col{display:flex;flex-direction:column;gap:2px;padding:7px 6px;flex:1;overflow-y:auto}
+.lp-icon-btn{width:40px;height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;color:var(--text3);font-size:14px;transition:all .12s;border:1px solid transparent;flex-shrink:0}
+.lp-icon-btn:hover{background:rgba(200,175,120,.07);border-color:var(--border2);color:var(--gold2)}
+.lp-icon-btn.active{background:rgba(200,175,120,.12);border-color:var(--gold);color:var(--gold2)}
+.lp-icon-label{font-size:6px;margin-top:2px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+.lp-expanded{display:none;flex-direction:column;flex:1;overflow-y:auto}
+.left-panel.expanded .lp-expanded{display:flex}
+.left-panel.expanded .lp-icon-col{display:none}
+.lp-sec{border-bottom:1px solid var(--border2)}
+.lp-sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);cursor:pointer;user-select:none}
+.lp-sec-hdr:hover{color:var(--text2)}
+.lp-sec-arrow{transition:transform .2s;font-size:7px}
+.lp-sec.open .lp-sec-arrow{transform:rotate(180deg)}
+.lp-sec-body{display:none;padding:5px 8px 9px}
+.lp-sec.open .lp-sec-body{display:block}
+.layer-item{display:flex;align-items:center;gap:7px;padding:5px 5px;border-radius:4px;cursor:pointer;font-size:10px;color:var(--text2);transition:background .1s}
+.layer-item:hover{background:rgba(200,175,120,.06)}
+.layer-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.layer-eye{margin-left:auto;font-size:11px;opacity:.5;cursor:pointer}
+.opacity-row{display:flex;align-items:center;gap:5px;padding:3px 5px 7px}
+.op-label{font-size:8px;color:var(--text3);flex-shrink:0}
+.op-slider{flex:1;accent-color:var(--gold);cursor:pointer}
+.op-val{font-size:8px;color:var(--text2);font-family:'DM Mono',monospace;width:24px;text-align:right;flex-shrink:0}
+
+/* ─── NOTES ─── */
+.proj-notes-area{width:100%;padding:6px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:5px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:10px;outline:none;resize:none;line-height:1.6;min-height:70px}
+.proj-notes-area:focus{border-color:var(--gold3)}
+
+/* ─── CANVAS STAGE ─── */
+.canvas-stage{flex:1;background:var(--bg);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0}
+.canvas-grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(200,175,120,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,175,120,.04) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0}
+#vastu-svg{position:relative;z-index:2;transform-origin:center center;transition:transform .1s}
+#fp-image{display:none;position:absolute;z-index:1;max-width:88%;max-height:88%;object-fit:contain;pointer-events:none}
+
+/* mode indicator */
+.mode-indicator{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--gold3);border-radius:20px;padding:4px 14px;font-size:10px;color:var(--gold2);z-index:15;display:none;pointer-events:none}
+.mode-indicator.visible{display:block}
+
+/* perimeter overlay */
+#perimeter-overlay{position:absolute;inset:0;z-index:10;cursor:crosshair;display:none}
+#perimeter-overlay.active{display:block}
+
+/* drop zone */
+.drop-zone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(15,14,11,.88);z-index:30;opacity:0;pointer-events:none;transition:opacity .2s}
+.drop-zone.visible{opacity:1;pointer-events:all}
+.drop-ring{width:148px;height:148px;border-radius:50%;border:2px dashed var(--gold3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;transition:all .2s}
+.drop-ring.hover{border-color:var(--gold);transform:scale(1.07)}
+.drop-icon{font-size:34px;opacity:.5}
+.drop-text{font-size:12px;color:var(--text2)}
+.drop-sub{font-size:9px;color:var(--text3)}
+
+/* compass rose */
+.compass-rose{position:absolute;top:14px;right:14px;width:72px;height:72px;z-index:10;pointer-events:none}
+
+/* scale bar */
+.scale-bar{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 10px;font-size:9px;color:var(--text2);z-index:10;white-space:nowrap;display:none}
+.scale-bar.visible{display:block}
+
+/* brahmasthan drag cursor */
+.brahma-draggable{cursor:grab}
+.brahma-draggable:active{cursor:grabbing}
+
+/* confirm dialog */
+.confirm-dlg{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 15px;min-width:250px;z-index:20;display:none}
+.confirm-dlg.show{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.confirm-dlg h4{font-size:12px;color:var(--text);margin-bottom:2px}
+.confirm-dlg p{font-size:9px;color:var(--text3);margin-bottom:9px;line-height:1.6}
+.confirm-dlg-btns{display:flex;gap:6px}
+@keyframes bpulse{0%,100%{r:5;opacity:1}50%{r:8;opacity:.5}}
+.brahma-pulse{animation:bpulse 1.8s ease infinite}
+
+/* ─── BOTTOM BAR ─── */
+.canvas-bottombar{height:32px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:9px;font-size:10px;color:var(--text3);flex-shrink:0}
+.zoom-ctrl{display:flex;align-items:center;gap:4px}
+.zoom-btn{width:19px;height:19px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2)}
+.zoom-btn:hover{border-color:var(--gold3);color:var(--gold2)}
+.bb-sep{width:1px;height:13px;background:var(--border2)}
+.undo-btn{cursor:pointer;padding:2px 5px;border-radius:3px;transition:color .12s}
+.undo-btn:hover{color:var(--gold2)}
+.undo-btn.disabled{opacity:.3;cursor:default}
+
+/* ─── RIGHT PANEL ─── */
+.right-panel{width:290px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .2s;z-index:5}
+.right-panel.collapsed{width:0;border-left-width:0}
+.rp-header{display:flex;align-items:center;padding:0 10px;height:36px;border-bottom:1px solid var(--border2);flex-shrink:0}
+.rp-tabs{display:flex;flex:1}
+.rp-tab{flex:1;padding:9px 0;text-align:center;font-size:10px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .13s;white-space:nowrap}
+.rp-tab:hover{color:var(--text2)}
+.rp-tab.active{color:var(--gold2);border-bottom-color:var(--gold)}
+.rp-close{font-size:11px;color:var(--text3);cursor:pointer;padding:3px;border-radius:3px;flex-shrink:0;margin-left:4px}
+.rp-close:hover{color:var(--gold2)}
+.rp-pane{display:none;flex:1;overflow-y:auto;padding:11px}
+.rp-pane.active{display:block}
+.rp-chat-pane{display:none;flex-direction:column;flex:1;overflow:hidden;padding:9px;gap:6px}
+.rp-chat-pane.active{display:flex}
+
+/* zone rows */
+.zone-row{display:flex;align-items:center;gap:5px;padding:4px 3px;border-radius:4px;cursor:pointer;transition:background .1s;position:relative}
+.zone-row:hover{background:rgba(200,175,120,.05)}
+.zone-row:hover .zone-tooltip{display:block}
+.zone-color{width:6px;height:22px;border-radius:2px;flex-shrink:0}
+.zone-nm{font-family:'DM Mono',monospace;font-size:9px;color:var(--text2);width:30px;flex-shrink:0}
+.zone-bar-wrap{flex:1}
+.zone-bar{height:3px;border-radius:2px}
+.zone-pct-val{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);width:32px;text-align:right;flex-shrink:0}
+.zone-status{font-size:9px;width:14px;text-align:center;flex-shrink:0}
+.zone-tooltip{display:none;position:absolute;left:100%;top:50%;transform:translateY(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;min-width:180px;z-index:50;margin-left:6px;pointer-events:none}
+.zone-tooltip .zt-name{font-size:10px;color:var(--gold2);font-weight:500;margin-bottom:4px}
+.zone-tooltip .zt-row{font-size:9px;color:var(--text2);line-height:1.7}
+.zone-tooltip .zt-row b{color:var(--text3)}
+
+/* north panel */
+.nm-btns{display:flex;gap:4px;margin-bottom:11px}
+.nm-btn{flex:1;padding:6px 3px;text-align:center;font-size:10px;border-radius:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);transition:all .13s}
+.nm-btn:hover{border-color:var(--gold3);color:var(--text2)}
+.nm-btn.active{background:rgba(200,175,120,.12);border-color:var(--gold);color:var(--gold2)}
+.form-grp{margin-bottom:9px}
+.form-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;display:block}
+.form-input{width:100%;padding:6px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none}
+.form-input:focus{border-color:var(--gold3)}
+.north-big{text-align:center;padding:11px;background:var(--bg3);border-radius:7px;margin-bottom:9px;border:1px solid var(--border)}
+.ndb-val{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:300;color:var(--gold2);line-height:1}
+.ndb-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}
+
+/* chatbot */
+.chat-history{display:flex;flex-direction:column;gap:7px;overflow-y:auto;flex:1;min-height:0;padding-bottom:3px}
+.chat-msg{max-width:92%;padding:7px 10px;border-radius:8px;font-size:11px;line-height:1.6}
+.chat-msg.user{align-self:flex-end;background:rgba(200,175,120,.13);border:1px solid var(--border);color:var(--text2);border-radius:8px 8px 2px 8px}
+.chat-msg.ai{align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:8px 8px 8px 2px}
+.chat-cite{font-size:9px;color:var(--gold3);margin-top:3px;font-style:italic}
+.chat-chips{display:flex;flex-wrap:wrap;gap:4px;flex-shrink:0;margin-top:3px}
+.chat-chip{font-size:9px;padding:3px 7px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);transition:all .13s}
+.chat-chip:hover{border-color:var(--gold3);color:var(--gold2)}
+.chat-input-row{display:flex;gap:5px;flex-shrink:0}
+.chat-input{flex:1;padding:6px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif;outline:none;resize:none}
+.chat-input:focus{border-color:var(--gold3)}
+.chat-send{width:30px;height:30px;background:var(--gold);border:none;border-radius:5px;cursor:pointer;font-size:13px;color:var(--bg);display:flex;align-items:center;justify-content:center;transition:background .13s;flex-shrink:0}
+.chat-send:hover{background:var(--gold2)}
+@keyframes pulse{0%,80%,100%{transform:scale(.8);opacity:.4}40%{transform:scale(1);opacity:1}}
+.typing-dots{display:inline-flex;align-items:center;gap:3px;padding:2px 3px}
+.typing-dots span{width:4px;height:4px;border-radius:50%;background:var(--gold3);animation:pulse 1.2s ease-in-out infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+
+/* ─── SCALE CALIBRATION MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:22px;width:420px;transform:translateY(10px);transition:transform .18s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-wide{width:490px}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--text);margin-bottom:2px}
+.modal-sub{font-size:10px;color:var(--text3);margin-bottom:16px;line-height:1.6}
+.modal-footer{display:flex;gap:6px;justify-content:flex-end;margin-top:16px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.modal-grid .full{grid-column:1/-1}
+.zbar-chart{display:flex;align-items:flex-end;gap:2px;height:56px;margin-top:7px}
+.zb{flex:1;border-radius:2px 2px 0 0;min-width:0}
+.zb-labels{display:flex;gap:2px;margin-top:2px}
+.zb-lbl{flex:1;text-align:center;font-size:5px;color:var(--text3);font-family:'DM Mono',monospace;overflow:hidden;min-width:0}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* export modal */
+.export-checklist{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.export-check-item{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:4px;background:var(--bg3);cursor:pointer;font-size:11px;color:var(--text2)}
+.export-check-item input[type=checkbox]{accent-color:var(--gold);cursor:pointer}
+.export-section-title{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:9px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--border2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()">◀</div>
+  <div class="logo-area">
+    <div class="logo-icon">V</div>
+    <div class="logo-text">
+      <div class="logo-wm">vastu<span>@home</span></div>
+      <div class="logo-sub">Consultant</div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-sec">Workspace</div>
+    <div class="nav-item active" onclick="showScreen('dashboard')"><span class="nav-icon">⊞</span><span class="nav-label">Dashboard</span></div>
+    <div class="nav-item" onclick="showScreen('projects')"><span class="nav-icon">◫</span><span class="nav-label">Projects</span></div>
+    <div class="nav-item" onclick="showScreen('canvas')"><span class="nav-icon">◈</span><span class="nav-label">Canvas</span></div>
+    <div class="nav-sec">Tools</div>
+    <div class="nav-item" onclick="showScreen('canvas');setTimeout(()=>openRpTab('analysis'),60)"><span class="nav-icon">◉</span><span class="nav-label">Analysis</span></div>
+    <div class="nav-item" onclick="showScreen('canvas');setTimeout(()=>openRpTab('chatbot'),60)"><span class="nav-icon">◎</span><span class="nav-label">Vastu AI</span></div>
+    <div class="nav-sec">Account</div>
+    <div class="nav-item" onclick="openExportModal()"><span class="nav-icon">◌</span><span class="nav-label">Reports</span></div>
+    <div class="nav-item"><span class="nav-icon">⚙</span><span class="nav-label">Settings</span></div>
+  </div>
+  <div class="sb-bottom">
+    <div class="user-chip" onclick="editUserName()">
+      <div class="user-avatar" id="user-avatar">R</div>
+      <div class="user-info">
+        <div class="user-name-display" id="user-name-display">
+          <span id="user-name-text">Rajesh Sharma</span>
+          <span class="edit-name-btn" title="Edit name">✏</span>
+        </div>
+        <input class="user-name-input" id="user-name-input" value="Rajesh Sharma" style="display:none" onblur="saveUserName()" onkeydown="if(event.key==='Enter')saveUserName()">
+        <div class="user-plan">Professional Plan</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+<!-- ── DASHBOARD ── -->
+<div id="screen-dashboard" class="screen active">
+  <div class="topbar">
+    <div class="topbar-title">Dashboard <span id="greeting-text">Good morning, Rajesh</span></div>
+    <button class="btn btn-ghost" style="font-size:10px;padding:5px 11px">📥 Import</button>
+    <button class="btn btn-primary" style="font-size:10px;padding:5px 11px" onclick="openNewProjectModal()">＋ New Project</button>
+  </div>
+  <div class="dash-body">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total Projects</div><div class="stat-value" id="stat-total">3</div><div class="stat-sub">↑ Growing</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" id="stat-active">1</div><div class="stat-sub">In analysis</div></div>
+      <div class="stat-card"><div class="stat-label">Clients</div><div class="stat-value" id="stat-clients">3</div><div class="stat-sub">Managed</div></div>
+      <div class="stat-card"><div class="stat-label">Reports</div><div class="stat-value">0</div><div class="stat-sub">Exported</div></div>
+    </div>
+
+    <div class="dash-card open" id="card-projects">
+      <div class="dash-card-hdr" onclick="toggleCard('card-projects')">
+        <div class="dash-card-title">◫ Recent Projects</div>
+        <div class="dash-card-right">
+          <span class="dash-card-sub" style="cursor:pointer" onclick="event.stopPropagation();showScreen('projects')">View all →</span>
+          <div class="dash-card-arrow">▾</div>
+        </div>
+      </div>
+      <div class="dash-card-body">
+        <div class="proj-grid" id="dash-recent-projects">
+          <div style="color:var(--text3);font-size:11px;padding:16px 0;text-align:center;grid-column:1/-1">No projects yet. <span style="color:var(--gold3);cursor:pointer" onclick="openNewProjectModal()">Create one →</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-card open" id="card-analytics">
+      <div class="dash-card-hdr" onclick="toggleCard('card-analytics')">
+        <div class="dash-card-title">◉ Analytics</div>
+        <div class="dash-card-right"><div class="dash-card-sub">This Quarter</div><div class="dash-card-arrow">▾</div></div>
+      </div>
+      <div class="dash-card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div><div style="font-size:9px;color:var(--text3);margin-bottom:4px">Projects / Month</div>
+          <div class="mini-chart" id="month-chart"></div><div class="chart-labels" id="month-labels"></div></div>
+          <div><div style="font-size:9px;color:var(--text3);margin-bottom:7px">Zone Issues Detected</div>
+          <div style="font-size:11px;color:var(--text2);padding-top:6px">Start your first analysis to see zone data here.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:12px">
+      <div class="dash-card open" id="card-activity">
+        <div class="dash-card-hdr" onclick="toggleCard('card-activity')">
+          <div class="dash-card-title">◎ Activity</div><div class="dash-card-arrow">▾</div>
+        </div>
+        <div class="dash-card-body" style="padding:7px 12px" id="activity-feed">
+          <div style="font-size:11px;color:var(--text3);text-align:center;padding:12px 0">No activity yet.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div class="dash-card open" id="card-sub">
+          <div class="dash-card-hdr" onclick="toggleCard('card-sub')">
+            <div class="dash-card-title">◌ Subscription</div><div class="dash-card-arrow">▾</div>
+          </div>
+          <div class="dash-card-body">
+            <div class="sub-plan">Professional</div><div class="sub-renews">Renews May 1, 2026 · 36 days left</div>
+            <div class="ubar-wrap"><div class="ubar-label"><span>Projects</span><span id="proj-usage">0/30</span></div><div class="ubar"><div class="ubar-fill" id="proj-usage-bar" style="width:0%"></div></div></div>
+            <div class="ubar-wrap"><div class="ubar-label"><span>Reports</span><span>0/∞</span></div><div class="ubar"><div class="ubar-fill" style="width:0%"></div></div></div>
+            <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px;font-size:10px;padding:5px">Manage</button>
+          </div>
+        </div>
+        <div class="dash-card open" id="card-qa">
+          <div class="dash-card-hdr" onclick="toggleCard('card-qa')">
+            <div class="dash-card-title">⚡ Quick Actions</div><div class="dash-card-arrow">▾</div>
+          </div>
+          <div class="dash-card-body">
+            <div class="qa-grid">
+              <div class="qa-btn" onclick="openNewProjectModal()"><span class="qa-icon">＋</span>New Project</div>
+              <div class="qa-btn" onclick="showScreen('canvas');setTimeout(showDropZone,80)"><span class="qa-icon">↑</span>Upload Plan</div>
+              <div class="qa-btn" onclick="showScreen('canvas')"><span class="qa-icon">⊙</span>Open Canvas</div>
+              <div class="qa-btn" onclick="openExportModal()"><span class="qa-icon">⎙</span>Export Report</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROJECTS ── -->
+<div id="screen-projects" class="screen">
+  <div class="topbar"><div class="topbar-title">All Projects</div>
+    <button class="btn btn-primary" style="font-size:10px;padding:5px 11px" onclick="openNewProjectModal()">＋ New Project</button>
+  </div>
+  <div class="projects-page">
+    <div class="proj-header">
+      <input class="search-input" id="search-input" placeholder="🔍 Search client, project name…" oninput="filterProjects()">
+      <div class="filter-btns">
+        <button class="fb active" onclick="setFilter('all',this)">All</button>
+        <button class="fb" onclick="setFilter('draft',this)">Draft</button>
+        <button class="fb" onclick="setFilter('active',this)">In Analysis</button>
+        <button class="fb" onclick="setFilter('done',this)">Done</button>
+      </div>
+    </div>
+    <div class="projects-list-grid" id="projects-list-grid"></div>
+  </div>
+</div>
+
+<!-- ── CANVAS ── -->
+<div id="screen-canvas" class="screen">
+  <div class="canvas-topbar">
+    <div style="min-width:0">
+      <div class="canvas-proj-name" id="canvas-proj-name">Sharma Residence — 3BHK</div>
+      <div class="canvas-client" id="canvas-proj-client">Priya Sharma · Mumbai</div>
+    </div>
+    <div class="sep"></div>
+    <span style="font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0">🧭 N:</span>
+    <input type="number" class="north-inline-input" id="north-topbar" value="14.3" min="0" max="360" step="0.5"
+      oninput="updateNorth(this.value)" onchange="updateNorth(this.value)" title="Type true north degree">
+    <div class="sep"></div>
+    <div class="tool-grp">
+      <div class="tool-btn active" id="tool-select" title="Select" onclick="setTool('select')">⊹</div>
+      <div class="tool-btn" id="tool-perimeter" title="Draw Perimeter (P)" onclick="setTool('perimeter')">⬡</div>
+      <div class="tool-btn" id="tool-cut" title="Draw Cut (C)" onclick="setTool('cut')">✂</div>
+      <div class="tool-btn" id="tool-scale" title="Set Scale (S)" onclick="setTool('scale')">⊷</div>
+      <div class="tool-btn" id="tool-brahma" title="Move Brahmasthan (B)" onclick="setTool('brahma')">◉</div>
+    </div>
+    <div class="spacer"></div>
+    <span class="undo-btn disabled" id="undo-btn" onclick="undoAction()" title="Undo (Ctrl+Z)">↩ Undo</span>
+    <div class="sep"></div>
+    <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px" onclick="toggleChakra()">◎ Chakra</button>
+    <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px" onclick="toggleRightPanel()">⊟ Panel</button>
+    <button class="btn btn-primary" style="font-size:10px;padding:4px 9px" onclick="openExportModal()">⎙ Export</button>
+  </div>
+
+  <div class="canvas-workspace">
+    <!-- LEFT PANEL -->
+    <div class="left-panel" id="left-panel">
+      <div class="lp-toggle" onclick="toggleLeftPanel()">≡</div>
+      <div class="lp-icon-col">
+        <div class="lp-icon-btn active" onclick="toggleLeftPanel()">🏠<span class="lp-icon-label">Plan</span></div>
+        <div class="lp-icon-btn" onclick="toggleLeftPanel()">◫<span class="lp-icon-label">Layers</span></div>
+        <div class="lp-icon-btn" onclick="toggleLeftPanel()">📝<span class="lp-icon-label">Notes</span></div>
+        <div class="lp-icon-btn" onclick="showDropZone()">↑<span class="lp-icon-label">Upload</span></div>
+      </div>
+      <div class="lp-expanded">
+        <div class="lp-sec open">
+          <div class="lp-sec-hdr" onclick="toggleLpSec(this)">Floor Plan <span class="lp-sec-arrow">▾</span></div>
+          <div class="lp-sec-body">
+            <button class="qa-btn" style="width:100%;text-align:center;margin-bottom:5px;font-size:9px;padding:6px" onclick="showDropZone()">↑ Upload Image</button>
+            <button class="qa-btn" style="width:100%;text-align:center;font-size:9px;padding:6px" onclick="setTool('perimeter')">⬡ Draw Perimeter</button>
+            <div style="padding:6px 2px 0;font-size:8px;color:var(--text3)">Scale: <span style="color:var(--text2)" id="scale-display">Not set — click ⊷ tool</span></div>
+          </div>
+        </div>
+        <div class="lp-sec open">
+          <div class="lp-sec-hdr" onclick="toggleLpSec(this)">Layers <span class="lp-sec-arrow">▾</span></div>
+          <div class="lp-sec-body">
+            <div class="layer-item"><div class="layer-dot" style="background:rgba(200,175,120,.6)"></div><span>Floor Plan</span><span class="layer-eye">👁</span></div>
+            <div class="layer-item" onclick="toggleChakra()"><div class="layer-dot" style="background:rgba(200,175,120,.4)"></div><span>Vastu Chakra</span><span class="layer-eye" id="chakra-eye">👁</span></div>
+            <div class="layer-item"><div class="layer-dot" style="background:rgba(200,60,40,.6)"></div><span>Cuts</span><span class="layer-eye">👁</span></div>
+            <div class="layer-item"><div class="layer-dot" style="background:rgba(200,175,120,.5)"></div><span>Perimeter</span><span class="layer-eye">👁</span></div>
+            <div class="opacity-row">
+              <span class="op-label">Opacity</span>
+              <input class="op-slider" type="range" min="10" max="80" value="38" oninput="setChakraOpacity(this.value)">
+              <span class="op-val" id="op-val">38%</span>
+            </div>
+          </div>
+        </div>
+        <div class="lp-sec open">
+          <div class="lp-sec-hdr" onclick="toggleLpSec(this)">Brahmasthan <span class="lp-sec-arrow">▾</span></div>
+          <div class="lp-sec-body">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:4px">Center of floor plan</div>
+            <div style="display:flex;gap:7px;font-size:9px;color:var(--text2);font-family:'DM Mono',monospace;margin-bottom:6px">
+              <span>X: <span id="brahma-x-lbl">350</span></span>
+              <span>Y: <span id="brahma-y-lbl">298</span></span>
+            </div>
+            <button class="qa-btn" style="font-size:9px;padding:5px;width:100%;text-align:center;margin-bottom:4px" onclick="setTool('brahma')">⊹ Drag to Adjust</button>
+            <button class="qa-btn" style="font-size:9px;padding:5px;width:100%;text-align:center" onclick="recalcCentroid()">⟳ Auto-detect Center</button>
+          </div>
+        </div>
+        <div class="lp-sec open">
+          <div class="lp-sec-hdr" onclick="toggleLpSec(this)">Project Notes <span class="lp-sec-arrow">▾</span></div>
+          <div class="lp-sec-body">
+            <textarea class="proj-notes-area" id="proj-notes" placeholder="Client concerns, special notes, on-site observations…" oninput="saveNotes()"></textarea>
+            <div style="font-size:8px;color:var(--text3);margin-top:4px">Saved automatically</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANVAS STAGE -->
+    <div class="canvas-stage" id="canvas-stage">
+      <div class="canvas-grid-bg"></div>
+      <img id="fp-image" alt="Floor plan" style="pointer-events:none"/>
+
+      <!-- Main SVG -->
+      <svg id="vastu-svg" viewBox="0 0 760 620" style="width:min(760px,100%);height:min(620px,100%)" xmlns="http://www.w3.org/2000/svg">
+        <!-- Uploaded floor plan fade-out group -->
+        <g id="fp-default-group">
+          <polygon id="fp-polygon" points="110,75 620,75 620,300 475,300 475,530 110,530"
+            fill="rgba(200,175,120,0.055)" stroke="rgba(200,175,120,0.65)" stroke-width="2"/>
+          <line x1="110" y1="248" x2="355" y2="248" stroke="rgba(200,175,120,.18)" stroke-width="1"/>
+          <line x1="355" y1="75" x2="355" y2="530" stroke="rgba(200,175,120,.18)" stroke-width="1"/>
+          <line x1="355" y1="352" x2="620" y2="352" stroke="rgba(200,175,120,.18)" stroke-width="1"/>
+          <line x1="110" y1="392" x2="355" y2="392" stroke="rgba(200,175,120,.18)" stroke-width="1"/>
+          <text x="205" y="162" text-anchor="middle" fill="rgba(200,175,120,.28)" font-family="DM Sans" font-size="12">Living Room</text>
+          <text x="512" y="192" text-anchor="middle" fill="rgba(200,175,120,.28)" font-family="DM Sans" font-size="12">Master Bedroom</text>
+          <text x="205" y="324" text-anchor="middle" fill="rgba(200,175,120,.28)" font-family="DM Sans" font-size="12">Bedroom 2</text>
+          <text x="205" y="462" text-anchor="middle" fill="rgba(200,175,120,.28)" font-family="DM Sans" font-size="12">Kitchen</text>
+          <text x="415" y="450" text-anchor="middle" fill="rgba(200,175,120,.28)" font-family="DM Sans" font-size="12">Dining</text>
+        </g>
+
+        <!-- User-drawn perimeter -->
+        <g id="perimeter-group">
+          <polygon id="user-perimeter" points="" fill="rgba(200,175,120,0.04)" stroke="rgba(200,175,120,0.9)" stroke-width="2" stroke-dasharray="none" display="none"/>
+          <g id="perimeter-points"></g>
+          <polyline id="perimeter-preview" points="" fill="none" stroke="rgba(200,175,120,0.5)" stroke-width="1.5" stroke-dasharray="5,3"/>
+        </g>
+
+        <!-- Authentic Vastu Shakti Chakra -->
+        <g id="chakra-group" opacity="0.42">
+          <!-- Outer ring with tick marks for 32 entrances -->
+          <circle id="chakra-outer-ring" cx="362" cy="300" r="250" fill="none" stroke="rgba(200,175,120,0.7)" stroke-width="1.8"/>
+          <circle id="chakra-middle-ring" cx="362" cy="300" r="50" fill="rgba(255,215,150,0.08)" stroke="rgba(200,175,120,0.4)" stroke-width="1"/>
+          <circle id="chakra-inner-ring" cx="362" cy="300" r="20" fill="rgba(255,215,150,0.12)" stroke="rgba(200,175,120,0.6)" stroke-width="1.2"/>
+          <!-- 16 zone slices + labels -->
+          <g id="chakra-slices"></g>
+          <g id="chakra-zone-lines"></g>
+          <g id="chakra-labels"></g>
+          <g id="chakra-deity-labels"></g>
+          <!-- 32 entrance tick marks -->
+          <g id="chakra-ticks"></g>
+          <!-- Element rings -->
+          <g id="chakra-element-arcs"></g>
+          <!-- North arrow -->
+          <g id="north-arrow-group"></g>
+          <!-- Brahmasthan -->
+          <circle id="brahma-dot" cx="362" cy="300" r="5" fill="var(--gold)" class="brahma-pulse" opacity="0.95" style="cursor:grab"/>
+          <circle id="brahma-inner" cx="362" cy="300" r="2" fill="var(--bg)"/>
+          <text id="brahma-label" x="362" y="334" text-anchor="middle" fill="rgba(200,175,120,0.6)" font-family="Cormorant Garamond" font-size="10" font-style="italic">Brahma</text>
+        </g>
+
+        <!-- Cuts overlay -->
+        <g id="cuts-group"></g>
+
+        <!-- Scale calibration line -->
+        <g id="scale-line-group" display="none">
+          <line id="scale-line" x1="0" y1="0" x2="0" y2="0" stroke="var(--gold)" stroke-width="2" stroke-dasharray="4,3"/>
+          <circle id="scale-pt1" cx="0" cy="0" r="4" fill="var(--gold)"/>
+          <circle id="scale-pt2" cx="0" cy="0" r="4" fill="var(--gold)" display="none"/>
+          <text id="scale-text" x="0" y="0" fill="var(--gold2)" font-size="9" font-family="DM Mono" display="none"></text>
+        </g>
+      </svg>
+
+      <!-- Compass Rose -->
+      <div class="compass-rose">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r="32" fill="rgba(12,11,9,.9)" stroke="rgba(200,175,120,.28)" stroke-width="1"/>
+          <g id="compass-inner" style="transform-origin:36px 36px">
+            <line x1="36" y1="7" x2="36" y2="65" stroke="rgba(200,175,120,.22)" stroke-width=".5"/>
+            <line x1="7" y1="36" x2="65" y2="36" stroke="rgba(200,175,120,.22)" stroke-width=".5"/>
+            <line x1="14" y1="14" x2="58" y2="58" stroke="rgba(200,175,120,.1)" stroke-width=".4"/>
+            <line x1="58" y1="14" x2="14" y2="58" stroke="rgba(200,175,120,.1)" stroke-width=".4"/>
+            <polygon points="36,8 32.5,22 39.5,22" fill="var(--gold)" opacity=".9"/>
+            <polygon points="36,64 32.5,50 39.5,50" fill="var(--text3)" opacity=".5"/>
+            <circle cx="36" cy="36" r="3" fill="var(--gold)"/>
+            <text x="36" y="5.5" text-anchor="middle" fill="var(--gold2)" font-size="8" font-weight="600" font-family="DM Mono">N</text>
+            <text x="36" y="70" text-anchor="middle" fill="var(--text3)" font-size="7" font-family="DM Mono">S</text>
+            <text x="68" y="39" text-anchor="middle" fill="var(--text3)" font-size="7" font-family="DM Mono">E</text>
+            <text x="4" y="39" text-anchor="middle" fill="var(--text3)" font-size="7" font-family="DM Mono">W</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Mode indicator -->
+      <div class="mode-indicator" id="mode-indicator"></div>
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-ring" id="drop-ring">
+          <div class="drop-icon">🏠</div>
+          <div class="drop-text">Drop floor plan here</div>
+          <div class="drop-sub">JPG · PNG · SVG</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <label style="cursor:pointer">
+            <input type="file" accept="image/*,.svg" style="display:none" onchange="handleFileInput(this)">
+            <span class="btn btn-primary" style="font-size:10px;padding:6px 13px">📂 Choose File</span>
+          </label>
+          <button class="btn btn-ghost" style="font-size:10px;padding:6px 13px" onclick="hideDropZone()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Scale input dialog -->
+      <div class="confirm-dlg" id="scale-dlg">
+        <h4>⊷ Set Scale Reference</h4>
+        <p>Click two points on the floor plan, then enter the real-world distance between them.</p>
+        <div style="display:flex;gap:7px;align-items:center;margin-bottom:9px">
+          <input type="number" id="scale-distance-input" class="form-input" placeholder="e.g. 22" style="flex:1" min="1">
+          <select class="form-input" id="scale-unit-select" style="width:60px">
+            <option>ft</option><option>m</option>
+          </select>
+        </div>
+        <div class="confirm-dlg-btns">
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px" onclick="cancelScale()">Cancel</button>
+          <button class="btn btn-primary" style="font-size:10px;padding:4px 9px" onclick="confirmScale()">✓ Set Scale</button>
+        </div>
+      </div>
+
+      <!-- Brahmasthan confirm -->
+      <div class="confirm-dlg" id="brahma-dlg">
+        <h4>✦ Brahmasthan Located</h4>
+        <p id="brahma-dlg-text">The center point has been calculated from your floor plan perimeter. Drag the gold dot to fine-tune if needed.</p>
+        <div class="confirm-dlg-btns">
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px" onclick="document.getElementById('brahma-dlg').classList.remove('show')">Adjust</button>
+          <button class="btn btn-primary" style="font-size:10px;padding:4px 9px" onclick="confirmBrahmasthan()">✓ Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel" id="right-panel">
+      <div class="rp-header">
+        <div class="rp-tabs">
+          <div class="rp-tab active" onclick="openRpTab('analysis')">Analysis</div>
+          <div class="rp-tab" onclick="openRpTab('north')">North</div>
+          <div class="rp-tab" onclick="openRpTab('chatbot')">Vastu AI</div>
+        </div>
+        <div class="rp-close" onclick="toggleRightPanel()">✕</div>
+      </div>
+
+      <!-- Analysis pane -->
+      <div class="rp-pane active" id="rp-analysis">
+        <div style="font-size:8px;color:var(--text3);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase" id="rp-proj-label">Select a project</div>
+        <div style="display:flex;gap:9px;margin-bottom:8px;font-size:9px;color:var(--text3)">
+          <span>N: <strong style="color:var(--gold2)" id="rp-north-val">14.3°</strong></span>
+          <span>Cuts: <strong style="color:var(--red)" id="rp-cuts-val">0</strong></span>
+          <span>Ideal/zone: <strong style="color:var(--text2)">6.25%</strong></span>
+        </div>
+        <div id="zone-list"></div>
+        <div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--border2)">
+          <div style="font-size:8px;color:var(--text3);margin-bottom:3px">Zone Distribution</div>
+          <div id="zone-bar-chart" class="zbar-chart"></div>
+          <div id="zone-bar-labels" class="zb-labels"></div>
+        </div>
+        <div style="margin-top:9px;display:flex;gap:6px">
+          <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:10px;padding:5px">⊞ Table</button>
+          <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:10px;padding:5px" onclick="openExportModal()">⎙ Export</button>
+        </div>
+      </div>
+
+      <!-- North pane -->
+      <div class="rp-pane" id="rp-north">
+        <div class="nm-btns">
+          <div class="nm-btn active" id="nm-manual" onclick="setNorthMethod('manual')">Manual</div>
+          <div class="nm-btn" id="nm-gps" onclick="setNorthMethod('gps')">GPS</div>
+          <div class="nm-btn" id="nm-map" onclick="setNorthMethod('map')">Maps</div>
+        </div>
+        <div class="north-big">
+          <div class="ndb-val" id="north-display">14.3°</div>
+          <div class="ndb-lbl">True North</div>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Degree (0°–360°, clockwise from top)</label>
+          <input type="number" class="form-input" id="north-panel-input" value="14.3" min="0" max="360" step="0.5"
+            oninput="updateNorth(this.value)" onchange="updateNorth(this.value)">
+        </div>
+        <div style="display:flex;justify-content:center;margin:8px 0">
+          <svg width="86" height="86" viewBox="0 0 86 86">
+            <circle cx="43" cy="43" r="39" fill="var(--bg3)" stroke="var(--border)" stroke-width="1"/>
+            <g id="north-preview" style="transform-origin:43px 43px">
+              <line x1="43" y1="8" x2="43" y2="78" stroke="rgba(200,175,120,.2)" stroke-width=".6"/>
+              <line x1="8" y1="43" x2="78" y2="43" stroke="rgba(200,175,120,.2)" stroke-width=".6"/>
+              <polygon points="43,10 39,26 47,26" fill="var(--gold)"/>
+              <circle cx="43" cy="43" r="3" fill="var(--gold)"/>
+              <text x="43" y="7" text-anchor="middle" fill="var(--gold2)" font-size="8" font-weight="600" font-family="DM Mono">N</text>
+              <text x="43" y="83" text-anchor="middle" fill="var(--text3)" font-size="7" font-family="DM Mono">S</text>
+              <text x="81" y="46" text-anchor="middle" fill="var(--text3)" font-size="7" font-family="DM Mono">E</text>
+              <text x="5" y="46" text-anchor="middle" fill="var(--text3)" font-size="7" font-family="DM Mono">W</text>
+            </g>
+          </svg>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Property Address</label>
+          <input type="text" class="form-input" id="prop-address" placeholder="Enter address…" value="Bandra West, Mumbai">
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:11px" onclick="applyNorth()">✓ Apply & Lock North</button>
+        <div style="margin-top:9px;padding:8px;background:var(--bg3);border-radius:5px;border:1px solid var(--border2);font-size:8px;color:var(--text3);line-height:1.9">
+          <strong style="color:var(--text2)">Mumbai Declination:</strong> +0.8°<br>
+          <strong style="color:var(--text2)">True North:</strong> <span id="north-info-val">14.3°</span><br>
+          <strong style="color:var(--text2)">Method:</strong> Manual
+        </div>
+      </div>
+
+      <!-- Chatbot pane -->
+      <div class="rp-chat-pane" id="rp-chatbot">
+        <div style="font-size:8px;color:var(--text3);padding-bottom:6px;border-bottom:1px solid var(--border2);flex-shrink:0">✦ Vastu AI · Grounded in Vishwakarma Prakash</div>
+        <div class="chat-history" id="chat-history">
+          <div class="chat-msg ai">Namaste! I'm your Vastu advisor. Draw your floor plan perimeter first, then I can give you accurate zone analysis. What would you like to know?
+            <div class="chat-cite">— Vishwakarma Prakash</div>
+          </div>
+        </div>
+        <div class="chat-chips">
+          <div class="chat-chip" onclick="sendQuickChat('What does the SW cut mean for this property?')">SW cut?</div>
+          <div class="chat-chip" onclick="sendQuickChat('How is the NE zone looking?')">NE zone</div>
+          <div class="chat-chip" onclick="sendQuickChat('Suggest non-demolition remedies for the cuts')">Remedies</div>
+          <div class="chat-chip" onclick="sendQuickChat('What room should go in the NE zone?')">NE room</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" placeholder="Ask about this floor plan…" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="chat-send" onclick="sendChat()">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-bottombar">
+    <div class="zoom-ctrl">
+      <div class="zoom-btn" onclick="changeZoom(-10)">−</div>
+      <span id="zoom-label" style="font-family:'DM Mono',monospace;min-width:32px;text-align:center">100%</span>
+      <div class="zoom-btn" onclick="changeZoom(10)">+</div>
+      <div class="zoom-btn" onclick="resetZoom()">⊙</div>
+    </div>
+    <div class="bb-sep"></div>
+    <span style="font-size:9px;color:var(--text3)" id="scale-status-bar">Scale: not calibrated</span>
+    <div class="bb-sep"></div>
+    <span id="perimeter-status" style="font-size:9px;color:var(--text3)">Perimeter: not drawn</span>
+    <div class="spacer"></div>
+    <span id="coord-display" style="font-size:9px;color:var(--text3);font-family:'DM Mono',monospace"></span>
+  </div>
+</div>
+
+</div><!-- .main -->
+</div><!-- .app -->
+
+<!-- ─── NEW PROJECT MODAL ─── -->
+<div class="modal-overlay" id="new-project-modal">
+  <div class="modal modal-wide">
+    <div class="modal-title">◫ New Project</div>
+    <div class="modal-sub">Create a new Vastu analysis workspace for your client.</div>
+    <div class="modal-grid">
+      <div class="form-grp full"><label class="form-lbl">Project Name</label><input type="text" class="form-input" id="np-name" placeholder="e.g. Kapoor Residence — 2BHK"></div>
+      <div class="form-grp"><label class="form-lbl">Client Name</label><input type="text" class="form-input" id="np-client" placeholder="Full name"></div>
+      <div class="form-grp"><label class="form-lbl">Client Contact</label><input type="text" class="form-input" id="np-contact" placeholder="+91 98…"></div>
+      <div class="form-grp full"><label class="form-lbl">Property Address</label><input type="text" class="form-input" id="np-address" placeholder="Address or Google Maps URL"></div>
+      <div class="form-grp"><label class="form-lbl">Property Type</label>
+        <select class="form-input" id="np-type"><option>Residential</option><option>Commercial</option><option>Industrial</option><option>Plot</option></select></div>
+      <div class="form-grp"><label class="form-lbl">Area (sq ft)</label><input type="number" class="form-input" id="np-area" placeholder="e.g. 1840"></div>
+      <div class="form-grp full"><label class="form-lbl">Initial Notes</label>
+        <textarea class="form-input" id="np-notes" placeholder="Client concerns, special requirements…" style="height:60px;resize:none;line-height:1.6"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" style="font-size:10px;padding:5px 12px" onclick="closeNewProjectModal()">Cancel</button>
+      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px" onclick="createProject()">Create Project →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── EXPORT MODAL ─── -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal modal-wide">
+    <div class="modal-title">⎙ Export Report</div>
+    <div class="modal-sub">Select what to include in the PDF report for your client.</div>
+    <div class="export-section-title">Cover Page</div>
+    <div class="export-checklist">
+      <label class="export-check-item"><input type="checkbox" checked> Project name, client name, consultant name, date</label>
+      <label class="export-check-item"><input type="checkbox"> Company logo (upload in Settings)</label>
+    </div>
+    <div class="export-section-title">Floor Plan</div>
+    <div class="export-checklist">
+      <label class="export-check-item"><input type="checkbox" checked> Floor plan image (clean, no overlay)</label>
+      <label class="export-check-item"><input type="checkbox" checked> Floor plan with Vastu Shakti Chakra overlay</label>
+      <label class="export-check-item"><input type="checkbox" checked> Floor plan with cuts highlighted</label>
+    </div>
+    <div class="export-section-title">Analysis</div>
+    <div class="export-checklist">
+      <label class="export-check-item"><input type="checkbox" checked> Zone area table (all 16 zones)</label>
+      <label class="export-check-item"><input type="checkbox" checked> Bar Graph: Zone area distribution</label>
+      <label class="export-check-item"><input type="checkbox"> Bar Graph: Cut area by zone</label>
+    </div>
+    <div class="export-section-title">Recommendations</div>
+    <div class="export-checklist">
+      <label class="export-check-item"><input type="checkbox" checked> AI-generated zone-by-zone recommendations</label>
+      <label class="export-check-item"><input type="checkbox" checked> Remedy suggestions (non-demolition)</label>
+      <label class="export-check-item"><input type="checkbox"> Classical text references (Vishwakarma Prakash)</label>
+    </div>
+    <div style="margin-top:10px;padding:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:9px;color:var(--text3)">
+      PDF generation requires completing the floor plan analysis first. Draw your perimeter and confirm Brahmasthan to unlock full export.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" style="font-size:10px;padding:5px 12px" onclick="closeExportModal()">Cancel</button>
+      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px" onclick="triggerExport()">⎙ Generate PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  AUTHENTIC SHAKTI CHAKRA DATA
+//  Colors per classical Vastu zone colors
+// ══════════════════════════════════════════════
+const ZONES = [
+  // name, start°, end°, fill color, element, deity, governs, ideal use
+  {name:'N',   s:348.75, e:11.25,  fill:'#4a90c4', elem:'Water',  deity:'Kubera',   governs:'Wealth, career, opportunities',  ideal:'Living room, WFH area'},
+  {name:'NNE', s:11.25,  e:33.75,  fill:'#5ba8d8', elem:'Water',  deity:'Soma',     governs:'Health, immunity, well-being',    ideal:'Bathroom (no toilet), living'},
+  {name:'NE',  s:33.75,  e:56.25,  fill:'#6ec6e8', elem:'Space',  deity:'Ishaan',   governs:'Wisdom, clarity, spirituality',   ideal:'Pooja room, meditation'},
+  {name:'ENE', s:56.25,  e:78.75,  fill:'#5aaa6a', elem:'Air',    deity:'Parjanya', governs:'New ideas, fun, recreation',      ideal:'Study, children\'s room'},
+  {name:'E',   s:78.75,  e:101.25, fill:'#48a858', elem:'Air',    deity:'Indra',    governs:'Social life, achievements',       ideal:'Living room, drawing room'},
+  {name:'ESE', s:101.25, e:123.75, fill:'#72b872', elem:'Fire+Air',deity:'Vitatha',  governs:'Analysis, churning of thoughts',  ideal:'Gym, activity room'},
+  {name:'SE',  s:123.75, e:146.25, fill:'#e85050', elem:'Fire',   deity:'Agni',     governs:'Cash flow, energy, cooking',      ideal:'Kitchen, electrical room'},
+  {name:'SSE', s:146.25, e:168.75, fill:'#d04848', elem:'Fire',   deity:'Pushan',   governs:'Confidence, power, stamina',      ideal:'Bedroom, storage'},
+  {name:'S',   s:168.75, e:191.25, fill:'#c03838', elem:'Earth',  deity:'Yama',     governs:'Rest, fame, social recognition',  ideal:'Bedroom, heavy storage'},
+  {name:'SSW', s:191.25, e:213.75, fill:'#c8a028', elem:'Earth',  deity:'Nairutya', governs:'Expenditure, disposal, savings',  ideal:'Locker room, master bedroom'},
+  {name:'SW',  s:213.75, e:236.25, fill:'#b09020', elem:'Earth',  deity:'Niriti',   governs:'Stability, relationships, skills', ideal:'Master bedroom, safe'},
+  {name:'WSW', s:236.25, e:258.75, fill:'#b8b8b8', elem:'Earth+Water',deity:'Duwarik',governs:'Education, savings, profits',    ideal:'Children study, profit room'},
+  {name:'W',   s:258.75, e:281.25, fill:'#a0a8b8', elem:'Water',  deity:'Varuna',   governs:'Learning, gains, prosperity',     ideal:'Study, dining, children\'s room'},
+  {name:'WNW', s:281.25, e:303.75, fill:'#8898b0', elem:'Air+Water',deity:'Pushpadanta',governs:'Support, banking, movement',  ideal:'Guest room, toilet (ok)'},
+  {name:'NW',  s:303.75, e:326.25, fill:'#7898b0', elem:'Air',    deity:'Vayu',     governs:'Support systems, travel, banking',ideal:'Guest room, garage'},
+  {name:'NNW', s:326.25, e:348.75, fill:'#6890c0', elem:'Air',    deity:'Bhallat',  governs:'Attraction, relationships strength',ideal:'Secondary bedroom'},
+];
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let northDeg = 14.3;
+let brahmaX = 362, brahmaY = 300;
+let chakraVisible = true;
+let zoomLevel = 100;
+let currentTool = 'select';
+let rightPanelOpen = true;
+let leftPanelExpanded = false;
+let currentProjectId = null;
+let chatLoading = false;
+
+// Perimeter drawing state
+let perimeterPts = [];        // drawn points [{x,y}]
+let perimeterComplete = false;
+
+// Scale state
+let scalePixels = null;       // distance in px between 2 calibration points
+let scaleReal = null;         // real distance (ft or m)
+let scaleUnit = 'ft';
+let scalePt1 = null, scalePt2 = null;
+let scaleStep = 0; // 0=idle, 1=awaiting pt1, 2=awaiting pt2
+
+// Cut drawing state
+let cuts = [];                // [{points:[{x,y}], label:'Cut #N'}]
+let drawingCut = false;
+let cutPts = [];
+
+// Brahmasthan drag
+let draggingBrahma = false;
+let brahmaConfirmed = false;
+
+// Undo stack
+let undoStack = []; // each entry = function to undo
+
+// Projects store
+let projects = [];
+let activeFilter = 'all';
+let searchQuery = '';
+
+// User
+let userName = 'Rajesh Sharma';
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.onload = () => {
+  renderChakra();
+  renderZoneList();
+  renderZoneBarChart();
+  renderDashCharts();
+  renderProjectsGrid();
+  renderDashRecentProjects();
+  updateStats();
+  setupDragDrop();
+  setupBrahmahraDrag();
+  setupCanvasMouseTrack();
+  setupKeyboardShortcuts();
+  updateGreeting();
+};
+
+// ══════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  document.getElementById('sb-toggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+// ══════════════════════════════════════════════
+//  USER NAME
+// ══════════════════════════════════════════════
+function editUserName() {
+  const display = document.getElementById('user-name-display');
+  const input = document.getElementById('user-name-input');
+  display.style.display = 'none';
+  input.style.display = 'block';
+  input.focus();
+  input.select();
+}
+function saveUserName() {
+  const input = document.getElementById('user-name-input');
+  userName = input.value.trim() || userName;
+  document.getElementById('user-name-text').textContent = userName;
+  document.getElementById('user-avatar').textContent = userName.charAt(0).toUpperCase();
+  document.getElementById('user-name-display').style.display = 'flex';
+  input.style.display = 'none';
+  updateGreeting();
+}
+function updateGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = userName.split(' ')[0];
+  document.getElementById('greeting-text').textContent = `${g}, ${firstName}`;
+}
+
+// ══════════════════════════════════════════════
+//  SCREENS
+// ══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  const map = {dashboard:0, projects:1, canvas:2};
+  const items = document.querySelectorAll('.nav-item');
+  if (map[id] !== undefined) items[map[id]].classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  DASH CARDS
+// ══════════════════════════════════════════════
+function toggleCard(id) { document.getElementById(id).classList.toggle('open'); }
+
+// ══════════════════════════════════════════════
+//  LEFT PANEL
+// ══════════════════════════════════════════════
+function toggleLeftPanel() {
+  leftPanelExpanded = !leftPanelExpanded;
+  document.getElementById('left-panel').classList.toggle('expanded', leftPanelExpanded);
+}
+function toggleLpSec(hdr) { hdr.parentElement.classList.toggle('open'); }
+
+// ══════════════════════════════════════════════
+//  RIGHT PANEL
+// ══════════════════════════════════════════════
+function toggleRightPanel() {
+  rightPanelOpen = !rightPanelOpen;
+  document.getElementById('right-panel').classList.toggle('collapsed', !rightPanelOpen);
+}
+function openRpTab(tab) {
+  document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.rp-pane,.rp-chat-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  const idx = {analysis:0, north:1, chatbot:2};
+  const tabs = document.querySelectorAll('.rp-tab');
+  if (tabs[idx[tab]]) tabs[idx[tab]].classList.add('active');
+  const pane = document.getElementById('rp-' + tab);
+  if (pane) { pane.classList.add('active'); pane.style.display = tab === 'chatbot' ? 'flex' : 'block'; }
+  if (!rightPanelOpen) { rightPanelOpen = true; document.getElementById('right-panel').classList.remove('collapsed'); }
+  if (tab === 'north') document.getElementById('north-panel-input').value = northDeg.toFixed(1);
+}
+
+// ══════════════════════════════════════════════
+//  AUTHENTIC SHAKTI CHAKRA RENDERING
+// ══════════════════════════════════════════════
+function toRad(deg) { return (deg - 90) * Math.PI / 180; }
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function renderChakra() {
+  const R = 250; // outer radius
+  const r1 = 50; // middle ring (zone labels inner boundary)
+  const cx = brahmaX, cy = brahmaY;
+
+  // Update ring positions
+  ['chakra-outer-ring','chakra-middle-ring','chakra-inner-ring'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.setAttribute('cx', cx); el.setAttribute('cy', cy); }
+  });
+  const outer = document.getElementById('chakra-outer-ring');
+  if (outer) outer.setAttribute('r', R);
+
+  const slicesEl = document.getElementById('chakra-slices');
+  const linesEl  = document.getElementById('chakra-zone-lines');
+  const labelsEl = document.getElementById('chakra-labels');
+  const deityEl  = document.getElementById('chakra-deity-labels');
+  const ticksEl  = document.getElementById('chakra-ticks');
+  [slicesEl,linesEl,labelsEl,deityEl,ticksEl].forEach(el => { if(el) el.innerHTML = ''; });
+
+  ZONES.forEach((z, i) => {
+    const sA = z.s + northDeg;
+    const eA = z.e + northDeg;
+    const sR = toRad(sA), eR = toRad(eA);
+    const x1 = cx + R * Math.cos(sR), y1 = cy + R * Math.sin(sR);
+    const x2 = cx + R * Math.cos(eR), y2 = cy + R * Math.sin(eR);
+    const ix1 = cx + r1 * Math.cos(sR), iy1 = cy + r1 * Math.sin(sR);
+    const ix2 = cx + r1 * Math.cos(eR), iy2 = cy + r1 * Math.sin(eR);
+
+    // Slice (donut from r1 to R)
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const large = 0; // 22.5° < 180
+    const d = `M${ix1.toFixed(1)},${iy1.toFixed(1)} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} L${ix2.toFixed(1)},${iy2.toFixed(1)} A${r1},${r1} 0 ${large},0 ${ix1.toFixed(1)},${iy1.toFixed(1)} Z`;
+    path.setAttribute('d', d);
+    path.setAttribute('fill', hexToRgba(z.fill, 0.55));
+    path.setAttribute('stroke', hexToRgba(z.fill, 0.85));
+    path.setAttribute('stroke-width', '0.6');
+    slicesEl.appendChild(path);
+
+    // Zone boundary line (from center)
+    const isCardinal = i % 4 === 0;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', x1.toFixed(1)); line.setAttribute('y2', y1.toFixed(1));
+    line.setAttribute('stroke', isCardinal ? 'rgba(200,175,120,0.7)' : 'rgba(200,175,120,0.3)');
+    line.setAttribute('stroke-width', isCardinal ? '1.4' : '0.7');
+    linesEl.appendChild(line);
+
+    // Zone name label (at ~75% radius)
+    const midA = sA + 11.25;
+    const LR = R * 0.72;
+    const lx = cx + LR * Math.cos(toRad(midA));
+    const ly = cy + LR * Math.sin(toRad(midA));
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', lx.toFixed(1));
+    lbl.setAttribute('y', ly.toFixed(1));
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('dominant-baseline','middle');
+    lbl.setAttribute('fill', '#ffffff');
+    lbl.setAttribute('font-family','DM Mono');
+    lbl.setAttribute('font-size','10');
+    lbl.setAttribute('font-weight','600');
+    lbl.textContent = z.name;
+    labelsEl.appendChild(lbl);
+
+    // Deity name (at ~55% radius, small)
+    const DR = R * 0.52;
+    const dx = cx + DR * Math.cos(toRad(midA));
+    const dy = cy + DR * Math.sin(toRad(midA));
+    const dlbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    dlbl.setAttribute('x', dx.toFixed(1));
+    dlbl.setAttribute('y', dy.toFixed(1));
+    dlbl.setAttribute('text-anchor','middle');
+    dlbl.setAttribute('dominant-baseline','middle');
+    dlbl.setAttribute('fill', hexToRgba(z.fill, 0.95));
+    dlbl.setAttribute('font-family','Cormorant Garamond');
+    dlbl.setAttribute('font-size','7.5');
+    dlbl.setAttribute('font-style','italic');
+    dlbl.textContent = z.deity;
+    deityEl.appendChild(dlbl);
+  });
+
+  // 32 entrance tick marks on outer ring
+  for (let i = 0; i < 32; i++) {
+    const a = toRad(i * 11.25 + northDeg);
+    const tickLen = i % 2 === 0 ? 10 : 5;
+    const x1t = cx + (R) * Math.cos(a);
+    const y1t = cy + (R) * Math.sin(a);
+    const x2t = cx + (R + tickLen) * Math.cos(a);
+    const y2t = cy + (R + tickLen) * Math.sin(a);
+    const tk = document.createElementNS('http://www.w3.org/2000/svg','line');
+    tk.setAttribute('x1', x1t.toFixed(1)); tk.setAttribute('y1', y1t.toFixed(1));
+    tk.setAttribute('x2', x2t.toFixed(1)); tk.setAttribute('y2', y2t.toFixed(1));
+    tk.setAttribute('stroke', 'rgba(200,175,120,0.5)');
+    tk.setAttribute('stroke-width', i % 4 === 0 ? '1.5' : '0.8');
+    ticksEl.appendChild(tk);
+    // Number label every 4th tick
+    if (i % 4 === 0) {
+      const nR = R + 18;
+      const tx = cx + nR * Math.cos(a);
+      const ty = cy + nR * Math.sin(a);
+      const nt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      nt.setAttribute('x', tx.toFixed(1)); nt.setAttribute('y', ty.toFixed(1));
+      nt.setAttribute('text-anchor','middle'); nt.setAttribute('dominant-baseline','middle');
+      nt.setAttribute('fill','rgba(200,175,120,0.55)'); nt.setAttribute('font-size','7');
+      nt.setAttribute('font-family','DM Mono');
+      nt.textContent = (i/4*90).toFixed(0) + '°';
+      ticksEl.appendChild(nt);
+    }
+  }
+
+  // Element color band — thin ring showing element color groupings
+  renderElementBand(cx, cy, R);
+
+  // North arrow
+  renderNorthArrow(cx, cy, R);
+
+  // Compass rose + preview
+  updateCompassRose(northDeg);
+  updateNorthPreview(northDeg);
+
+  // Update Brahmasthan dot
+  ['brahma-dot','brahma-inner','brahma-label'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'brahma-label') { el.setAttribute('x', cx); el.setAttribute('y', cy + 34); }
+    else { el.setAttribute('cx', cx); el.setAttribute('cy', cy); }
+  });
+
+  // Update position labels
+  document.getElementById('brahma-x-lbl').textContent = Math.round(cx);
+  document.getElementById('brahma-y-lbl').textContent = Math.round(cy);
+}
+
+function renderElementBand(cx, cy, R) {
+  // thin colored arc at 90% of R showing element groupings
+  const el = document.getElementById('chakra-element-arcs');
+  if (!el) return;
+  el.innerHTML = '';
+  const br = R * 0.88; // band radius
+  const bw = 6; // band width
+  const ELEM_COLORS = {
+    'Water':'#4a90c4','Space':'#6ec6e8','Air':'#48a858',
+    'Fire':'#e85050','Earth':'#c8a028','Fire+Air':'#d06840',
+    'Earth+Water':'#a09060','Air+Water':'#6890c0'
+  };
+  ZONES.forEach(z => {
+    const sA = z.s + northDeg, eA = z.e + northDeg;
+    const sR = toRad(sA), eR = toRad(eA);
+    const x1 = cx + br * Math.cos(sR), y1 = cy + br * Math.sin(sR);
+    const x2 = cx + br * Math.cos(eR), y2 = cy + br * Math.sin(eR);
+    const xi1 = cx + (br-bw) * Math.cos(sR), yi1 = cy + (br-bw) * Math.sin(sR);
+    const xi2 = cx + (br-bw) * Math.cos(eR), yi2 = cy + (br-bw) * Math.sin(eR);
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const col = ELEM_COLORS[z.elem] || '#888888';
+    p.setAttribute('d', `M${xi1.toFixed(1)},${yi1.toFixed(1)} L${x1.toFixed(1)},${y1.toFixed(1)} A${br},${br} 0 0,1 ${x2.toFixed(1)},${y2.toFixed(1)} L${xi2.toFixed(1)},${yi2.toFixed(1)} A${br-bw},${br-bw} 0 0,0 ${xi1.toFixed(1)},${yi1.toFixed(1)} Z`);
+    p.setAttribute('fill', hexToRgba(col, 0.9));
+    el.appendChild(p);
+  });
+}
+
+function renderNorthArrow(cx, cy, R) {
+  const grp = document.getElementById('north-arrow-group');
+  grp.innerHTML = '';
+  const aR = R * 0.94;
+  const ax = cx + aR * Math.cos(toRad(northDeg));
+  const ay = cy + aR * Math.sin(toRad(northDeg));
+  const tipR = aR + 12;
+  const tx = cx + tipR * Math.cos(toRad(northDeg));
+  const ty = cy + tipR * Math.sin(toRad(northDeg));
+  const perp = toRad(northDeg) + Math.PI/2;
+
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',cx); line.setAttribute('y1',cy);
+  line.setAttribute('x2',ax.toFixed(1)); line.setAttribute('y2',ay.toFixed(1));
+  line.setAttribute('stroke','rgba(200,175,120,0.6)'); line.setAttribute('stroke-width','1.4'); line.setAttribute('stroke-dasharray','5,3');
+  grp.appendChild(line);
+
+  const tri = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  const p0x = (tx + 13*Math.cos(toRad(northDeg))).toFixed(1), p0y = (ty + 13*Math.sin(toRad(northDeg))).toFixed(1);
+  const p1x = (tx + 7*Math.cos(perp)).toFixed(1), p1y = (ty + 7*Math.sin(perp)).toFixed(1);
+  const p2x = (tx - 7*Math.cos(perp)).toFixed(1), p2y = (ty - 7*Math.sin(perp)).toFixed(1);
+  tri.setAttribute('points', `${p0x},${p0y} ${p1x},${p1y} ${p2x},${p2y}`);
+  tri.setAttribute('fill','var(--gold)'); tri.setAttribute('opacity','0.95');
+  grp.appendChild(tri);
+
+  const ntxt = document.createElementNS('http://www.w3.org/2000/svg','text');
+  const nR = tipR + 16;
+  ntxt.setAttribute('x', (cx + nR*Math.cos(toRad(northDeg))).toFixed(1));
+  ntxt.setAttribute('y', (cy + nR*Math.sin(toRad(northDeg))).toFixed(1));
+  ntxt.setAttribute('text-anchor','middle'); ntxt.setAttribute('dominant-baseline','middle');
+  ntxt.setAttribute('fill','var(--gold2)'); ntxt.setAttribute('font-size','13'); ntxt.setAttribute('font-weight','700'); ntxt.setAttribute('font-family','DM Mono');
+  ntxt.textContent = 'N';
+  grp.appendChild(ntxt);
+}
+
+function updateCompassRose(deg) {
+  const el = document.getElementById('compass-inner');
+  if (el) { el.style.transform = `rotate(${deg}deg)`; }
+}
+function updateNorthPreview(deg) {
+  const el = document.getElementById('north-preview');
+  if (el) { el.style.transform = `rotate(${deg}deg)`; }
+}
+
+// ══════════════════════════════════════════════
+//  NORTH UPDATE
+// ══════════════════════════════════════════════
+function updateNorth(val) {
+  let v = parseFloat(val);
+  if (isNaN(v)) return;
+  v = Math.max(0, Math.min(360, v));
+  northDeg = v;
+  document.getElementById('north-display').textContent = v.toFixed(1) + '°';
+  document.getElementById('north-info-val').textContent = v.toFixed(1) + '°';
+  document.getElementById('rp-north-val').textContent = v.toFixed(1) + '°';
+  // sync all north inputs without loops
+  ['north-topbar','north-panel-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && document.activeElement !== el) el.value = v.toFixed(1);
+  });
+  renderChakra();
+  recalcPercentages();
+}
+function setNorthMethod(m) {
+  ['manual','gps','map'].forEach(x => document.getElementById('nm-'+x).classList.remove('active'));
+  document.getElementById('nm-'+m).classList.add('active');
+  if (m === 'gps' && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      showToast(`📍 GPS: ${pos.coords.latitude.toFixed(3)}°N, ${pos.coords.longitude.toFixed(3)}°E`);
+    }, () => {});
+  }
+}
+function applyNorth() {
+  updateNorth(document.getElementById('north-panel-input').value);
+  showToast(`✓ True North locked at ${northDeg.toFixed(1)}°`);
+}
+
+// ══════════════════════════════════════════════
+//  TOOL MANAGEMENT
+// ══════════════════════════════════════════════
+function setTool(tool) {
+  currentTool = tool;
+  ['select','perimeter','cut','scale','brahma'].forEach(t => {
+    document.getElementById('tool-'+t)?.classList.toggle('active', t === tool);
+  });
+  const modes = {
+    select:    {msg:'', cursor:'default'},
+    perimeter: {msg:'⬡ Perimeter Mode — Click to place points. Double-click to close.', cursor:'crosshair'},
+    cut:       {msg:'✂ Cut Mode — Click to draw cut area. Double-click to close.', cursor:'crosshair'},
+    scale:     {msg:'⊷ Scale Mode — Click two points, then enter real distance.', cursor:'crosshair'},
+    brahma:    {msg:'◉ Brahmasthan Mode — Drag the gold center dot.', cursor:'move'},
+  };
+  const m = modes[tool] || modes.select;
+  const ind = document.getElementById('mode-indicator');
+  ind.textContent = m.msg;
+  ind.classList.toggle('visible', !!m.msg);
+  document.getElementById('vastu-svg').style.cursor = m.cursor;
+  if (tool === 'perimeter' && !perimeterComplete) {
+    // Reset if restarting
+  }
+  if (tool !== 'scale') scaleStep = 0;
+  if (tool !== 'cut') { drawingCut = false; cutPts = []; }
+}
+
+// ══════════════════════════════════════════════
+//  SVG CANVAS CLICK HANDLER
+// ══════════════════════════════════════════════
+function getSVGCoords(e) {
+  const svg = document.getElementById('vastu-svg');
+  const rect = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const scaleX = vb.width / rect.width;
+  const scaleY = vb.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const svg = document.getElementById('vastu-svg');
+  if (!svg) return;
+  svg.addEventListener('click', onSVGClick);
+  svg.addEventListener('dblclick', onSVGDblClick);
+  svg.addEventListener('mousemove', onSVGMouseMove);
+});
+// Also set up after onload
+window.addEventListener('load', () => {
+  const svg = document.getElementById('vastu-svg');
+  if (!svg) return;
+  svg.addEventListener('click', onSVGClick);
+  svg.addEventListener('dblclick', onSVGDblClick);
+  svg.addEventListener('mousemove', onSVGMouseMove);
+  renderChakra();
+  renderZoneList();
+  renderZoneBarChart();
+  renderDashCharts();
+  renderProjectsGrid();
+  renderDashRecentProjects();
+  updateStats();
+  setupDragDrop();
+  setupBrahmahraDrag();
+  setupCanvasMouseTrack();
+  setupKeyboardShortcuts();
+  updateGreeting();
+});
+
+let lastClickTime = 0;
+function onSVGClick(e) {
+  if (e.target.closest('#north-arrow-group, #compass-inner')) return;
+  const now = Date.now();
+  if (now - lastClickTime < 350) return; // skip single after dblclick
+  lastClickTime = now;
+  const pt = getSVGCoords(e);
+
+  if (currentTool === 'perimeter') {
+    if (perimeterComplete) return;
+    perimeterPts.push(pt);
+    updatePerimeterVisual();
+    pushUndo(() => {
+      perimeterPts.pop();
+      perimeterComplete = false;
+      updatePerimeterVisual();
+    });
+  }
+  else if (currentTool === 'cut') {
+    cutPts.push(pt);
+    updateCutPreview();
+  }
+  else if (currentTool === 'scale') {
+    if (scaleStep === 0) { scalePt1 = pt; scaleStep = 1; showScalePt(1, pt); showToast('Scale: first point set. Click second point.'); }
+    else if (scaleStep === 1) { scalePt2 = pt; scaleStep = 2; showScalePt(2, pt); showScaleLine(); document.getElementById('scale-dlg').classList.add('show'); }
+  }
+}
+function onSVGDblClick(e) {
+  const pt = getSVGCoords(e);
+  if (currentTool === 'perimeter' && perimeterPts.length >= 3) {
+    perimeterComplete = true;
+    updatePerimeterVisual();
+    recalcCentroid();
+    recalcPercentages();
+    document.getElementById('brahma-dlg-text').textContent = 'Center calculated from your drawn perimeter. Drag the gold dot to fine-tune.';
+    document.getElementById('brahma-dlg').classList.add('show');
+    setTool('select');
+    addActivity('Perimeter drawn — Brahmasthan located');
+  }
+  else if (currentTool === 'cut' && cutPts.length >= 3) {
+    const label = 'Cut #' + (cuts.length + 1);
+    cuts.push({points: [...cutPts], label});
+    cutPts = [];
+    drawingCut = false;
+    renderCuts();
+    recalcPercentages();
+    pushUndo(() => { cuts.pop(); renderCuts(); recalcPercentages(); });
+    document.getElementById('rp-cuts-val').textContent = cuts.length;
+    addActivity(`${label} added`);
+    showToast(`✓ ${label} added`);
+    setTool('select');
+  }
+}
+function onSVGMouseMove(e) {
+  if (currentTool === 'perimeter' && perimeterPts.length > 0 && !perimeterComplete) {
+    const pt = getSVGCoords(e);
+    const preview = document.getElementById('perimeter-preview');
+    const all = [...perimeterPts, pt];
+    preview.setAttribute('points', all.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+  }
+}
+
+// ── Perimeter visual ──
+function updatePerimeterVisual() {
+  const poly = document.getElementById('user-perimeter');
+  const ptsEl = document.getElementById('perimeter-points');
+  const preview = document.getElementById('perimeter-preview');
+  ptsEl.innerHTML = '';
+  if (perimeterPts.length === 0) { poly.setAttribute('display','none'); preview.setAttribute('points',''); return; }
+  poly.setAttribute('display','');
+  poly.setAttribute('points', perimeterPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+  poly.setAttribute('stroke-dasharray', perimeterComplete ? 'none' : '6,3');
+  perimeterPts.forEach((p, i) => {
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', p.x.toFixed(1)); c.setAttribute('cy', p.y.toFixed(1));
+    c.setAttribute('r', i === 0 ? '5' : '3.5');
+    c.setAttribute('fill', i === 0 ? 'var(--gold)' : 'rgba(200,175,120,0.7)');
+    c.setAttribute('stroke', 'var(--gold2)'); c.setAttribute('stroke-width','1');
+    ptsEl.appendChild(c);
+  });
+  if (perimeterComplete) preview.setAttribute('points','');
+  const status = perimeterComplete
+    ? `Perimeter: ${perimeterPts.length} pts — closed`
+    : `Perimeter: ${perimeterPts.length} pts drawn`;
+  document.getElementById('perimeter-status').textContent = status;
+}
+
+// ── Polygon centroid ──
+function recalcCentroid() {
+  const pts = perimeterPts.length > 0 ? perimeterPts : getDefaultPerimeterPts();
+  if (pts.length < 3) return;
+  let area = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    const cross = pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+    area += cross;
+    cx += (pts[i].x + pts[j].x) * cross;
+    cy += (pts[i].y + pts[j].y) * cross;
+  }
+  area /= 2;
+  brahmaX = cx / (6 * area);
+  brahmaY = cy / (6 * area);
+  renderChakra();
+  showToast(`✓ Brahmasthan at (${Math.round(brahmaX)}, ${Math.round(brahmaY)})`);
+}
+function getDefaultPerimeterPts() {
+  return [{x:110,y:75},{x:620,y:75},{x:620,y:300},{x:475,y:300},{x:475,y:530},{x:110,y:530}];
+}
+
+// ── Cut rendering ──
+function renderCuts() {
+  const grp = document.getElementById('cuts-group');
+  grp.innerHTML = '';
+  cuts.forEach(cut => {
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points', cut.points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+    poly.setAttribute('fill','rgba(200,60,40,0.2)');
+    poly.setAttribute('stroke','rgba(200,60,40,0.7)');
+    poly.setAttribute('stroke-width','1.8');
+    poly.setAttribute('stroke-dasharray','6,3');
+    grp.appendChild(poly);
+    // Label at centroid of cut
+    const cx = cut.points.reduce((s,p)=>s+p.x,0)/cut.points.length;
+    const cy = cut.points.reduce((s,p)=>s+p.y,0)/cut.points.length;
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',cx.toFixed(1)); t.setAttribute('y',(cy-4).toFixed(1));
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','#e05050');
+    t.setAttribute('font-size','11'); t.setAttribute('font-family','DM Mono'); t.setAttribute('font-weight','600');
+    t.textContent = cut.label;
+    grp.appendChild(t);
+  });
+
+  // Cut preview while drawing
+  if (currentTool === 'cut' && cutPts.length > 0) {
+    const prev = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    prev.setAttribute('points', cutPts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+    prev.setAttribute('fill','none'); prev.setAttribute('stroke','rgba(200,60,40,0.6)');
+    prev.setAttribute('stroke-width','1.5'); prev.setAttribute('stroke-dasharray','4,3');
+    grp.appendChild(prev);
+  }
+}
+function updateCutPreview() { renderCuts(); }
+
+// ── Scale ──
+function showScalePt(n, pt) {
+  const el = document.getElementById('scale-pt' + n);
+  if (!el) return;
+  el.setAttribute('cx', pt.x); el.setAttribute('cy', pt.y); el.setAttribute('display','');
+  document.getElementById('scale-line-group').setAttribute('display','');
+}
+function showScaleLine() {
+  if (!scalePt1 || !scalePt2) return;
+  const l = document.getElementById('scale-line');
+  l.setAttribute('x1',scalePt1.x); l.setAttribute('y1',scalePt1.y);
+  l.setAttribute('x2',scalePt2.x); l.setAttribute('y2',scalePt2.y);
+}
+function confirmScale() {
+  if (!scalePt1 || !scalePt2) return;
+  const d = parseFloat(document.getElementById('scale-distance-input').value);
+  const u = document.getElementById('scale-unit-select').value;
+  if (!d || d <= 0) { showToast('Please enter a valid distance.'); return; }
+  const px = Math.hypot(scalePt2.x - scalePt1.x, scalePt2.y - scalePt1.y);
+  scalePixels = px; scaleReal = d; scaleUnit = u;
+  const pxPerUnit = px / d;
+  document.getElementById('scale-dlg').classList.remove('show');
+  document.getElementById('scale-line-group').setAttribute('display','none');
+  scalePt1 = null; scalePt2 = null; scaleStep = 0;
+  const display = `1px = ${(1/pxPerUnit).toFixed(2)} ${u}`;
+  document.getElementById('scale-display').textContent = display;
+  document.getElementById('scale-status-bar').textContent = `Scale: ${display}`;
+  showToast(`✓ Scale set: 1px = ${(1/pxPerUnit).toFixed(2)} ${u}`);
+  recalcPercentages();
+  setTool('select');
+  pushUndo(() => { scalePixels = null; scaleReal = null; document.getElementById('scale-display').textContent = 'Not set'; document.getElementById('scale-status-bar').textContent = 'Scale: not calibrated'; recalcPercentages(); });
+}
+function cancelScale() {
+  document.getElementById('scale-dlg').classList.remove('show');
+  document.getElementById('scale-line-group').setAttribute('display','none');
+  scaleStep = 0; scalePt1 = null; scalePt2 = null;
+  setTool('select');
+}
+
+// ── Real percentage calculation ──
+function recalcPercentages() {
+  const pts = perimeterPts.length >= 3 ? perimeterPts : getDefaultPerimeterPts();
+  const totalArea = polygonArea(pts);
+  if (totalArea <= 0) return;
+  ZONES.forEach(z => {
+    // Use centroid-ray method to get approximate zone percentage
+    // For each zone, estimate what fraction of the perimeter polygon lies within that angular wedge
+    const zoneArea = estimateZoneArea(pts, brahmaX, brahmaY, z.s + northDeg, z.e + northDeg);
+    z._pct = (zoneArea / totalArea * 100);
+  });
+  renderZoneList();
+  renderZoneBarChart();
+}
+function polygonArea(pts) {
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i+1) % pts.length;
+    a += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+  }
+  return Math.abs(a) / 2;
+}
+function estimateZoneArea(polyPts, cx, cy, startDeg, endDeg) {
+  // Monte Carlo approximation using 200 sample points in bounding box
+  const xs = polyPts.map(p=>p.x), ys = polyPts.map(p=>p.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  let inside = 0, total = 0;
+  const samples = 300;
+  for (let i = 0; i < samples; i++) {
+    const px = minX + Math.random()*(maxX-minX);
+    const py = minY + Math.random()*(maxY-minY);
+    if (!pointInPolygon(px, py, polyPts)) continue;
+    total++;
+    let angle = Math.atan2(py - cy, px - cx) * 180 / Math.PI + 90;
+    if (angle < 0) angle += 360;
+    if (angle >= 360) angle -= 360;
+    // Check if angle falls in zone's range
+    let s = ((startDeg % 360) + 360) % 360;
+    let e = ((endDeg % 360) + 360) % 360;
+    let inZone = false;
+    if (s < e) inZone = angle >= s && angle < e;
+    else inZone = angle >= s || angle < e; // wraps around 0
+    if (inZone) inside++;
+  }
+  return total > 0 ? polygonArea(polyPts) * inside / total : 0;
+}
+function pointInPolygon(px, py, poly) {
+  let inside = false;
+  for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
+    const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+    if (((yi>py)!=(yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ══════════════════════════════════════════════
+//  ZONE LIST & CHART
+// ══════════════════════════════════════════════
+function renderZoneList() {
+  const el = document.getElementById('zone-list');
+  el.innerHTML = '';
+  ZONES.forEach(z => {
+    const pct = z._pct !== undefined ? z._pct : (ZONE_DEFAULTS[z.name] || 6.25);
+    const hasCut = cuts.some(c => isPointInCut(brahmaX + 100*Math.cos(toRad(z.s+northDeg+11.25)), brahmaY + 100*Math.sin(toRad(z.s+northDeg+11.25)), c.points));
+    let status = '✅';
+    if (hasCut) status = '🔴';
+    else if (Math.abs(pct - 6.25) > 1.5) status = '⚠️';
+    const row = document.createElement('div');
+    row.className = 'zone-row';
+    row.innerHTML = `
+      <div class="zone-color" style="background:${hexToRgba(z.fill,0.8)}"></div>
+      <div class="zone-nm">${z.name}</div>
+      <div class="zone-bar-wrap"><div class="zone-bar" style="width:${Math.min(100,pct/12*100)}%;background:${hexToRgba(z.fill,0.85)}"></div></div>
+      <div class="zone-pct-val">${pct.toFixed(1)}%</div>
+      <div class="zone-status">${status}</div>
+      <div class="zone-tooltip">
+        <div class="zt-name">${z.name} — ${z.deity}</div>
+        <div class="zt-row"><b>Element:</b> ${z.elem}</div>
+        <div class="zt-row"><b>Governs:</b> ${z.governs}</div>
+        <div class="zt-row"><b>Ideal use:</b> ${z.ideal}</div>
+        <div class="zt-row"><b>Zone %:</b> ${pct.toFixed(1)}% ${hasCut?'🔴 Cut present':''}</div>
+      </div>`;
+    el.appendChild(row);
+  });
+}
+function isPointInCut(px, py, cutPts) {
+  return pointInPolygon(px, py, cutPts);
+}
+const ZONE_DEFAULTS = {N:9.4,NNE:4.2,NE:8.2,ENE:5.1,E:7.8,ESE:6.0,SE:5.5,SSE:6.1,S:5.8,SSW:4.9,SW:5.2,WSW:6.3,W:7.1,WNW:6.8,NW:8.0,NNW:9.6};
+
+function renderZoneBarChart() {
+  const el = document.getElementById('zone-bar-chart'), lbl = document.getElementById('zone-bar-labels');
+  el.innerHTML = ''; lbl.innerHTML = '';
+  ZONES.forEach(z => {
+    const pct = z._pct !== undefined ? z._pct : (ZONE_DEFAULTS[z.name] || 6.25);
+    const h = Math.max(2, pct/12*54);
+    const bar = document.createElement('div'); bar.className = 'zb';
+    bar.style.cssText = `height:${h}px;background:${hexToRgba(z.fill,0.75)}`;
+    bar.title = `${z.name}: ${pct.toFixed(1)}%`;
+    el.appendChild(bar);
+    const lb = document.createElement('div'); lb.className = 'zb-lbl';
+    lb.textContent = z.name.length > 3 ? z.name.slice(0,3) : z.name;
+    lbl.appendChild(lb);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  BRAHMASTHAN DRAG
+// ══════════════════════════════════════════════
+function setupBrahmahraDrag() {
+  const svg = document.getElementById('vastu-svg');
+  if (!svg) return;
+  svg.addEventListener('mousedown', e => {
+    if (currentTool !== 'brahma') return;
+    const dot = document.getElementById('brahma-dot');
+    if (!dot) return;
+    const pt = getSVGCoords(e);
+    const dist = Math.hypot(pt.x - brahmaX, pt.y - brahmaY);
+    if (dist > 20) return;
+    draggingBrahma = true;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!draggingBrahma) return;
+    const pt = getSVGCoords(e);
+    const prevX = brahmaX, prevY = brahmaY;
+    brahmaX = pt.x; brahmaY = pt.y;
+    renderChakra();
+  });
+  document.addEventListener('mouseup', e => {
+    if (draggingBrahma) {
+      draggingBrahma = false;
+      recalcPercentages();
+      showToast(`Brahmasthan moved to (${Math.round(brahmaX)}, ${Math.round(brahmaY)})`);
+    }
+  });
+}
+function confirmBrahmasthan() {
+  document.getElementById('brahma-dlg').classList.remove('show');
+  brahmaConfirmed = true;
+  showToast('✓ Brahmasthan confirmed');
+  addActivity('Brahmasthan confirmed');
+}
+
+// ══════════════════════════════════════════════
+//  UNDO
+// ══════════════════════════════════════════════
+function pushUndo(fn) {
+  undoStack.push(fn);
+  document.getElementById('undo-btn').classList.remove('disabled');
+}
+function undoAction() {
+  if (undoStack.length === 0) return;
+  undoStack.pop()();
+  if (undoStack.length === 0) document.getElementById('undo-btn').classList.add('disabled');
+}
+
+// ══════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undoAction(); }
+    if (e.key === 'p' || e.key === 'P') setTool('perimeter');
+    if (e.key === 'c' || e.key === 'C') setTool('cut');
+    if (e.key === 's' || e.key === 'S') setTool('scale');
+    if (e.key === 'b' || e.key === 'B') setTool('brahma');
+    if (e.key === 'Escape') setTool('select');
+  });
+}
+
+// ══════════════════════════════════════════════
+//  CANVAS MOUSE TRACKING
+// ══════════════════════════════════════════════
+function setupCanvasMouseTrack() {
+  const svg = document.getElementById('vastu-svg');
+  if (!svg) return;
+  svg.addEventListener('mousemove', e => {
+    const pt = getSVGCoords(e);
+    let info = `SVG: ${Math.round(pt.x)}, ${Math.round(pt.y)}`;
+    if (scalePixels && scaleReal) {
+      const pxPerUnit = scalePixels / scaleReal;
+      info += ` | ~${(pt.x/pxPerUnit).toFixed(1)} ${scaleUnit}`;
+    }
+    document.getElementById('coord-display').textContent = info;
+  });
+}
+
+// ══════════════════════════════════════════════
+//  DASH CHARTS
+// ══════════════════════════════════════════════
+function renderDashCharts() {
+  const months=['Oct','Nov','Dec','Jan','Feb','Mar'], vals=[0,0,0,0,0,projects.length];
+  const max = Math.max(...vals,1);
+  const ce=document.getElementById('month-chart'), le=document.getElementById('month-labels');
+  if (!ce) return;
+  ce.innerHTML=''; le.innerHTML='';
+  months.forEach((m,i) => {
+    const h = (vals[i]/max*46)||2;
+    const bar=document.createElement('div'); bar.className='mbar';
+    bar.style.cssText=`height:${h}px;background:${i===5?'var(--gold)':'rgba(200,175,120,0.3)'}`;
+    ce.appendChild(bar);
+    const lb=document.createElement('div'); lb.className='clbl'; lb.textContent=m;
+    le.appendChild(lb);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  PROJECTS
+// ══════════════════════════════════════════════
+let filterState = 'all';
+
+function createProject() {
+  const name = document.getElementById('np-name').value.trim();
+  const client = document.getElementById('np-client').value.trim();
+  if (!name) { showToast('Please enter a project name.'); return; }
+  const proj = {
+    id: Date.now(),
+    name: name || 'Untitled Project',
+    client: client || 'Unknown Client',
+    contact: document.getElementById('np-contact').value.trim(),
+    address: document.getElementById('np-address').value.trim(),
+    type: document.getElementById('np-type').value,
+    area: document.getElementById('np-area').value,
+    notes: document.getElementById('np-notes').value.trim(),
+    status: 'active',
+    date: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'}),
+    createdAt: Date.now()
+  };
+  projects.unshift(proj);
+  closeNewProjectModal();
+  renderProjectsGrid();
+  renderDashRecentProjects();
+  updateStats();
+  renderDashCharts();
+  addActivity(`New project created: ${proj.name}`);
+  // Open project in canvas
+  loadProjectInCanvas(proj);
+  showScreen('canvas');
+  showToast(`✓ Project created: ${proj.name}`);
+}
+
+function loadProjectInCanvas(proj) {
+  currentProjectId = proj.id;
+  document.getElementById('canvas-proj-name').textContent = proj.name;
+  document.getElementById('canvas-proj-client').textContent = `${proj.client} · ${proj.address || 'No address'}`;
+  document.getElementById('proj-notes').value = proj.notes || '';
+  document.getElementById('rp-proj-label').textContent = `${proj.name} · ${proj.area ? proj.area+' sq ft' : 'Area not set'}`;
+}
+
+function renderDashRecentProjects() {
+  const el = document.getElementById('dash-recent-projects');
+  el.innerHTML = '';
+  const recent = projects.slice(0, 3);
+  if (recent.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:11px;padding:16px 0;text-align:center;grid-column:1/-1">No projects yet. <span style="color:var(--gold3);cursor:pointer" onclick="openNewProjectModal()">Create one →</span></div>';
+    return;
+  }
+  recent.forEach(p => el.appendChild(buildProjCard(p, true)));
+}
+
+function renderProjectsGrid() {
+  const el = document.getElementById('projects-list-grid');
+  if (!el) return;
+  el.innerHTML = '';
+  let list = [...projects];
+  if (searchQuery) list = list.filter(p => (p.name+p.client).toLowerCase().includes(searchQuery.toLowerCase()));
+  if (filterState !== 'all') list = list.filter(p => p.status === filterState);
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">◫</div><div class="empty-state-text">No projects match your search.</div></div>';
+    return;
+  }
+  list.forEach(p => el.appendChild(buildProjCard(p, false)));
+}
+function buildProjCard(p, small) {
+  const bm={draft:'badge-draft',active:'badge-active',done:'badge-done'};
+  const lm={draft:'Draft',active:'In Analysis',done:'Done'};
+  if (small) {
+    const card=document.createElement('div'); card.className='proj-card';
+    card.onclick=()=>{loadProjectInCanvas(p);showScreen('canvas');};
+    card.innerHTML=`<div class="proj-thumb"><svg width="56" height="56" viewBox="0 0 56 56"><rect x="4" y="4" width="48" height="48" fill="none" stroke="rgba(200,175,120,0.35)" stroke-width="1.2"/><line x1="4" y1="28" x2="52" y2="28" stroke="rgba(200,175,120,0.15)" stroke-width=".7"/><line x1="28" y1="4" x2="28" y2="52" stroke="rgba(200,175,120,0.15)" stroke-width=".7"/><circle cx="28" cy="28" r="9" fill="none" stroke="rgba(200,175,120,0.2)" stroke-width=".5"/><circle cx="28" cy="28" r="2" fill="rgba(200,175,120,0.6)"/></svg></div><div class="proj-info"><div class="proj-name">${p.name}</div><div class="proj-client">${p.client} · ${p.type}</div><div class="proj-meta"><span class="badge ${bm[p.status]||'badge-draft'}">${lm[p.status]||'Draft'}</span><span class="project-date">${p.date}</span></div></div>`;
+    return card;
+  }
+  const card=document.createElement('div'); card.className='pcl';
+  card.onclick=()=>{loadProjectInCanvas(p);showScreen('canvas');};
+  card.innerHTML=`<div class="pcl-thumb"><svg width="75" height="65" viewBox="0 0 75 65"><rect x="7" y="7" width="61" height="51" fill="none" stroke="rgba(200,175,120,0.32)" stroke-width="1.1"/><line x1="7" y1="33" x2="68" y2="33" stroke="rgba(200,175,120,0.14)" stroke-width=".6"/><line x1="37" y1="7" x2="37" y2="58" stroke="rgba(200,175,120,0.14)" stroke-width=".6"/><circle cx="37" cy="33" r="9" fill="none" stroke="rgba(200,175,120,0.18)" stroke-width=".5"/><circle cx="37" cy="33" r="1.8" fill="rgba(200,175,120,0.6)"/></svg></div><div class="pcl-info"><div class="pcl-name">${p.name}</div><div class="pcl-client">${p.client} · ${p.type}</div><div class="pcl-footer"><span class="badge ${bm[p.status]||'badge-draft'}">${lm[p.status]||'Draft'}</span><span style="font-size:9px;color:var(--text3)">${p.date}</span></div></div>`;
+  return card;
+}
+
+function setFilter(val, btn) {
+  filterState = val;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProjectsGrid();
+}
+function filterProjects() {
+  searchQuery = document.getElementById('search-input').value;
+  renderProjectsGrid();
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = projects.length;
+  document.getElementById('stat-active').textContent = projects.filter(p=>p.status==='active').length;
+  document.getElementById('stat-clients').textContent = new Set(projects.map(p=>p.client)).size;
+  const pct = Math.min(100,(projects.length/30)*100);
+  document.getElementById('proj-usage').textContent = `${projects.length}/30`;
+  document.getElementById('proj-usage-bar').style.width = pct + '%';
+}
+
+// ══════════════════════════════════════════════
+//  ACTIVITY FEED
+// ══════════════════════════════════════════════
+let activities = [];
+function addActivity(text) {
+  activities.unshift({text, time: 'Just now'});
+  const el = document.getElementById('activity-feed');
+  el.innerHTML = '';
+  activities.slice(0,6).forEach(a => {
+    el.innerHTML += `<div class="activity-item"><div class="act-dot" style="background:var(--gold)"></div><div><div class="act-text">${a.text}</div><div class="act-time">${a.time}</div></div></div>`;
+  });
+}
+
+// ══════════════════════════════════════════════
+//  PROJECT NOTES
+// ══════════════════════════════════════════════
+function saveNotes() {
+  if (!currentProjectId) return;
+  const proj = projects.find(p=>p.id===currentProjectId);
+  if (proj) proj.notes = document.getElementById('proj-notes').value;
+}
+
+// ══════════════════════════════════════════════
+//  CHAKRA CONTROLS
+// ══════════════════════════════════════════════
+function toggleChakra() {
+  chakraVisible = !chakraVisible;
+  document.getElementById('chakra-group').style.display = chakraVisible ? '' : 'none';
+  document.getElementById('chakra-eye').textContent = chakraVisible ? '👁' : '◌';
+}
+function setChakraOpacity(val) {
+  document.getElementById('chakra-group').setAttribute('opacity', val/100);
+  document.getElementById('op-val').textContent = val + '%';
+}
+
+// ══════════════════════════════════════════════
+//  DROP ZONE / FILE UPLOAD
+// ══════════════════════════════════════════════
+function showDropZone() { document.getElementById('drop-zone').classList.add('visible'); }
+function hideDropZone() { document.getElementById('drop-zone').classList.remove('visible'); document.getElementById('drop-ring').classList.remove('hover'); }
+function setupDragDrop() {
+  document.addEventListener('dragover', e => {
+    if (document.getElementById('screen-canvas').classList.contains('active')) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('visible');
+      document.getElementById('drop-ring').classList.add('hover');
+    }
+  });
+  document.addEventListener('dragleave', e => {
+    if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+      document.getElementById('drop-ring').classList.remove('hover');
+    }
+  });
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    document.getElementById('drop-ring').classList.remove('hover');
+    if (document.getElementById('screen-canvas').classList.contains('active')) {
+      const file = e.dataTransfer.files[0];
+      if (file) loadFloorPlanFile(file);
+    }
+  });
+}
+function handleFileInput(input) { const f=input.files[0]; if(f) loadFloorPlanFile(f); }
+function loadFloorPlanFile(file) {
+  if (!file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.svg')) { showToast('Please upload an image (JPG, PNG, SVG).'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    hideDropZone();
+    const img = document.getElementById('fp-image');
+    img.src = e.target.result; img.style.display = 'block';
+    document.getElementById('fp-default-group').style.opacity = '0.2';
+    showToast(`✓ Loaded: ${file.name} — Now draw the perimeter (press P)`);
+    addActivity(`Floor plan uploaded: ${file.name}`);
+    pushUndo(() => {
+      img.style.display = 'none';
+      document.getElementById('fp-default-group').style.opacity = '1';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════════
+//  ZOOM
+// ══════════════════════════════════════════════
+function changeZoom(d) { zoomLevel = Math.max(40,Math.min(250,zoomLevel+d)); applyZoom(); }
+function resetZoom() { zoomLevel = 100; applyZoom(); }
+function applyZoom() {
+  document.getElementById('zoom-label').textContent = zoomLevel + '%';
+  document.getElementById('vastu-svg').style.transform = `scale(${zoomLevel/100})`;
+}
+
+// ══════════════════════════════════════════════
+//  CHATBOT
+// ══════════════════════════════════════════════
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || chatLoading) return;
+  input.value = '';
+  addChatMsg(msg, 'user');
+  await askVastuAI(msg);
+}
+async function sendQuickChat(msg) { if (chatLoading) return; addChatMsg(msg, 'user'); await askVastuAI(msg); }
+function addChatMsg(text, role) {
+  const h = document.getElementById('chat-history');
+  const d = document.createElement('div'); d.className = `chat-msg ${role}`; d.textContent = text;
+  h.appendChild(d); h.scrollTop = h.scrollHeight; return d;
+}
+async function askVastuAI(userMsg) {
+  chatLoading = true;
+  const h = document.getElementById('chat-history');
+  const typDiv = document.createElement('div'); typDiv.className = 'chat-msg ai';
+  typDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  h.appendChild(typDiv); h.scrollTop = h.scrollHeight;
+  const zoneData = ZONES.map(z => {
+    const pct = z._pct !== undefined ? z._pct : (ZONE_DEFAULTS[z.name] || 6.25);
+    const hasCut = cuts.some(c => isPointInCut(brahmaX + 80*Math.cos(toRad(z.s+northDeg+11.25)), brahmaY + 80*Math.sin(toRad(z.s+northDeg+11.25)), c.points));
+    return `${z.name}: ${pct.toFixed(1)}% (${z.deity}, ${z.governs})${hasCut?' — CUT PRESENT':''}`;
+  }).join('\n');
+  const projName = currentProjectId ? projects.find(p=>p.id===currentProjectId)?.name || 'Current Project' : 'Current Project';
+  const sys = `You are a professional Vastu Shastra advisor grounded in Vishwakarma Prakash, Mayamatam, and Brihat Samhita.
+
+Project: ${projName}. True North: ${northDeg.toFixed(1)}°. Cuts: ${cuts.length}.
+Zone Analysis:
+${zoneData}
+
+Guidelines:
+- Answer in 3-5 clear sentences
+- Cite the classical text when relevant
+- Prefer non-demolition remedies (metals, colors, yantras, element balancing)
+- Reference specific zone percentages and deity names in your answer
+- Be respectful of the ancient tradition`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:800, system:sys, messages:[{role:'user',content:userMsg}]})
+    });
+    const data = await resp.json();
+    const reply = data.content?.find(b=>b.type==='text')?.text || 'Unable to respond. Please try again.';
+    typDiv.innerHTML = reply.replace(/\n/g,'<br>');
+    const cite = document.createElement('div'); cite.className = 'chat-cite';
+    cite.textContent = '— Vishwakarma Prakash / Classical Vastu Shastra';
+    typDiv.appendChild(cite);
+  } catch(e) {
+    const fallbacks = {
+      sw: `The SW (Nairutya) zone governs by Niriti controls stability and relationships. A cut here per Vishwakarma Prakash Ch. 7 disturbs the earth element causing financial and relationship instability. Remedies: Place heavy iron furniture or a granite block in SW, use yellow/ochre tones, avoid blue or water elements in this zone.`,
+      ne: `Your NE (Ishaan) zone is governed by Shiva and represents wisdom, clarity and spirituality. Per Mayamatam, an open, well-lit NE is the most auspicious configuration. A Pooja room or meditation space here would be ideal. Ensure this zone has no clutter, toilets, or heavy storage.`,
+      remed: `For cut zones, classical Vastu recommends: (1) Copper strips along the cut boundary to contain energy leakage. (2) Shri Yantra placement in the Brahmasthan. (3) Zone-appropriate colors — earth tones in SW, blues in N/NE. (4) Avoid water features in S and SW zones. All are non-demolition remedies per Vishwakarma Prakash.`,
+    };
+    const key = Object.keys(fallbacks).find(k => userMsg.toLowerCase().includes(k)) || 'ne';
+    typDiv.innerHTML = fallbacks[key];
+    const cite = document.createElement('div'); cite.className = 'chat-cite'; cite.textContent = '— Vishwakarma Prakash / Classical Vastu';
+    typDiv.appendChild(cite);
+  }
+  chatLoading = false; h.scrollTop = h.scrollHeight;
+}
+
+// ══════════════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════════════
+function openNewProjectModal() { document.getElementById('new-project-modal').classList.add('open'); }
+function closeNewProjectModal() { document.getElementById('new-project-modal').classList.remove('open'); }
+function openExportModal() { document.getElementById('export-modal').classList.add('open'); }
+function closeExportModal() { document.getElementById('export-modal').classList.remove('open'); }
+function triggerExport() {
+  closeExportModal();
+  showToast('⎙ PDF generation requires completed floor plan analysis. Draw perimeter first to unlock.');
+}
+['new-project-modal','export-modal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════════
+//  TOAST NOTIFICATIONS
+// ══════════════════════════════════════════════
+function showToast(msg, duration=3000) {
+  const n = document.createElement('div');
+  n.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--gold3);border-radius:6px;padding:8px 16px;font-size:10px;color:var(--gold2);z-index:200;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center';
+  n.textContent = msg; document.body.appendChild(n);
+  setTimeout(() => n.remove(), duration);
+}
+
+// ══════════════════════════════════════════════
+//  SIDEBAR SECTION TOGGLING (filter buttons)
+// ══════════════════════════════════════════════
+document.addEventListener('click', e => {
+  const fb = e.target.closest('.fb');
+  if (fb) {
+    const filterBtns = document.querySelectorAll('.fb');
+    filterBtns.forEach(b=>b.classList.remove('active'));
+    fb.classList.add('active');
+  }
+});
+</script>
+</body>
+</html>

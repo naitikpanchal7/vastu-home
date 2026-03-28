@@ -1,0 +1,62 @@
+/* src/app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0f0e0b;
+  --bg-2: #161410;
+  --bg-3: #1e1b16;
+  --bg-4: #252018;
+  --border: rgba(200, 175, 120, 0.15);
+  --border-2: rgba(200, 175, 120, 0.08);
+  --gold: #c8af78;
+  --gold-2: #e8d4a0;
+  --gold-3: #a08050;
+  --saffron: #e8912a;
+  --vastu-text: #e8e0d0;
+  --vastu-text-2: #b0a080;
+  --vastu-text-3: #706050;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--vastu-text);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+
+/* Custom selection color */
+::selection { background: rgba(200, 175, 120, 0.25); color: var(--gold-2); }
+
+/* Number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type="number"] { -moz-appearance: textfield; }
+
+/* Brahmasthan animation */
+@keyframes brahma-pulse {
+  0%, 100% { r: 5; opacity: 1; }
+  50% { r: 8; opacity: 0.5; }
+}
+.brahma-pulse { animation: brahma-pulse 1.8s ease-in-out infinite; }
+
+/* SVG zone hover */
+.vastu-zone-slice {
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.vastu-zone-slice:hover { opacity: 0.8; }
