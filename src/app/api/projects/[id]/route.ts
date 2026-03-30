@@ -15,7 +15,8 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("projects")
     .select("*")
     .eq("id", id)
@@ -27,7 +28,8 @@ export async function GET(
   }
 
   // Update last_opened_at
-  await supabase.from("projects").update({ last_opened_at: new Date().toISOString() }).eq("id", id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from("projects").update({ last_opened_at: new Date().toISOString() }).eq("id", id);
 
   return NextResponse.json({ data, status: "ok" });
 }
@@ -47,7 +49,8 @@ export async function PATCH(
 
   const body = await req.json();
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("projects")
     .update({
       canvas_state: body.canvasState,
@@ -80,7 +83,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
     .from("projects")
     .delete()
     .eq("id", id)

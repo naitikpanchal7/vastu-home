@@ -135,12 +135,16 @@ export default function VastuCanvas() {
     facing:    "crosshair",
   }[currentTool] ?? "default";
 
-  const toolMsg = {
+  const toolMsg: Record<string, string> = {
     perimeter: "⬡ Perimeter Mode — Click to place points. Double-click to close.",
     cut:       "✂ Cut Mode — Click to draw cut area. Double-click to close.",
     scale:     "⊷ Scale Mode — Click two points, then enter real distance.",
     brahma:    "◉ Brahmasthan Mode — Drag the gold center dot.",
-  }[currentTool] ?? "";
+    entrance:  "⛩ Entrance Mode — Click on a perimeter wall to mark the entrance.",
+    facing:    "⬆ Facing Mode — Click to set the facing direction.",
+    select:    "",
+  };
+  const toolMsgText = toolMsg[currentTool] ?? "";
 
   const perimeterPts = perimeterPoints.length > 0 ? perimeterPoints : null;
   const perimeterStr = perimeterPts
@@ -352,9 +356,9 @@ export default function VastuCanvas() {
         <CompassRose northDeg={northDeg} />
 
         {/* Mode indicator */}
-        {toolMsg && (
+        {toolMsgText && (
           <div className="absolute top-[10px] left-1/2 -translate-x-1/2 bg-bg-2 border border-gold-3 rounded-full px-[14px] py-1 text-[10px] text-gold-2 z-[15] pointer-events-none animate-fade-in">
-            {toolMsg}
+            {toolMsgText}
           </div>
         )}
 

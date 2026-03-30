@@ -16,7 +16,8 @@ export async function GET() {
     return NextResponse.json({ data: [], status: "ok" });
   }
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("projects")
     .select("*")
     .eq("consultant_id", user.id)
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json() as Partial<Project>;
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("projects")
     .insert({
       consultant_id: user.id,
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
       area_sq_ft: body.areaSqFt,
       notes: body.notes,
       status: "active",
-    })
+    } as any)
     .select()
     .single();
 
