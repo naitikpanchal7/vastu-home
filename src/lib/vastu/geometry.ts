@@ -173,20 +173,83 @@ export function calculateZoneAreas(
       }
     });
 
-    const netAreaPx = Math.max(0, zoneAreaPx - cutAreaPx);
-    const pctOfTotal = (netAreaPx / totalArea) * 100;
+    // pctOfTotal is pure zone area — not affected by cuts (cuts are shown separately)
+    const pctOfTotal = (zoneAreaPx / totalArea) * 100;
     const cutPctOfZone = zoneAreaPx > 0 ? (cutAreaPx / zoneAreaPx) * 100 : 0;
 
     return {
       zoneName: zone.shortName,
-      areaPixels: netAreaPx,
-      areaSqFt: scalePixelsPerFt ? netAreaPx / (scalePixelsPerFt * scalePixelsPerFt) : null,
+      areaPixels: zoneAreaPx,
+      areaSqFt: scalePixelsPerFt ? zoneAreaPx / (scalePixelsPerFt * scalePixelsPerFt) : null,
       pctOfTotal,
       hasCut,
       cutAreaPixels: cutAreaPx,
       cutPctOfZone,
     };
   });
+}
+
+// ── Cut analysis ──────────────────────────────────────────────────────────────
+// Each cut's share of (floor plan area + all cuts area combined)
+export interface CutAnalysisResult {
+  id: string;
+  label: string;
+  areaPixels: number;
+  pctOfCombined: number;   // cutArea / (floorArea + allCutsArea) * 100
+  pctOfFloor: number;      // cutArea / floorArea * 100 — used for severity
+  primaryZone: string;     // zone the cut centroid falls in
+  severity: "mild" | "moderate" | "severe";
+}
+
+export function calculateCutAnalysis(
+  floorPlanPoly: Point[],
+  brahmaX: number,
+  brahmaY: number,
+  northDeg: number,
+  zones: Array<{ shortName: string; startDeg: number; endDeg: number }>,
+  cuts: Array<{ id: string; label: string; points: Point[] }>
+): CutAnalysisResult[] {
+  if (cuts.length === 0 || floorPlanPoly.length < 3) return [];
+
+  const floorArea = polygonArea(floorPlanPoly);
+  if (floorArea <= 0) return [];
+
+  const totalCutArea = cuts.reduce(
+    (sum, c) => sum + (c.points.length >= 3 ? polygonArea(c.points) : 0),
+    0
+  );
+  const combinedArea = floorArea + totalCutArea;
+
+  return cuts
+    .filter(c => c.points.length >= 3)
+    .map(cut => {
+      const cutArea = polygonArea(cut.points);
+      const pctOfCombined = (cutArea / combinedArea) * 100;
+      const pctOfFloor = (cutArea / floorArea) * 100;
+      const severity: "mild" | "moderate" | "severe" =
+        pctOfFloor < 5 ? "mild" : pctOfFloor < 15 ? "moderate" : "severe";
+
+      // Determine which zone the cut centroid falls in
+      const centroid = polygonCentroid(cut.points);
+      const dx = centroid.x - brahmaX;
+      const dy = centroid.y - brahmaY;
+      // SVG coords: atan2(dy,dx) + 90 gives clockwise angle from top (screen North)
+      const screenAngle = ((Math.atan2(dy, dx) * 180) / Math.PI + 90 + 360) % 360;
+      // Subtract northDeg to get angle in the canonical zone frame
+      const zoneAngle = ((screenAngle - northDeg) % 360 + 360) % 360;
+
+      let primaryZone = "–";
+      for (const zone of zones) {
+        const s = ((zone.startDeg % 360) + 360) % 360;
+        const e = ((zone.endDeg % 360) + 360) % 360;
+        const inZone = s <= e
+          ? zoneAngle >= s && zoneAngle < e
+          : zoneAngle >= s || zoneAngle < e; // wraps around 0° (zone N)
+        if (inZone) { primaryZone = zone.shortName; break; }
+      }
+
+      return { id: cut.id, label: cut.label, areaPixels: cutArea, pctOfCombined, pctOfFloor, primaryZone, severity };
+    });
 }
 
 // ── Distance between two points ───────────────────────────────────────────────
