@@ -100,7 +100,6 @@ interface CanvasStore {
   getCanvasState: () => CanvasState;
 }
 
-let cutIdCounter = 0;
 let entranceIdCounter = 0;
 
 export const useCanvasStore = create<CanvasStore>()(
@@ -177,8 +176,8 @@ export const useCanvasStore = create<CanvasStore>()(
       },
 
       addCut: (points) => {
-        cutIdCounter++;
-        const cut: Cut = { id: `cut-${cutIdCounter}`, label: `Cut #${cutIdCounter}`, points };
+        const nextNum = get().cuts.length + 1;
+        const cut: Cut = { id: `cut-${Date.now()}`, label: `Cut #${nextNum}`, points };
         get().pushUndo({
           label: `Remove ${cut.label}`,
           undo: () => set((s) => ({ cuts: s.cuts.filter((c) => c.id !== cut.id) })),
