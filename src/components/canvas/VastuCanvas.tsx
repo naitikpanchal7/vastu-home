@@ -11,8 +11,6 @@ import type { Point } from "@/lib/vastu/geometry";
 const SVG_W = 760;
 const SVG_H = 620;
 
-// Default demo floor plan (L-shaped)
-const DEFAULT_PERIMETER = "110,75 620,75 620,300 475,300 475,530 110,530";
 
 export default function VastuCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -147,7 +145,7 @@ export default function VastuCanvas() {
   const perimeterPts = perimeterPoints.length > 0 ? perimeterPoints : null;
   const perimeterStr = perimeterPts
     ? perimeterPts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
-    : DEFAULT_PERIMETER;
+    : "";
 
   const scaleInfo = store.scale
     ? `Scale: 1px = ${(1 / store.scale.pixelsPerUnit).toFixed(2)} ${store.scale.unit}`
@@ -213,33 +211,8 @@ export default function VastuCanvas() {
           onMouseMove={handleMouseMove}
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Default / user floor plan */}
-          {!perimeterPts ? (
-            <g opacity="1">
-              <polygon
-                points={DEFAULT_PERIMETER}
-                fill="rgba(200,175,120,0.055)"
-                stroke="rgba(200,175,120,0.65)"
-                strokeWidth="2"
-              />
-              {[
-                [110, 248, 355, 248], [355, 75, 355, 530],
-                [355, 352, 620, 352], [110, 392, 355, 392],
-              ].map(([x1, y1, x2, y2], i) => (
-                <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(200,175,120,.18)" strokeWidth="1" />
-              ))}
-              {[
-                [205, 162, "Living Room"], [512, 192, "Master Bedroom"],
-                [205, 324, "Bedroom 2"],  [205, 462, "Kitchen"],
-                [415, 450, "Dining"],
-              ].map(([x, y, label]) => (
-                <text key={label as string} x={x} y={y} textAnchor="middle" fill="rgba(200,175,120,.28)" fontFamily="DM Sans" fontSize="12">
-                  {label}
-                </text>
-              ))}
-            </g>
-          ) : (
-            /* User-drawn perimeter */
+          {/* User-drawn perimeter */}
+          {perimeterPts && (
             <g>
               <polygon
                 points={perimeterStr}

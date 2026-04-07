@@ -9,7 +9,7 @@ export default function CompassRose({ northDeg }: CompassRoseProps) {
     <div className="absolute top-[14px] right-[14px] w-[72px] h-[72px] z-10 pointer-events-none">
       <svg width="72" height="72" viewBox="0 0 72 72">
         <circle cx="36" cy="36" r="32" fill="rgba(12,11,9,0.9)" stroke="rgba(200,175,120,0.28)" strokeWidth="1" />
-        <g style={{ transformOrigin: "36px 36px", transform: `rotate(${northDeg}deg)` }}>
+        <g style={{ transformOrigin: "36px 36px", transform: `rotate(${-northDeg}deg)` }}>
           <line x1="36" y1="7" x2="36" y2="65" stroke="rgba(200,175,120,0.22)" strokeWidth="0.5" />
           <line x1="7" y1="36" x2="65" y2="36" stroke="rgba(200,175,120,0.22)" strokeWidth="0.5" />
           <line x1="14" y1="14" x2="58" y2="58" stroke="rgba(200,175,120,0.1)" strokeWidth="0.4" />
