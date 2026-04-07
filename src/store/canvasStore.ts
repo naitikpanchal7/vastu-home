@@ -84,6 +84,10 @@ interface CanvasStore {
   zoneAnalysis: ZoneAnalysis[];
   setZoneAnalysis: (results: ZoneAnalysis[]) => void;
 
+  // Floor plan image
+  floorPlanImage: string | null;
+  setFloorPlanImage: (src: string | null) => void;
+
   // Project notes
   notes: string;
   setNotes: (n: string) => void;
@@ -125,6 +129,7 @@ export const useCanvasStore = create<CanvasStore>()(
       chakraVisible: true,
       chakraOpacity: 0.42,
       zoneAnalysis: [],
+      floorPlanImage: null,
       notes: "",
       undoStack: [],
 
@@ -212,6 +217,8 @@ export const useCanvasStore = create<CanvasStore>()(
       setChakraOpacity: (v) => set({ chakraOpacity: v / 100 }),
 
       setZoneAnalysis: (results) => set({ zoneAnalysis: results }),
+
+      setFloorPlanImage: (src) => set({ floorPlanImage: src }),
 
       setNotes: (n) => set({ notes: n }),
 

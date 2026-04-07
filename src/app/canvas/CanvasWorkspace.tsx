@@ -20,6 +20,7 @@ export default function CanvasWorkspace() {
     chakraVisible, notes, undoStack,
     setTool, setNorth, toggleChakra, setChakraOpacity, chakraOpacity,
     setNotes, undo, perimeterPoints, perimeterComplete, resetPerimeter, cuts,
+    floorPlanImage, setFloorPlanImage,
   } = store;
 
   const TOOLS: { id: CanvasTool; icon: string; title: string }[] = [
@@ -77,6 +78,37 @@ export default function CanvasWorkspace() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Import Floor Plan */}
+        <label className="cursor-pointer flex-shrink-0">
+          <input
+            type="file"
+            accept="image/*,.svg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const url = URL.createObjectURL(file);
+              setFloorPlanImage(url);
+              e.target.value = "";
+            }}
+          />
+          <span className="inline-flex items-center gap-1 text-[10px] px-[9px] py-[5px] bg-bg-3 border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors">
+            📂 Import Floor Plan
+          </span>
+        </label>
+
+        {floorPlanImage && (
+          <button
+            onClick={() => setFloorPlanImage(null)}
+            className="text-[10px] px-[5px] py-[2px] rounded-[3px] cursor-pointer text-vastu-text-3 hover:text-red-400 bg-transparent border-none transition-colors flex-shrink-0"
+            title="Remove floor plan image"
+          >
+            ✕ Remove
+          </button>
+        )}
+
+        <div className="w-[1px] h-4 bg-[rgba(200,175,120,0.15)] flex-shrink-0" />
 
         {/* Undo */}
         <button
@@ -144,6 +176,30 @@ export default function CanvasWorkspace() {
             <div className="flex flex-col flex-1 overflow-y-auto">
               {/* Floor Plan */}
               <LpSection title="Floor Plan" defaultOpen>
+                <label className="cursor-pointer block mb-1">
+                  <input
+                    type="file"
+                    accept="image/*,.svg"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setFloorPlanImage(URL.createObjectURL(file));
+                      e.target.value = "";
+                    }}
+                  />
+                  <span className="w-full flex items-center justify-center gap-1 text-[9px] px-2 py-[6px] bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors mb-1">
+                    📂 Import Floor Plan
+                  </span>
+                </label>
+                {floorPlanImage && (
+                  <button
+                    onClick={() => setFloorPlanImage(null)}
+                    className="w-full text-[9px] px-2 py-[5px] bg-transparent border border-[rgba(200,60,40,0.2)] text-red-400 rounded-md hover:border-red-400 cursor-pointer font-sans mb-1"
+                  >
+                    ✕ Remove Image
+                  </button>
+                )}
                 <Button variant="ghost" className="w-full justify-center text-[9px] py-[6px] mb-1" onClick={() => setTool("perimeter")}>
                   ⬡ Draw Perimeter
                 </Button>
