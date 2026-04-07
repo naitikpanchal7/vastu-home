@@ -26,16 +26,14 @@ export default function VastuCanvas() {
   const [scaleUnit, setScaleUnit] = useState<"ft" | "m">("ft");
   const [showBrahmaDlg, setShowBrahmaDlg] = useState(false);
   const [showDropZone, setShowDropZone] = useState(false);
-  const [fpImageSrc, setFpImageSrc] = useState<string | null>(null);
   const lastClickTime = useRef(0);
 
   const {
     currentTool, perimeterPoints, perimeterComplete,
     northDeg, brahmaX, brahmaY, chakraVisible, chakraOpacity,
-    zoomLevel, cuts, notes, undoStack,
-    addPerimeterPoint, closePerimeter, resetPerimeter,
-    addCut, setScale, setTool, setZoom, setNotes,
-    undo, toggleChakra, setChakraOpacity,
+    zoomLevel, cuts, floorPlanImage, setFloorPlanImage,
+    addPerimeterPoint, closePerimeter,
+    addCut, setScale, setTool, setZoom,
   } = store;
 
   // ── Cut drawing state (local, not in store until complete) ──
@@ -121,7 +119,7 @@ export default function VastuCanvas() {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    setFpImageSrc(url);
+    setFloorPlanImage(url);
     setShowDropZone(false);
   };
 
@@ -171,7 +169,7 @@ export default function VastuCanvas() {
           e.preventDefault();
           const file = e.dataTransfer.files[0];
           if (file?.type.startsWith("image/")) {
-            setFpImageSrc(URL.createObjectURL(file));
+            setFloorPlanImage(URL.createObjectURL(file));
           }
           setShowDropZone(false);
         }}
@@ -188,9 +186,9 @@ export default function VastuCanvas() {
         />
 
         {/* Floor plan image (if uploaded) */}
-        {fpImageSrc && (
+        {floorPlanImage && (
           <img
-            src={fpImageSrc}
+            src={floorPlanImage}
             alt="Floor plan"
             className="absolute z-[1] max-w-[88%] max-h-[88%] object-contain pointer-events-none"
             style={{ transform: `scale(${zoomLevel / 100})` }}

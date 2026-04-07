@@ -133,9 +133,11 @@ export function calculateZoneAreas(
   if (totalArea <= 0) return [];
 
   return zones.map(zone => {
-    // Get wedge polygon for this zone
-    const adjStart = zone.startDeg + northDeg;
-    const adjEnd = zone.endDeg + northDeg;
+    // Get wedge polygon for this zone.
+    // The chakra rotates CCW by northDeg, so zone boundaries shift by -northDeg
+    // in screen space (matching rotate(-northDeg) in ShaktiChakra).
+    const adjStart = zone.startDeg - northDeg;
+    const adjEnd = zone.endDeg - northDeg;
     const wedge = zoneWedgePolygon(brahmaX, brahmaY, adjStart, adjEnd);
 
     // Clip floor plan against wedge to get zone polygon
@@ -235,8 +237,9 @@ export function calculateCutAnalysis(
       const dy = centroid.y - brahmaY;
       // SVG coords: atan2(dy,dx) + 90 gives clockwise angle from top (screen North)
       const screenAngle = ((Math.atan2(dy, dx) * 180) / Math.PI + 90 + 360) % 360;
-      // Subtract northDeg to get angle in the canonical zone frame
-      const zoneAngle = ((screenAngle - northDeg) % 360 + 360) % 360;
+      // Add northDeg to map screen angle → canonical zone frame
+      // (chakra rotates CCW by northDeg, so zone frame = screen + northDeg)
+      const zoneAngle = ((screenAngle + northDeg) % 360 + 360) % 360;
 
       let primaryZone = "–";
       for (const zone of zones) {

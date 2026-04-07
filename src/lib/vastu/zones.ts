@@ -245,8 +245,8 @@ export const VASTU_ZONES: VastuZone[] = [
 
 // Helper: get zone for a given angle from Brahmasthan (0° = North, clockwise)
 export function getZoneForAngle(angleDeg: number, northDeg: number = 0): VastuZone {
-  // Normalize angle relative to true North
-  let normalized = ((angleDeg - northDeg) % 360 + 360) % 360;
+  // Add northDeg: chakra rotates CCW by northDeg, so canonical zone angle = screen angle + northDeg
+  let normalized = ((angleDeg + northDeg) % 360 + 360) % 360;
   return VASTU_ZONES.find(z => {
     const s = z.startDeg, e = z.endDeg;
     if (s > e) return normalized >= s || normalized < e; // wraps around 0
