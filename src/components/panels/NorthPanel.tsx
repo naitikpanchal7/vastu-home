@@ -73,7 +73,7 @@ export default function NorthPanel() {
       <div className="flex justify-center my-2">
         <svg width="86" height="86" viewBox="0 0 86 86">
           <circle cx="43" cy="43" r="39" fill="var(--bg-3)" stroke="rgba(200,175,120,0.15)" strokeWidth="1" />
-          <g style={{ transformOrigin: "43px 43px", transform: `rotate(${deg}deg)` }}>
+          <g style={{ transformOrigin: "43px 43px", transform: `rotate(${-deg}deg)` }}>
             <line x1="43" y1="8" x2="43" y2="78" stroke="rgba(200,175,120,0.2)" strokeWidth="0.6" />
             <line x1="8" y1="43" x2="78" y2="43" stroke="rgba(200,175,120,0.2)" strokeWidth="0.6" />
             <polygon points="43,10 39,26 47,26" fill="var(--gold)" />
