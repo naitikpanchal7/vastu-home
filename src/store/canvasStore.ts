@@ -97,6 +97,11 @@ interface CanvasStore {
   pushUndo: (action: UndoAction) => void;
   undo: () => void;
 
+  // Mutators for project metadata
+  setProjectName: (name: string) => void;
+  setClientName: (name: string) => void;
+  setProjectId: (id: string | null) => void;
+
   // Load project state
   loadCanvasState: (state: Partial<CanvasState>, projectId: string, projectName: string, clientName: string) => void;
 
@@ -132,6 +137,10 @@ export const useCanvasStore = create<CanvasStore>()(
       floorPlanImage: null,
       notes: "",
       undoStack: [],
+
+      setProjectName: (name) => set({ projectName: name }),
+      setClientName: (name) => set({ clientName: name }),
+      setProjectId: (id) => set({ projectId: id }),
 
       setTool: (tool) => set({ currentTool: tool }),
 

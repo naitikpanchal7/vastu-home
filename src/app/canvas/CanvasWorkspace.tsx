@@ -1,27 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
+import { useProjectStore } from "@/store/projectStore";
 import VastuCanvas from "@/components/canvas/VastuCanvas";
 import RightPanel from "@/components/panels/RightPanel";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import type { CanvasTool } from "@/store/canvasStore";
+import type { Project } from "@/lib/types";
 
 interface ExportModalState { open: boolean }
 
 export default function CanvasWorkspace() {
   const store = useCanvasStore();
+  const projectStore = useProjectStore();
   const [exportModal, setExportModal] = useState<ExportModalState>({ open: false });
   const [leftExpanded, setLeftExpanded] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const autoCreatedRef = useRef(false);
 
   const {
-    currentTool, northDeg, projectName, clientName,
+    currentTool, northDeg, projectName, clientName, projectId,
     chakraVisible, notes, undoStack,
     setTool, setNorth, toggleChakra, setChakraOpacity, chakraOpacity,
-    setNotes, undo, perimeterPoints, perimeterComplete, resetPerimeter, cuts,
+    setNotes, undo, perimeterPoints, perimeterComplete, resetPerimeter,
     floorPlanImage, setFloorPlanImage,
   } = store;
+
+  // Auto-create project in projectStore when user starts drawing (first perimeter point)
+  useEffect(() => {
+    if (perimeterPoints.length === 1 && !projectId && !autoCreatedRef.current) {
+      autoCreatedRef.current = true;
+      const now = new Date().toISOString();
+      const id = `proj-${Date.now()}`;
+      const project: Project = {
+        id,
+        consultantId: "local",
+        name: projectName || "Untitled Project",
+        clientName: clientName || "",
+        propertyType: "Residential",
+        status: "draft",
+        createdAt: now,
+        updatedAt: now,
+      };
+      projectStore.addProject(project);
+      store.setProjectId(id);
+    }
+  }, [perimeterPoints.length, projectId, projectName, clientName, projectStore, store]);
+
+  const startEditingName = () => {
+    setNameValue(projectName || "Untitled Project");
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 0);
+  };
+
+  const commitName = () => {
+    const trimmed = nameValue.trim() || "Untitled Project";
+    store.setProjectName(trimmed);
+    if (projectId) {
+      projectStore.updateProject(projectId, { name: trimmed });
+    } else {
+      // Create project now if not yet created
+      if (!autoCreatedRef.current) {
+        autoCreatedRef.current = true;
+        const now = new Date().toISOString();
+        const id = `proj-${Date.now()}`;
+        const project: Project = {
+          id,
+          consultantId: "local",
+          name: trimmed,
+          clientName: clientName || "",
+          propertyType: "Residential",
+          status: "draft",
+          createdAt: now,
+          updatedAt: now,
+        };
+        projectStore.addProject(project);
+        store.setProjectId(id);
+      }
+    }
+    setEditingName(false);
+  };
 
   const TOOLS: { id: CanvasTool; icon: string; title: string }[] = [
     { id: "select",    icon: "⊹", title: "Select" },
@@ -35,11 +97,31 @@ export default function CanvasWorkspace() {
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Canvas topbar */}
       <div className="h-[42px] bg-bg-2 border-b border-[rgba(200,175,120,0.15)] flex items-center px-[11px] gap-[7px] flex-shrink-0 overflow-hidden">
-        {/* Project info */}
+        {/* Project info — click to rename */}
         <div className="min-w-0 flex-shrink-0">
-          <div className="font-serif text-[14px] font-medium text-vastu-text whitespace-nowrap truncate max-w-[180px]">
-            {projectName || "Untitled Project"}
-          </div>
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitName();
+                if (e.key === "Escape") setEditingName(false);
+              }}
+              autoFocus
+              className="font-serif text-[14px] font-medium text-vastu-text bg-bg-3 border border-gold-3 rounded-[3px] px-1 outline-none max-w-[200px]"
+            />
+          ) : (
+            <div
+              className="font-serif text-[14px] font-medium text-vastu-text whitespace-nowrap truncate max-w-[180px] cursor-text hover:text-gold-2 transition-colors group flex items-center gap-[4px]"
+              onClick={startEditingName}
+              title="Click to rename"
+            >
+              {projectName || "Untitled Project"}
+              <span className="text-[9px] text-vastu-text-3 opacity-0 group-hover:opacity-100 transition-opacity">✎</span>
+            </div>
+          )}
           {clientName && (
             <div className="text-[9px] text-vastu-text-3 whitespace-nowrap">{clientName}</div>
           )}
