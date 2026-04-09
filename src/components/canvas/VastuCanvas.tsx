@@ -11,6 +11,8 @@ import type { Point } from "@/lib/vastu/geometry";
 const SVG_W = 760;
 const SVG_H = 620;
 
+type PanOrigin = { mx: number; my: number; px: number; py: number };
+
 
 export default function VastuCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -26,6 +28,12 @@ export default function VastuCanvas() {
   const [showDropZone, setShowDropZone] = useState(false);
   const lastClickTime = useRef(0);
 
+  // Pan state
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const panOrigin = useRef<PanOrigin | null>(null);
+  const didPan = useRef(false);
+
   const {
     currentTool, perimeterPoints, perimeterComplete,
     northDeg, brahmaX, brahmaY, chakraVisible, chakraOpacity,
@@ -37,8 +45,24 @@ export default function VastuCanvas() {
   // ── Cut drawing state (local, not in store until complete) ──
   const [cutPts, setCutPts] = useState<Point[]>([]);
 
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (currentTool !== "select") return;
+      if ((e.target as Element).closest("[data-brahma]")) return;
+      if (e.button !== 0) return;
+      panOrigin.current = { mx: e.clientX, my: e.clientY, px: panX, py: panY };
+      didPan.current = false;
+    },
+    [currentTool, panX, panY]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    panOrigin.current = null;
+  }, []);
+
   const handleClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
+      if (didPan.current) { didPan.current = false; return; }
       if ((e.target as Element).closest("[data-brahma]")) return;
       const now = Date.now();
       if (now - lastClickTime.current < 350) return;
@@ -84,6 +108,14 @@ export default function VastuCanvas() {
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
+      if (panOrigin.current) {
+        const dx = e.clientX - panOrigin.current.mx;
+        const dy = e.clientY - panOrigin.current.my;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan.current = true;
+        setPanX(panOrigin.current.px + dx);
+        setPanY(panOrigin.current.py + dy);
+        return;
+      }
       const pt = getSVGCoords(e);
       setMousePos(pt);
     },
@@ -189,7 +221,10 @@ export default function VastuCanvas() {
             src={floorPlanImage}
             alt="Floor plan"
             className="absolute z-[1] max-w-[88%] max-h-[88%] object-contain pointer-events-none"
-            style={{ transform: `scale(${zoomLevel / 100})` }}
+            style={{
+              transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
+              transformOrigin: "center center",
+            }}
           />
         )}
 
@@ -200,8 +235,8 @@ export default function VastuCanvas() {
           style={{
             width: `min(${SVG_W}px, 100%)`,
             height: `min(${SVG_H}px, 100%)`,
-            cursor: svgCursor,
-            transform: `scale(${zoomLevel / 100})`,
+            cursor: panOrigin.current ? "grabbing" : currentTool === "select" ? "grab" : svgCursor,
+            transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
             transformOrigin: "center center",
             position: "relative",
             zIndex: 2,
@@ -209,6 +244,9 @@ export default function VastuCanvas() {
           onClick={handleClick}
           onDoubleClick={handleDblClick}
           onMouseMove={handleMouseMove}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* User-drawn perimeter */}
@@ -437,8 +475,9 @@ export default function VastuCanvas() {
             +
           </button>
           <button
-            onClick={() => setZoom(100)}
+            onClick={() => { setZoom(100); setPanX(0); setPanY(0); }}
             className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[3px] flex items-center justify-center text-[10px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
+            title="Reset zoom & pan"
           >
             ⊙
           </button>
