@@ -11,16 +11,24 @@ export function useCanvas() {
   const store = useCanvasStore();
   const lastClickTime = useRef(0);
 
-  // Convert a mouse/pointer event on the SVG element to viewBox coordinates
+  // Convert a mouse/pointer event on the SVG element to viewBox coordinates.
+  // Uses getScreenCTM().inverse() which correctly accounts for CSS transforms
+  // (scale/translate for zoom/pan), the SVG viewBox, and preserveAspectRatio
+  // letterboxing — the getBoundingClientRect approach misses the letterbox offset.
   const getSVGCoords = useCallback((e: React.MouseEvent<SVGSVGElement>): Point => {
     const svg = e.currentTarget;
+    const ctm = svg.getScreenCTM();
+    if (ctm) {
+      const pt = new DOMPoint(e.clientX, e.clientY);
+      const svgPt = pt.matrixTransform(ctm.inverse());
+      return { x: svgPt.x, y: svgPt.y };
+    }
+    // Fallback for environments where getScreenCTM is unavailable
     const rect = svg.getBoundingClientRect();
     const vb = svg.viewBox.baseVal;
-    const scaleX = vb.width / rect.width;
-    const scaleY = vb.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (e.clientX - rect.left) * (vb.width / rect.width),
+      y: (e.clientY - rect.top) * (vb.height / rect.height),
     };
   }, []);
 

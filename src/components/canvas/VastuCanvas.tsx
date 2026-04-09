@@ -31,6 +31,7 @@ export default function VastuCanvas() {
   // Pan state
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
+  const [isPanning, setIsPanning] = useState(false);
   const panOrigin = useRef<PanOrigin | null>(null);
   const didPan = useRef(false);
 
@@ -52,12 +53,14 @@ export default function VastuCanvas() {
       if (e.button !== 0) return;
       panOrigin.current = { mx: e.clientX, my: e.clientY, px: panX, py: panY };
       didPan.current = false;
+      setIsPanning(true);
     },
     [currentTool, panX, panY]
   );
 
   const handleMouseUp = useCallback(() => {
     panOrigin.current = null;
+    setIsPanning(false);
   }, []);
 
   const handleClick = useCallback(
@@ -193,7 +196,7 @@ export default function VastuCanvas() {
     <div className="flex-1 relative overflow-hidden flex flex-col min-h-0 bg-bg">
       {/* Canvas stage */}
       <div
-        className="flex-1 relative overflow-hidden flex items-center justify-center min-h-0"
+        className="flex-1 relative overflow-hidden min-h-0"
         onDragOver={(e) => { e.preventDefault(); setShowDropZone(true); }}
         onDrop={(e) => {
           e.preventDefault();
@@ -215,30 +218,40 @@ export default function VastuCanvas() {
           }}
         />
 
-        {/* Floor plan image (if uploaded) */}
+        {/* Floor plan image — behind the SVG, fills container with object-fit:contain
+            so it stays centered and proportional. pointer-events:none so it never
+            blocks clicks destined for the SVG. z-index 1 (below SVG at z-index 2). */}
         {floorPlanImage && (
           <img
             src={floorPlanImage}
             alt="Floor plan"
-            className="absolute z-[1] max-w-[88%] max-h-[88%] object-contain pointer-events-none"
+            className="absolute inset-0 w-full h-full pointer-events-none"
             style={{
+              objectFit: "contain",
+              zIndex: 1,
               transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
               transformOrigin: "center center",
             }}
           />
         )}
 
-        {/* Main SVG */}
+        {/* SVG fills the full container so every pixel is interactive — no dead zones
+            when panels collapse. preserveAspectRatio keeps the viewBox centred.
+            isolation:isolate prevents the chakra's screen blend-mode from compositing
+            against the floor plan image behind the SVG (screen + white = invisible). */}
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+          preserveAspectRatio="xMidYMid meet"
           style={{
-            width: `min(${SVG_W}px, 100%)`,
-            height: `min(${SVG_H}px, 100%)`,
-            cursor: panOrigin.current ? "grabbing" : currentTool === "select" ? "grab" : svgCursor,
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            isolation: "isolate",
+            cursor: isPanning ? "grabbing" : currentTool === "select" ? "grab" : svgCursor,
             transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
             transformOrigin: "center center",
-            position: "relative",
             zIndex: 2,
           }}
           onClick={handleClick}
