@@ -218,27 +218,10 @@ export default function VastuCanvas() {
           }}
         />
 
-        {/* Floor plan image — behind the SVG, fills container with object-fit:contain
-            so it stays centered and proportional. pointer-events:none so it never
-            blocks clicks destined for the SVG. z-index 1 (below SVG at z-index 2). */}
-        {floorPlanImage && (
-          <img
-            src={floorPlanImage}
-            alt="Floor plan"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{
-              objectFit: "contain",
-              zIndex: 1,
-              transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
-              transformOrigin: "center center",
-            }}
-          />
-        )}
-
         {/* SVG fills the full container so every pixel is interactive — no dead zones
             when panels collapse. preserveAspectRatio keeps the viewBox centred.
-            isolation:isolate prevents the chakra's screen blend-mode from compositing
-            against the floor plan image behind the SVG (screen + white = invisible). */}
+            The floor plan image lives INSIDE the SVG so it shares the same coordinate
+            space as the perimeter/cuts and scales together with them perfectly. */}
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -248,7 +231,6 @@ export default function VastuCanvas() {
             inset: 0,
             width: "100%",
             height: "100%",
-            isolation: "isolate",
             cursor: isPanning ? "grabbing" : currentTool === "select" ? "grab" : svgCursor,
             transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
             transformOrigin: "center center",
@@ -262,6 +244,18 @@ export default function VastuCanvas() {
           onMouseLeave={handleMouseUp}
           xmlns="http://www.w3.org/2000/svg"
         >
+          {/* Floor plan image — inside SVG so it shares the same coordinate space
+              as the perimeter/cuts and scales identically when panels resize. */}
+          {floorPlanImage && (
+            <image
+              href={floorPlanImage}
+              x="0" y="0"
+              width={SVG_W}
+              height={SVG_H}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          )}
+
           {/* User-drawn perimeter */}
           {perimeterPts && (
             <g>
@@ -294,14 +288,18 @@ export default function VastuCanvas() {
             </g>
           )}
 
-          {/* Shakti Chakra overlay */}
-          <ShaktiChakra
-            cx={brahmaX}
-            cy={brahmaY}
-            northDeg={northDeg}
-            opacity={chakraOpacity}
-            visible={chakraVisible}
-          />
+          {/* Shakti Chakra overlay — isolated so its screen blend-mode composes
+              against the group's transparent background, not the floor plan image
+              (screen + white floor plan = invisible without this). */}
+          <g style={{ isolation: "isolate" }}>
+            <ShaktiChakra
+              cx={brahmaX}
+              cy={brahmaY}
+              northDeg={northDeg}
+              opacity={chakraOpacity}
+              visible={chakraVisible}
+            />
+          </g>
 
           {/* Cuts */}
           {cuts.map((cut) => {

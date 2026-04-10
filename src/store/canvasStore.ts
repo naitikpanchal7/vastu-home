@@ -56,6 +56,7 @@ interface CanvasStore {
   cuts: Cut[];
   addCut: (points: Point[]) => void;
   removeCut: (id: string) => void;
+  clearCuts: () => void;
 
   // Scale
   scale: ScaleCalibration | null;
@@ -201,6 +202,15 @@ export const useCanvasStore = create<CanvasStore>()(
 
       removeCut: (id) =>
         set((s) => ({ cuts: s.cuts.filter((c) => c.id !== id) })),
+
+      clearCuts: () => {
+        const prev = get().cuts;
+        get().pushUndo({
+          label: "Clear all cuts",
+          undo: () => set({ cuts: prev }),
+        });
+        set({ cuts: [] });
+      },
 
       setScale: (cal) => {
         const prev = get().scale;
