@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useCanvasStore } from "@/store/canvasStore";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
 import {
@@ -20,6 +21,7 @@ const SEV_STYLE = {
 } as const;
 
 export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
+  const router = useRouter();
   const {
     northDeg, cuts, projectName,
     perimeterPoints, brahmaX, brahmaY, scale,
@@ -62,6 +64,9 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
   return (
     <div className="flex flex-col h-full">
 
+      {/* ── Scrollable content ── */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-[1px]">
+
       {/* ── Header ── */}
       <div className="text-[8px] text-vastu-text-3 mb-[5px] uppercase tracking-[1px] truncate">
         {projectName || "Select a project"}
@@ -80,7 +85,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
         )}
       </div>
 
-      <div className="flex flex-col flex-1 overflow-y-auto min-h-0 pr-[1px]">
+      <div className="flex flex-col">
         {zoneRows.map(({ zone, pct, status, hasCut, cutPct }) => (
           <div
             key={zone.shortName}
@@ -135,7 +140,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
             </div>
           </div>
         ))}
-      </div>
+      </div>{/* end zone rows */}
 
       {/* ── Bar Chart ── */}
       <div className="mt-[8px] pt-[8px] border-t border-[rgba(200,175,120,0.08)]">
@@ -251,10 +256,12 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
         </div>
       )}
 
-      {/* ── Actions ── */}
-      <div className="flex gap-[6px] mt-[9px]">
-        <Button variant="ghost" className="flex-1 justify-center text-[10px] py-[5px]">
-          ⊞ Table
+      </div>{/* end scrollable content */}
+
+      {/* ── Actions — pinned to bottom ── */}
+      <div className="flex gap-[6px] pt-[9px] flex-shrink-0">
+        <Button variant="ghost" className="flex-1 justify-center text-[10px] py-[5px]" onClick={() => router.push("/canvas/analysis")}>
+          ⤢ Full View
         </Button>
         <Button variant="primary" className="flex-1 justify-center text-[10px] py-[5px]" onClick={onExport}>
           ⎙ Export
