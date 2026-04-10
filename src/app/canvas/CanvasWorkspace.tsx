@@ -27,7 +27,7 @@ export default function CanvasWorkspace() {
     chakraVisible, notes, undoStack,
     setTool, setNorth, toggleChakra, setChakraOpacity, chakraOpacity,
     setNotes, undo, perimeterPoints, perimeterComplete, resetPerimeter,
-    floorPlanImage, setFloorPlanImage,
+    floorPlanImage, setFloorPlanImage, cuts, clearCuts,
   } = store;
 
   // Auto-create project in projectStore when user starts drawing (first perimeter point)
@@ -286,8 +286,16 @@ export default function CanvasWorkspace() {
                   ⬡ Draw Perimeter
                 </Button>
                 {perimeterComplete && (
-                  <Button variant="danger" className="w-full justify-center text-[9px] py-[6px]" onClick={resetPerimeter}>
-                    ✕ Reset
+                  <Button variant="danger" className="w-full justify-center text-[9px] py-[6px] mb-1" onClick={resetPerimeter}>
+                    ✕ Reset Perimeter
+                  </Button>
+                )}
+                <Button variant="ghost" className="w-full justify-center text-[9px] py-[6px] mb-1" onClick={() => setTool("cut")}>
+                  ✂ Draw Cut
+                </Button>
+                {cuts.length > 0 && (
+                  <Button variant="danger" className="w-full justify-center text-[9px] py-[6px]" onClick={clearCuts}>
+                    ✕ Reset Cuts
                   </Button>
                 )}
                 <div className="px-[2px] pt-[6px] text-[8px] text-vastu-text-3">
