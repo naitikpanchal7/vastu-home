@@ -51,9 +51,12 @@ export default function RecentProjects({ onNewProject }: RecentProjectsProps) {
                 <div className="text-[10px] text-vastu-text-3 truncate">{p.clientName}</div>
                 <div className="flex items-center justify-between mt-[6px]">
                   <Badge status={p.status} />
-                  <span className="text-[8px] text-vastu-text-3 font-mono">
-                    {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                  </span>
+                  <div className="flex items-center gap-[5px]">
+                    <span className="text-[8px] text-vastu-text-3 font-mono">◫ {p.floors?.length ?? 1}F</span>
+                    <span className="text-[8px] text-vastu-text-3 font-mono">
+                      {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -28,9 +28,7 @@ export default function VastuCanvas() {
   const [showDropZone, setShowDropZone] = useState(false);
   const lastClickTime = useRef(0);
 
-  // Pan state
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
+  // Pan state — isPanning is local UI-only (cursor); panX/panY live in the store (per floor)
   const [isPanning, setIsPanning] = useState(false);
   const panOrigin = useRef<PanOrigin | null>(null);
   const didPan = useRef(false);
@@ -38,9 +36,9 @@ export default function VastuCanvas() {
   const {
     currentTool, perimeterPoints, perimeterComplete,
     northDeg, brahmaX, brahmaY, chakraVisible, chakraOpacity,
-    zoomLevel, cuts, floorPlanImage, setFloorPlanImage,
+    zoomLevel, panX, panY, cuts, floorPlanImage, setFloorPlanImage,
     addPerimeterPoint, closePerimeter,
-    addCut, setScale, setTool, setZoom,
+    addCut, setScale, setTool, setZoom, setPan,
   } = store;
 
   // ── Cut drawing state (local, not in store until complete) ──
@@ -115,8 +113,7 @@ export default function VastuCanvas() {
         const dx = e.clientX - panOrigin.current.mx;
         const dy = e.clientY - panOrigin.current.my;
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan.current = true;
-        setPanX(panOrigin.current.px + dx);
-        setPanY(panOrigin.current.py + dy);
+        setPan(panOrigin.current.px + dx, panOrigin.current.py + dy);
         return;
       }
       const pt = getSVGCoords(e);
@@ -486,7 +483,7 @@ export default function VastuCanvas() {
             +
           </button>
           <button
-            onClick={() => { setZoom(100); setPanX(0); setPanY(0); }}
+            onClick={() => { setZoom(100); setPan(0, 0); }}
             className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[3px] flex items-center justify-center text-[10px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
             title="Reset zoom & pan"
           >

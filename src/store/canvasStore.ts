@@ -1,8 +1,8 @@
 // src/store/canvasStore.ts
 import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
+import { devtools } from "zustand/middleware";
 import type { Point } from "@/lib/vastu/geometry";
-import type { CanvasState, Cut, EntranceMarker, ScaleCalibration, ZoneAnalysis } from "@/lib/types";
+import type { CanvasState, Cut, EntranceMarker, Floor, ScaleCalibration, ZoneAnalysis } from "@/lib/types";
 import { polygonCentroid } from "@/lib/vastu/geometry";
 
 // ── Canvas Tool ───────────────────────────────────────────────────────────────
@@ -21,6 +21,30 @@ interface UndoAction {
   undo: () => void;
 }
 
+// ── Default canvas state for a blank floor ────────────────────────────────────
+const BLANK_CANVAS_STATE: CanvasState = {
+  northDeg: 0,
+  northMethod: "manual",
+  brahmaX: 380,
+  brahmaY: 310,
+  brahmaConfirmed: false,
+  perimeterPoints: [],
+  perimeterComplete: false,
+  cuts: [],
+  entrancePoints: [],
+};
+
+function makeFloor(name: string, order: number, base?: Partial<CanvasState>): Floor {
+  return {
+    id: `floor-${Date.now()}-${order}`,
+    name,
+    order,
+    canvasState: { ...BLANK_CANVAS_STATE, ...base },
+    floorPlanImage: null,
+    notes: "",
+  };
+}
+
 // ── Canvas Store ──────────────────────────────────────────────────────────────
 interface CanvasStore {
   // Active project
@@ -28,16 +52,26 @@ interface CanvasStore {
   projectName: string;
   clientName: string;
 
+  // ── Floors ──────────────────────────────────────────────────────────────────
+  floors: Floor[];
+  currentFloorId: string;
+  addFloor: () => void;
+  switchFloor: (id: string) => void;
+  deleteFloor: (id: string) => void;
+  renameFloor: (id: string, name: string) => void;
+  /** Returns all floors with the current floor's live state baked in. Use this before saving to projectStore. */
+  getProjectFloors: () => Floor[];
+
   // Canvas tool
   currentTool: CanvasTool;
   setTool: (tool: CanvasTool) => void;
 
-  // North
+  // North (shared across all floors — same building, same compass)
   northDeg: number;
   northMethod: "manual" | "gps" | "maps";
   setNorth: (deg: number, method?: "manual" | "gps" | "maps") => void;
 
-  // Brahmasthan
+  // Brahmasthan (per floor)
   brahmaX: number;
   brahmaY: number;
   brahmaConfirmed: boolean;
@@ -45,35 +79,38 @@ interface CanvasStore {
   confirmBrahma: () => void;
   autoDetectBrahma: () => void;
 
-  // Perimeter
+  // Perimeter (per floor)
   perimeterPoints: Point[];
   perimeterComplete: boolean;
   addPerimeterPoint: (pt: Point) => void;
   closePerimeter: () => void;
   resetPerimeter: () => void;
 
-  // Cuts
+  // Cuts (per floor)
   cuts: Cut[];
   addCut: (points: Point[]) => void;
   removeCut: (id: string) => void;
   clearCuts: () => void;
 
-  // Scale
+  // Scale (shared across all floors — same building, same physical scale)
   scale: ScaleCalibration | null;
   setScale: (cal: ScaleCalibration) => void;
   clearScale: () => void;
 
-  // Entrances
+  // Entrances (per floor)
   entrancePoints: EntranceMarker[];
   addEntrance: (marker: EntranceMarker) => void;
 
-  // Facing direction
+  // Facing direction (per floor)
   facingDirection: number | null;
   setFacingDirection: (deg: number) => void;
 
-  // Zoom / pan
+  // Zoom / pan (per floor — each floor remembers its own view)
   zoomLevel: number;
+  panX: number;
+  panY: number;
   setZoom: (z: number) => void;
+  setPan: (x: number, y: number) => void;
 
   // Chakra
   chakraVisible: boolean;
@@ -85,11 +122,11 @@ interface CanvasStore {
   zoneAnalysis: ZoneAnalysis[];
   setZoneAnalysis: (results: ZoneAnalysis[]) => void;
 
-  // Floor plan image
+  // Floor plan image (per floor)
   floorPlanImage: string | null;
   setFloorPlanImage: (src: string | null) => void;
 
-  // Project notes
+  // Project notes (per floor)
   notes: string;
   setNotes: (n: string) => void;
 
@@ -104,13 +141,21 @@ interface CanvasStore {
   setProjectId: (id: string | null) => void;
 
   // Load project state
-  loadCanvasState: (state: Partial<CanvasState>, projectId: string, projectName: string, clientName: string) => void;
+  loadCanvasState: (
+    state: Partial<CanvasState>,
+    projectId: string,
+    projectName: string,
+    clientName: string,
+    floors?: Floor[]
+  ) => void;
 
-  // Serialise for save
+  // Serialise current floor for save
   getCanvasState: () => CanvasState;
 }
 
 let entranceIdCounter = 0;
+
+const DEFAULT_FLOOR = makeFloor("Floor 1", 0);
 
 export const useCanvasStore = create<CanvasStore>()(
   devtools(
@@ -132,6 +177,8 @@ export const useCanvasStore = create<CanvasStore>()(
       entrancePoints: [],
       facingDirection: null,
       zoomLevel: 100,
+      panX: 0,
+      panY: 0,
       chakraVisible: true,
       chakraOpacity: 0.42,
       zoneAnalysis: [],
@@ -139,14 +186,167 @@ export const useCanvasStore = create<CanvasStore>()(
       notes: "",
       undoStack: [],
 
+      // Floor defaults
+      floors: [DEFAULT_FLOOR],
+      currentFloorId: DEFAULT_FLOOR.id,
+
+      // ── Floor actions ──────────────────────────────────────────────────────
+
+      getProjectFloors: () => {
+        const s = get();
+        return s.floors.map((f) =>
+          f.id === s.currentFloorId
+            ? {
+                ...f,
+                canvasState: s.getCanvasState(),
+                floorPlanImage: s.floorPlanImage,
+                notes: s.notes,
+                zoomLevel: s.zoomLevel,
+                panX: s.panX,
+                panY: s.panY,
+              }
+            : f
+        );
+      },
+
+      addFloor: () => {
+        const s = get();
+        const nextNum = s.floors.length + 1;
+
+        // Pack current floor state (including zoom/pan) before switching
+        const packedFloors = s.floors.map((f) =>
+          f.id === s.currentFloorId
+            ? { ...f, canvasState: s.getCanvasState(), floorPlanImage: s.floorPlanImage, notes: s.notes, zoomLevel: s.zoomLevel, panX: s.panX, panY: s.panY }
+            : f
+        );
+
+        const newFloor = makeFloor(`Floor ${nextNum}`, nextNum - 1, {
+          northDeg: s.northDeg,
+          northMethod: s.northMethod,
+          scale: s.scale ?? undefined, // inherit shared scale
+        });
+
+        set({
+          floors: [...packedFloors, newFloor],
+          currentFloorId: newFloor.id,
+          perimeterPoints: [],
+          perimeterComplete: false,
+          brahmaX: 380,
+          brahmaY: 310,
+          brahmaConfirmed: false,
+          cuts: [],
+          entrancePoints: [],
+          facingDirection: null,
+          floorPlanImage: null,
+          notes: "",
+          zoomLevel: 100,
+          panX: 0,
+          panY: 0,
+          zoneAnalysis: [],
+          undoStack: [],
+        });
+      },
+
+      switchFloor: (targetId: string) => {
+        const s = get();
+        if (s.currentFloorId === targetId) return;
+
+        // Pack current floor state including zoom/pan
+        const packedFloors = s.floors.map((f) =>
+          f.id === s.currentFloorId
+            ? { ...f, canvasState: s.getCanvasState(), floorPlanImage: s.floorPlanImage, notes: s.notes, zoomLevel: s.zoomLevel, panX: s.panX, panY: s.panY }
+            : f
+        );
+
+        const target = packedFloors.find((f) => f.id === targetId);
+        if (!target) return;
+
+        set({
+          floors: packedFloors,
+          currentFloorId: targetId,
+          perimeterPoints: target.canvasState.perimeterPoints ?? [],
+          perimeterComplete: target.canvasState.perimeterComplete ?? false,
+          brahmaX: target.canvasState.brahmaX ?? 380,
+          brahmaY: target.canvasState.brahmaY ?? 310,
+          brahmaConfirmed: target.canvasState.brahmaConfirmed ?? false,
+          cuts: target.canvasState.cuts ?? [],
+          entrancePoints: target.canvasState.entrancePoints ?? [],
+          facingDirection: target.canvasState.facingDirection ?? null,
+          floorPlanImage: target.floorPlanImage ?? null,
+          notes: target.notes ?? "",
+          zoomLevel: target.zoomLevel ?? 100,
+          panX: target.panX ?? 0,
+          panY: target.panY ?? 0,
+          zoneAnalysis: [],
+          undoStack: [], // clear undo on floor switch
+        });
+        // northDeg and scale are NOT reset — they are shared across floors
+      },
+
+      deleteFloor: (id: string) => {
+        const s = get();
+        if (s.floors.length <= 1) return; // can't delete the last floor
+
+        const remaining = s.floors.filter((f) => f.id !== id);
+
+        if (s.currentFloorId === id) {
+          // Switch to adjacent floor before deleting
+          const deletedIdx = s.floors.findIndex((f) => f.id === id);
+          const next = remaining[Math.min(deletedIdx, remaining.length - 1)];
+
+          set({
+            floors: remaining,
+            currentFloorId: next.id,
+            perimeterPoints: next.canvasState.perimeterPoints ?? [],
+            perimeterComplete: next.canvasState.perimeterComplete ?? false,
+            brahmaX: next.canvasState.brahmaX ?? 380,
+            brahmaY: next.canvasState.brahmaY ?? 310,
+            brahmaConfirmed: next.canvasState.brahmaConfirmed ?? false,
+            cuts: next.canvasState.cuts ?? [],
+            entrancePoints: next.canvasState.entrancePoints ?? [],
+            facingDirection: next.canvasState.facingDirection ?? null,
+            floorPlanImage: next.floorPlanImage ?? null,
+            notes: next.notes ?? "",
+            zoomLevel: next.zoomLevel ?? 100,
+            panX: next.panX ?? 0,
+            panY: next.panY ?? 0,
+            zoneAnalysis: [],
+            undoStack: [],
+          });
+        } else {
+          set({ floors: remaining });
+        }
+      },
+
+      renameFloor: (id: string, name: string) => {
+        set((s) => ({
+          floors: s.floors.map((f) => (f.id === id ? { ...f, name } : f)),
+        }));
+      },
+
+      // ── Project metadata ───────────────────────────────────────────────────
+
       setProjectName: (name) => set({ projectName: name }),
       setClientName: (name) => set({ clientName: name }),
       setProjectId: (id) => set({ projectId: id }),
 
       setTool: (tool) => set({ currentTool: tool }),
 
-      setNorth: (deg, method = "manual") =>
-        set({ northDeg: Math.max(0, Math.min(360, deg)), northMethod: method }),
+      // ── North — synced to all floors ───────────────────────────────────────
+
+      setNorth: (deg, method = "manual") => {
+        const newDeg = Math.max(0, Math.min(360, deg));
+        set((s) => ({
+          northDeg: newDeg,
+          northMethod: method,
+          floors: s.floors.map((f) => ({
+            ...f,
+            canvasState: { ...f.canvasState, northDeg: newDeg, northMethod: method },
+          })),
+        }));
+      },
+
+      // ── Brahmasthan ────────────────────────────────────────────────────────
 
       setBrahma: (x, y) => {
         const prev = { x: get().brahmaX, y: get().brahmaY };
@@ -166,6 +366,8 @@ export const useCanvasStore = create<CanvasStore>()(
         get().setBrahma(centroid.x, centroid.y);
       },
 
+      // ── Perimeter ─────────────────────────────────────────────────────────
+
       addPerimeterPoint: (pt) => {
         const prev = [...get().perimeterPoints];
         get().pushUndo({
@@ -177,7 +379,6 @@ export const useCanvasStore = create<CanvasStore>()(
 
       closePerimeter: () => {
         set({ perimeterComplete: true, currentTool: "select" });
-        // Auto-detect Brahmasthan after closing
         get().autoDetectBrahma();
       },
 
@@ -189,6 +390,8 @@ export const useCanvasStore = create<CanvasStore>()(
         });
         set({ perimeterPoints: [], perimeterComplete: false, brahmaConfirmed: false });
       },
+
+      // ── Cuts ──────────────────────────────────────────────────────────────
 
       addCut: (points) => {
         const nextNum = get().cuts.length + 1;
@@ -212,25 +415,44 @@ export const useCanvasStore = create<CanvasStore>()(
         set({ cuts: [] });
       },
 
+      // ── Scale — synced to all floors ───────────────────────────────────────
+
       setScale: (cal) => {
         const prev = get().scale;
         get().pushUndo({
           label: "Clear scale",
           undo: () => set({ scale: prev }),
         });
-        set({ scale: cal });
+        set((s) => ({
+          scale: cal,
+          floors: s.floors.map((f) => ({
+            ...f,
+            canvasState: { ...f.canvasState, scale: cal },
+          })),
+        }));
       },
 
       clearScale: () => set({ scale: null }),
 
+      // ── Entrances ─────────────────────────────────────────────────────────
+
       addEntrance: (marker) => {
         entranceIdCounter++;
-        set((s) => ({ entrancePoints: [...s.entrancePoints, { ...marker, id: `entrance-${entranceIdCounter}` }] }));
+        set((s) => ({
+          entrancePoints: [
+            ...s.entrancePoints,
+            { ...marker, id: `entrance-${entranceIdCounter}` },
+          ],
+        }));
       },
 
       setFacingDirection: (deg) => set({ facingDirection: deg }),
 
+      // ── Zoom / Chakra ──────────────────────────────────────────────────────
+
       setZoom: (z) => set({ zoomLevel: Math.max(30, Math.min(300, z)) }),
+
+      setPan: (x, y) => set({ panX: x, panY: y }),
 
       toggleChakra: () => set((s) => ({ chakraVisible: !s.chakraVisible })),
       setChakraOpacity: (v) => set({ chakraOpacity: v / 100 }),
@@ -241,9 +463,11 @@ export const useCanvasStore = create<CanvasStore>()(
 
       setNotes: (n) => set({ notes: n }),
 
+      // ── Undo ──────────────────────────────────────────────────────────────
+
       pushUndo: (action) =>
         set((s) => ({
-          undoStack: [...s.undoStack.slice(-49), action], // max 50 undo steps
+          undoStack: [...s.undoStack.slice(-49), action],
         })),
 
       undo: () => {
@@ -254,24 +478,54 @@ export const useCanvasStore = create<CanvasStore>()(
         set((s) => ({ undoStack: s.undoStack.slice(0, -1) }));
       },
 
-      loadCanvasState: (state, projectId, projectName, clientName) => {
+      // ── Load / Save ───────────────────────────────────────────────────────
+
+      loadCanvasState: (state, projectId, projectName, clientName, incomingFloors?) => {
+        let floorsToLoad: Floor[];
+
+        if (incomingFloors && incomingFloors.length > 0) {
+          floorsToLoad = incomingFloors;
+        } else {
+          // Legacy single-floor project or new project — wrap into Floor 1
+          floorsToLoad = [
+            {
+              id: `floor-${Date.now()}-0`,
+              name: "Floor 1",
+              order: 0,
+              canvasState: { ...BLANK_CANVAS_STATE, ...state } as CanvasState,
+              floorPlanImage: null,
+              notes: "",
+            },
+          ];
+        }
+
+        const first = floorsToLoad[0];
+        const cs = first.canvasState;
+
         set({
           projectId,
           projectName,
           clientName,
-          northDeg: state.northDeg ?? 0,
-          northMethod: state.northMethod ?? "manual",
-          brahmaX: state.brahmaX ?? 380,
-          brahmaY: state.brahmaY ?? 310,
-          brahmaConfirmed: state.brahmaConfirmed ?? false,
-          perimeterPoints: state.perimeterPoints ?? [],
-          perimeterComplete: state.perimeterComplete ?? false,
-          cuts: state.cuts ?? [],
-          entrancePoints: state.entrancePoints ?? [],
-          facingDirection: state.facingDirection ?? null,
-          scale: state.scale ?? null,
-          notes: "",
+          floors: floorsToLoad,
+          currentFloorId: first.id,
+          northDeg: cs.northDeg ?? 0,
+          northMethod: cs.northMethod ?? "manual",
+          brahmaX: cs.brahmaX ?? 380,
+          brahmaY: cs.brahmaY ?? 310,
+          brahmaConfirmed: cs.brahmaConfirmed ?? false,
+          perimeterPoints: cs.perimeterPoints ?? [],
+          perimeterComplete: cs.perimeterComplete ?? false,
+          cuts: cs.cuts ?? [],
+          entrancePoints: cs.entrancePoints ?? [],
+          facingDirection: cs.facingDirection ?? null,
+          scale: cs.scale ?? null,
+          floorPlanImage: first.floorPlanImage ?? null,
+          notes: first.notes ?? "",
+          zoomLevel: first.zoomLevel ?? 100,
+          panX: first.panX ?? 0,
+          panY: first.panY ?? 0,
           undoStack: [],
+          zoneAnalysis: [],
         });
       },
 

@@ -24,7 +24,10 @@ export interface Project {
   status: ProjectStatus;
   notes?: string;                  // Consultant's private notes
 
-  // Canvas state (persisted to DB as JSON)
+  // Multi-floor support (new) — replaces canvasState for new projects
+  floors?: Floor[];
+
+  // Canvas state (legacy single-floor — kept for backward compat)
   canvasState?: CanvasState;
 
   // Metadata
@@ -37,7 +40,21 @@ export interface Project {
   floorPlanImageUrl?: string;
 }
 
-// ── Canvas State (persisted per project) ─────────────────────────────────────
+// ── Floor ─────────────────────────────────────────────────────────────────────
+export interface Floor {
+  id: string;
+  name: string;             // "Floor 1", "Floor 2", etc.
+  order: number;            // display order (0-indexed)
+  canvasState: CanvasState;
+  floorPlanImage?: string | null;
+  notes?: string;
+  // Per-floor view state — each floor remembers its own zoom and pan position
+  zoomLevel?: number;
+  panX?: number;
+  panY?: number;
+}
+
+// ── Canvas State (persisted per floor) ───────────────────────────────────────
 export interface CanvasState {
   northDeg: number;                // True North in degrees
   northMethod: "manual" | "gps" | "maps";

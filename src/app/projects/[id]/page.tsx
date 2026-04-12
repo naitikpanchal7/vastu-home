@@ -20,7 +20,8 @@ export default function ProjectCanvasPage() {
         project.canvasState ?? {},
         project.id,
         project.name,
-        project.clientName
+        project.clientName,
+        project.floors
       );
       setLoaded(true);
     }
