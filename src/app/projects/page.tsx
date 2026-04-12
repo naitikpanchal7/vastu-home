@@ -106,9 +106,14 @@ export default function ProjectsPage() {
                   <div className="text-[9px] text-vastu-text-3 mb-[6px] truncate">{p.clientName}</div>
                   <div className="flex items-center justify-between">
                     <Badge status={p.status} />
-                    <span className="text-[8px] text-vastu-text-3 font-mono">
-                      {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
-                    </span>
+                    <div className="flex items-center gap-[6px]">
+                      <span className="text-[8px] text-vastu-text-3 font-mono">
+                        ◫ {p.floors?.length ?? 1}F
+                      </span>
+                      <span className="text-[8px] text-vastu-text-3 font-mono">
+                        {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

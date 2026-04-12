@@ -8,7 +8,7 @@ import RightPanel from "@/components/panels/RightPanel";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import type { CanvasTool } from "@/store/canvasStore";
-import type { Project } from "@/lib/types";
+import type { Floor, Project } from "@/lib/types";
 
 interface ExportModalState { open: boolean }
 
@@ -28,7 +28,16 @@ export default function CanvasWorkspace() {
     setTool, setNorth, toggleChakra, setChakraOpacity, chakraOpacity,
     setNotes, undo, perimeterPoints, perimeterComplete, resetPerimeter,
     floorPlanImage, setFloorPlanImage, cuts, clearCuts,
+    floors, currentFloorId, addFloor, switchFloor, deleteFloor, renameFloor,
   } = store;
+
+  // Persist floors to projectStore whenever floors change
+  const persistFloors = () => {
+    const pid = store.projectId;
+    if (pid) {
+      projectStore.updateProject(pid, { floors: store.getProjectFloors() });
+    }
+  };
 
   // Auto-create project in projectStore when user starts drawing (first perimeter point)
   useEffect(() => {
@@ -218,6 +227,16 @@ export default function CanvasWorkspace() {
           ⎙ Export
         </Button>
       </div>
+
+      {/* Floor Tabs */}
+      <FloorTabs
+        floors={floors}
+        currentFloorId={currentFloorId}
+        onSwitch={(id) => { switchFloor(id); persistFloors(); }}
+        onAdd={() => { addFloor(); persistFloors(); }}
+        onDelete={(id) => { deleteFloor(id); persistFloors(); }}
+        onRename={(id, name) => { renameFloor(id, name); persistFloors(); }}
+      />
 
       {/* Workspace */}
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -413,6 +432,104 @@ export default function CanvasWorkspace() {
     </div>
   );
 }
+
+// ── Floor Tabs ────────────────────────────────────────────────────────────────
+
+interface FloorTabsProps {
+  floors: Floor[];
+  currentFloorId: string;
+  onSwitch: (id: string) => void;
+  onAdd: () => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+}
+
+function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename }: FloorTabsProps) {
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const startRename = (floor: Floor) => {
+    setRenamingId(floor.id);
+    setRenameValue(floor.name);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const commitRename = () => {
+    if (renamingId) {
+      const trimmed = renameValue.trim();
+      if (trimmed) onRename(renamingId, trimmed);
+    }
+    setRenamingId(null);
+  };
+
+  return (
+    <div className="h-[30px] bg-bg-2 border-b border-[rgba(200,175,120,0.15)] flex items-center px-[9px] gap-[2px] flex-shrink-0 overflow-x-auto">
+      {floors
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((floor) => {
+          const isActive = floor.id === currentFloorId;
+          return (
+            <div
+              key={floor.id}
+              onClick={() => !isActive && onSwitch(floor.id)}
+              className={`flex items-center gap-[5px] px-[8px] h-[22px] rounded-[4px] text-[10px] font-mono flex-shrink-0 cursor-pointer select-none transition-all duration-[120ms] border ${
+                isActive
+                  ? "bg-[rgba(200,175,120,0.12)] border-[rgba(200,175,120,0.4)] text-gold-2"
+                  : "bg-transparent border-transparent text-vastu-text-3 hover:bg-[rgba(200,175,120,0.06)] hover:text-vastu-text-2"
+              }`}
+            >
+              <span className="text-[8px] opacity-50">◫</span>
+              {renamingId === floor.id ? (
+                <input
+                  ref={renameInputRef}
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={commitRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenamingId(null);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-bg-3 border border-gold-3 rounded-[3px] px-[4px] text-[10px] font-mono text-vastu-text outline-none w-[80px]"
+                  autoFocus
+                />
+              ) : (
+                <span onDoubleClick={(e) => { e.stopPropagation(); startRename(floor); }}>
+                  {floor.name}
+                </span>
+              )}
+              {floors.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(floor.id);
+                  }}
+                  className="ml-[1px] text-[9px] text-vastu-text-3 hover:text-red-400 transition-colors leading-none cursor-pointer bg-transparent border-none"
+                  title={`Delete ${floor.name}`}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+      {/* Add floor button */}
+      <button
+        onClick={onAdd}
+        title="Add new floor"
+        className="flex items-center gap-[3px] px-[6px] h-[22px] rounded-[4px] text-[10px] font-mono text-vastu-text-3 hover:text-gold-2 hover:bg-[rgba(200,175,120,0.06)] transition-all border border-transparent hover:border-[rgba(200,175,120,0.15)] cursor-pointer bg-transparent flex-shrink-0"
+      >
+        <span className="text-[11px] leading-none">+</span>
+        <span>Floor</span>
+      </button>
+    </div>
+  );
+}
+
+// ── Left Panel Section ────────────────────────────────────────────────────────
 
 function LpSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
