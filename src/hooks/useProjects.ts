@@ -18,6 +18,7 @@ export function useProjects() {
       propertyType: PropertyType;
       areaSqFt?: number;
       notes?: string;
+      workspaceMode?: "canvas" | "builder";
     }): Project => {
       const now = new Date().toISOString();
       const project: Project = {
@@ -30,6 +31,7 @@ export function useProjects() {
         propertyType: data.propertyType,
         areaSqFt: data.areaSqFt,
         notes: data.notes,
+        workspaceMode: data.workspaceMode ?? "canvas",
         status: "draft",
         createdAt: now,
         updatedAt: now,

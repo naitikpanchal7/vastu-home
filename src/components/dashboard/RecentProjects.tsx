@@ -40,11 +40,18 @@ export default function RecentProjects({ onNewProject }: RecentProjectsProps) {
           {projects.map((p) => (
             <div
               key={p.id}
-              onClick={() => router.push(`/projects/${p.id}`)}
+              onClick={() =>
+                p.workspaceMode === "builder"
+                  ? router.push(`/builder?project=${p.id}`)
+                  : router.push(`/projects/${p.id}`)
+              }
               className="bg-bg-4 border border-[rgba(200,175,120,0.08)] rounded-[7px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[1px]"
             >
-              <div className="h-[70px] bg-bg-2 flex items-center justify-center">
-                <span className="text-[28px] opacity-20">🏠</span>
+              <div className="h-[70px] bg-bg-2 flex items-center justify-center relative">
+                <span className="text-[28px] opacity-20">{p.workspaceMode === "builder" ? "⬛" : "🏠"}</span>
+                {p.workspaceMode === "builder" && (
+                  <span className="absolute top-[5px] right-[5px] text-[6px] px-[5px] py-[1px] rounded-full bg-amber-900/30 text-amber-400 font-sans uppercase tracking-[0.5px]">Builder</span>
+                )}
               </div>
               <div className="px-[10px] py-2">
                 <div className="text-[11px] font-medium text-vastu-text mb-[2px] truncate">{p.name}</div>
@@ -52,7 +59,9 @@ export default function RecentProjects({ onNewProject }: RecentProjectsProps) {
                 <div className="flex items-center justify-between mt-[6px]">
                   <Badge status={p.status} />
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[8px] text-vastu-text-3 font-mono">◫ {p.floors?.length ?? 1}F</span>
+                    {p.workspaceMode !== "builder" && (
+                      <span className="text-[8px] text-vastu-text-3 font-mono">◫ {p.floors?.length ?? 1}F</span>
+                    )}
                     <span className="text-[8px] text-vastu-text-3 font-mono">
                       {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </span>

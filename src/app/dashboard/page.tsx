@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [npType, setNpType] = useState<PropertyType>("Residential");
   const [npArea, setNpArea] = useState("");
   const [npNotes, setNpNotes] = useState("");
+  const [npMode, setNpMode] = useState<"canvas" | "builder">("canvas");
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -41,10 +42,15 @@ export default function DashboardPage() {
       propertyType: npType,
       areaSqFt: npArea ? parseFloat(npArea) : undefined,
       notes: npNotes || undefined,
+      workspaceMode: npMode,
     });
     setShowNewProject(false);
-    setNpName(""); setNpClient(""); setNpContact(""); setNpAddress(""); setNpArea(""); setNpNotes("");
-    router.push(`/projects/${project.id}`);
+    setNpName(""); setNpClient(""); setNpContact(""); setNpAddress(""); setNpArea(""); setNpNotes(""); setNpMode("canvas");
+    if (npMode === "builder") {
+      router.push(`/builder?project=${project.id}`);
+    } else {
+      router.push(`/projects/${project.id}`);
+    }
   };
 
   return (
@@ -141,6 +147,34 @@ export default function DashboardPage() {
         }
       >
         <div className="grid grid-cols-2 gap-[9px]">
+          {/* Workspace mode selector */}
+          <div className="col-span-2 mb-[2px]">
+            <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-[8px]">Workspace Mode</label>
+            <div className="grid grid-cols-2 gap-[8px]">
+              <button type="button" onClick={() => setNpMode("canvas")}
+                className={`flex flex-col gap-[5px] p-[10px] rounded-[8px] border text-left transition-all cursor-pointer ${npMode === "canvas" ? "border-gold bg-[rgba(200,175,120,0.08)]" : "border-[rgba(200,175,120,0.12)] bg-bg-3 hover:border-gold-3"}`}>
+                <div className="flex items-center gap-[7px]">
+                  <span className="text-[16px]">◈</span>
+                  <span className={`text-[11px] font-sans font-medium ${npMode === "canvas" ? "text-gold-2" : "text-vastu-text"}`}>Traditional Canvas</span>
+                  {npMode === "canvas" && <span className="ml-auto text-[7px] px-[5px] py-[1px] rounded-full bg-gold/20 text-gold font-sans">Selected</span>}
+                </div>
+                <p className="text-[9px] text-vastu-text-3 font-sans leading-[1.5]">Upload a floor plan, draw the perimeter, and overlay the Shakti Chakra.</p>
+              </button>
+              <button type="button" onClick={() => setNpMode("builder")}
+                className={`flex flex-col gap-[5px] p-[10px] rounded-[8px] border text-left transition-all cursor-pointer ${npMode === "builder" ? "border-gold bg-[rgba(200,175,120,0.08)]" : "border-[rgba(200,175,120,0.12)] bg-bg-3 hover:border-gold-3"}`}>
+                <div className="flex items-center gap-[7px]">
+                  <span className="text-[16px]">⬛</span>
+                  <span className={`text-[11px] font-sans font-medium ${npMode === "builder" ? "text-gold-2" : "text-vastu-text"}`}>Floor Plan Builder</span>
+                  {npMode === "builder" && <span className="ml-auto text-[7px] px-[5px] py-[1px] rounded-full bg-gold/20 text-gold font-sans">Selected</span>}
+                </div>
+                <p className="text-[9px] text-vastu-text-3 font-sans leading-[1.5]">Build room-by-room with preset shapes, freehand drawing, and furniture placement.</p>
+              </button>
+            </div>
+            {npMode === "builder" && (
+              <p className="mt-[5px] text-[8px] text-amber-400/80 font-sans">⚠ Builder and Canvas are separate — this project always opens in the Builder.</p>
+            )}
+          </div>
+
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Project Name</label>
             <input value={npName} onChange={(e) => setNpName(e.target.value)} placeholder="e.g. Kapoor Residence — 2BHK"

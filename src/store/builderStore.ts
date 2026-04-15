@@ -1,9 +1,11 @@
 // src/store/builderStore.ts
 // Zustand store for the Custom Floor Plan Builder
+// Self-contained Vastu state — does NOT read from or write to canvasStore.
 
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { Point } from "@/lib/vastu/geometry";
+import type { Cut } from "@/lib/types";
 import type { RoomType } from "@/lib/builder/roomTypes";
 import type { RoomShape, ShapeConfig } from "@/lib/builder/presetShapes";
 import type { FurnitureItem } from "@/lib/builder/furniture";
@@ -67,6 +69,37 @@ export interface PlacedFurniture {
 // ── Store shape ───────────────────────────────────────────────────────────────
 
 interface BuilderStore {
+  // ── Project metadata ────────────────────────────────────────────────────────
+  projectId: string | null;
+  projectName: string;
+  clientName: string;
+  /** Load project identity into the builder (called when opening a builder project). */
+  loadProjectMeta: (id: string, name: string, client: string) => void;
+  /** Update the project name (also call projectStore.updateProject separately). */
+  setProjectName: (name: string) => void;
+
+  // ── North (builder-owned, does NOT touch canvasStore) ───────────────────────
+  northDeg: number;
+  northMethod: "manual" | "gps" | "maps";
+  setNorth: (deg: number, method?: "manual" | "gps" | "maps") => void;
+
+  // ── Brahmasthan (builder-owned) ─────────────────────────────────────────────
+  brahmaX: number;
+  brahmaY: number;
+  brahmaConfirmed: boolean;
+  setBrahma: (x: number, y: number) => void;
+  confirmBrahma: () => void;
+
+  // ── Cuts (builder-owned) ────────────────────────────────────────────────────
+  cuts: Cut[];
+  addCut: (pts: Point[]) => void;
+  removeCut: (id: string) => void;
+  clearCuts: () => void;
+
+  // ── Chakra visibility ───────────────────────────────────────────────────────
+  showChakra: boolean;
+  toggleChakra: () => void;
+
   // Room library (templates created in the left panel)
   roomTemplates: RoomTemplate[];
   addRoomTemplate: (
@@ -100,6 +133,16 @@ interface BuilderStore {
   isDrawingRoom: boolean;
   setDrawingRoom: (v: boolean) => void;
 
+  // Cut draw mode — user is marking a cut region on the canvas
+  isCuttingMode: boolean;
+  setCuttingMode: (v: boolean) => void;
+
+  // Move-all mode — drag entire layout as one unit
+  isMovingAll: boolean;
+  setMovingAll: (v: boolean) => void;
+  /** Shift every room, piece of furniture, cut, and the brahmasthan by (dx, dy) pixels. */
+  moveAllRooms: (dx: number, dy: number) => void;
+
   // Placed furniture on canvas
   placedFurniture: PlacedFurniture[];
   addPlacedFurniture: (item: FurnitureItem) => void;
@@ -109,7 +152,7 @@ interface BuilderStore {
   selectedFurnitureId: string | null;
   selectFurniture: (id: string | null) => void;
 
-  // Assembled perimeter (computed from placed rooms)
+  // Assembled perimeter (computed from placed rooms — builder-internal only)
   assembledPerimeter: Point[];
   setAssembledPerimeter: (pts: Point[]) => void;
 
@@ -120,10 +163,52 @@ interface BuilderStore {
 let templateCounter = 0;
 let placedCounter = 0;
 let furnitureCounter = 0;
+let cutCounter = 0;
 
 export const useBuilderStore = create<BuilderStore>()(
   devtools(
     (set, get) => ({
+      // ── Project metadata ────────────────────────────────────────────────────
+      projectId: null,
+      projectName: "",
+      clientName: "",
+      loadProjectMeta: (id, name, client) =>
+        set({ projectId: id, projectName: name, clientName: client }),
+      setProjectName: (name) => set({ projectName: name }),
+
+      // ── North ───────────────────────────────────────────────────────────────
+      northDeg: 0,
+      northMethod: "manual",
+      setNorth: (deg, method = "manual") =>
+        set({ northDeg: ((deg % 360) + 360) % 360, northMethod: method }),
+
+      // ── Brahmasthan ─────────────────────────────────────────────────────────
+      brahmaX: 430,
+      brahmaY: 300,
+      brahmaConfirmed: false,
+      setBrahma: (x, y) => set({ brahmaX: x, brahmaY: y }),
+      confirmBrahma: () => set({ brahmaConfirmed: true }),
+
+      // ── Cuts ────────────────────────────────────────────────────────────────
+      cuts: [],
+      addCut: (pts) => {
+        if (pts.length < 3) return;
+        cutCounter++;
+        const cut: Cut = {
+          id: `cut-${Date.now()}-${cutCounter}`,
+          label: `Cut #${cutCounter}`,
+          points: pts,
+        };
+        set((s) => ({ cuts: [...s.cuts, cut] }));
+      },
+      removeCut: (id) =>
+        set((s) => ({ cuts: s.cuts.filter((c) => c.id !== id) })),
+      clearCuts: () => set({ cuts: [] }),
+
+      // ── Chakra ──────────────────────────────────────────────────────────────
+      showChakra: false,
+      toggleChakra: () => set((s) => ({ showChakra: !s.showChakra })),
+
       // ── Room templates ──────────────────────────────────────────────────────
       roomTemplates: [],
 
@@ -277,10 +362,8 @@ export const useBuilderStore = create<BuilderStore>()(
           placedRooms: s.placedRooms.map((r) => {
             if (r.id !== id) return r;
             const nextRot = ((r.rotation + 1) % 4) as 0 | 1 | 2 | 3;
-
-            // For custom-drawn rooms, rotate the existing localPoints directly
             const basePts = r.localPoints;
-            const rotatedPts = rotatePoints(basePts, 1); // rotate by 1×90°
+            const rotatedPts = rotatePoints(basePts, 1);
             const bb = boundingBox(rotatedPts);
             return {
               ...r,
@@ -294,7 +377,6 @@ export const useBuilderStore = create<BuilderStore>()(
       },
 
       updatePlacedRoomVertex: (roomId, vIdx, absX, absY) => {
-        // Snap the dragged point to grid
         const snapAbsX = Math.round(absX / SCALE) * SCALE;
         const snapAbsY = Math.round(absY / SCALE) * SCALE;
 
@@ -302,16 +384,13 @@ export const useBuilderStore = create<BuilderStore>()(
           placedRooms: s.placedRooms.map((room) => {
             if (room.id !== roomId) return room;
 
-            // Compute current absolute canvas positions of all vertices
             const absPoints = room.localPoints.map((lp) => ({
               x: room.x + lp.x * SCALE,
               y: room.y + lp.y * SCALE,
             }));
 
-            // Update the dragged vertex
             absPoints[vIdx] = { x: snapAbsX, y: snapAbsY };
 
-            // Re-normalise bounding box
             const xs = absPoints.map((p) => p.x);
             const ys = absPoints.map((p) => p.y);
             const minX = Math.min(...xs);
@@ -341,7 +420,29 @@ export const useBuilderStore = create<BuilderStore>()(
 
       // ── Draw mode ───────────────────────────────────────────────────────────
       isDrawingRoom: false,
-      setDrawingRoom: (v) => set({ isDrawingRoom: v, selectedRoomId: null, selectedFurnitureId: null }),
+      setDrawingRoom: (v) =>
+        set({ isDrawingRoom: v, isCuttingMode: false, isMovingAll: false, selectedRoomId: null, selectedFurnitureId: null }),
+
+      // ── Cut mode ────────────────────────────────────────────────────────────
+      isCuttingMode: false,
+      setCuttingMode: (v) =>
+        set({ isCuttingMode: v, isDrawingRoom: false, isMovingAll: false, selectedRoomId: null, selectedFurnitureId: null }),
+
+      // ── Move-all mode ───────────────────────────────────────────────────────
+      isMovingAll: false,
+      setMovingAll: (v) =>
+        set({ isMovingAll: v, isCuttingMode: false, isDrawingRoom: false, selectedRoomId: null, selectedFurnitureId: null }),
+      moveAllRooms: (dx, dy) =>
+        set((s) => ({
+          placedRooms: s.placedRooms.map((r) => ({ ...r, x: r.x + dx, y: r.y + dy })),
+          placedFurniture: s.placedFurniture.map((f) => ({ ...f, x: f.x + dx, y: f.y + dy })),
+          brahmaX: s.brahmaX + dx,
+          brahmaY: s.brahmaY + dy,
+          cuts: s.cuts.map((c) => ({
+            ...c,
+            points: c.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+          })),
+        })),
 
       // ── Placed furniture ────────────────────────────────────────────────────
       placedFurniture: [],
@@ -399,15 +500,21 @@ export const useBuilderStore = create<BuilderStore>()(
       setAssembledPerimeter: (pts) => set({ assembledPerimeter: pts }),
 
       // ── Clear canvas ────────────────────────────────────────────────────────
-      clearCanvas: () =>
+      clearCanvas: () => {
+        cutCounter = 0;
         set({
           placedRooms: [],
           placedFurniture: [],
           assembledPerimeter: [],
+          cuts: [],
           selectedRoomId: null,
           selectedFurnitureId: null,
           isDrawingRoom: false,
-        }),
+          isCuttingMode: false,
+          isMovingAll: false,
+          brahmaConfirmed: false,
+        });
+      },
     }),
     { name: "vastu-builder-store" }
   )

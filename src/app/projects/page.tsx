@@ -22,13 +22,19 @@ export default function ProjectsPage() {
   const { filteredProjects, searchQuery, statusFilter, setSearchQuery, setStatusFilter, createProject, toggleStatus, deleteProject } = useProjects();
 
   const [showNewProject, setShowNewProject] = useState(false);
-  const [npName, setNpName]       = useState("");
-  const [npClient, setNpClient]   = useState("");
-  const [npContact, setNpContact] = useState("");
-  const [npAddress, setNpAddress] = useState("");
-  const [npType, setNpType]       = useState<PropertyType>("Residential");
-  const [npArea, setNpArea]       = useState("");
-  const [npNotes, setNpNotes]     = useState("");
+  const [npName, setNpName]         = useState("");
+  const [npClient, setNpClient]     = useState("");
+  const [npContact, setNpContact]   = useState("");
+  const [npAddress, setNpAddress]   = useState("");
+  const [npType, setNpType]         = useState<PropertyType>("Residential");
+  const [npArea, setNpArea]         = useState("");
+  const [npNotes, setNpNotes]       = useState("");
+  const [npMode, setNpMode]         = useState<"canvas" | "builder">("canvas");
+
+  const resetForm = () => {
+    setNpName(""); setNpClient(""); setNpContact(""); setNpAddress("");
+    setNpArea(""); setNpNotes(""); setNpMode("canvas");
+  };
 
   const handleCreate = () => {
     if (!npName.trim() || !npClient.trim()) return;
@@ -36,10 +42,15 @@ export default function ProjectsPage() {
       name: npName, clientName: npClient, clientContact: npContact || undefined,
       propertyAddress: npAddress || undefined, propertyType: npType,
       areaSqFt: npArea ? parseFloat(npArea) : undefined, notes: npNotes || undefined,
+      workspaceMode: npMode,
     });
     setShowNewProject(false);
-    setNpName(""); setNpClient(""); setNpContact(""); setNpAddress(""); setNpArea(""); setNpNotes("");
-    router.push(`/projects/${project.id}`);
+    resetForm();
+    if (npMode === "builder") {
+      router.push(`/builder?project=${project.id}`);
+    } else {
+      router.push(`/projects/${project.id}`);
+    }
   };
 
   return (
@@ -95,11 +106,24 @@ export default function ProjectsPage() {
             filteredProjects.map((p) => (
               <div
                 key={p.id}
-                onClick={() => router.push(`/projects/${p.id}`)}
+                onClick={() => {
+                  if (p.workspaceMode === "builder") {
+                    router.push(`/builder?project=${p.id}`);
+                  } else {
+                    router.push(`/projects/${p.id}`);
+                  }
+                }}
                 className="bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[8px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_6px_18px_rgba(0,0,0,0.3)]"
               >
-                <div className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(200,175,120,0.08)]">
-                  <span className="text-[36px] opacity-20">🏠</span>
+                <div className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(200,175,120,0.08)] relative">
+                  <span className="text-[36px] opacity-20">
+                    {p.workspaceMode === "builder" ? "⬛" : "🏠"}
+                  </span>
+                  {p.workspaceMode === "builder" && (
+                    <span className="absolute top-2 right-2 text-[7px] px-[6px] py-[2px] rounded-full font-sans font-medium uppercase bg-amber-900/30 text-amber-400 tracking-[0.5px]">
+                      Builder
+                    </span>
+                  )}
                 </div>
                 <div className="px-3 py-[10px]">
                   <div className="text-[11px] font-medium text-vastu-text mb-[2px] truncate">{p.name}</div>
@@ -107,9 +131,11 @@ export default function ProjectsPage() {
                   <div className="flex items-center justify-between">
                     <Badge status={p.status} />
                     <div className="flex items-center gap-[6px]">
-                      <span className="text-[8px] text-vastu-text-3 font-mono">
-                        ◫ {p.floors?.length ?? 1}F
-                      </span>
+                      {p.workspaceMode !== "builder" && (
+                        <span className="text-[8px] text-vastu-text-3 font-mono">
+                          ◫ {p.floors?.length ?? 1}F
+                        </span>
+                      )}
                       <span className="text-[8px] text-vastu-text-3 font-mono">
                         {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                       </span>
@@ -125,18 +151,84 @@ export default function ProjectsPage() {
       {/* New Project Modal */}
       <Modal
         open={showNewProject}
-        onClose={() => setShowNewProject(false)}
+        onClose={() => { setShowNewProject(false); resetForm(); }}
         title="◫ New Project"
         subtitle="Create a new Vastu analysis workspace for your client."
         wide
         footer={
           <>
-            <Button variant="ghost" size="sm" onClick={() => setShowNewProject(false)}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowNewProject(false); resetForm(); }}>Cancel</Button>
             <Button variant="primary" size="sm" onClick={handleCreate}>Create Project →</Button>
           </>
         }
       >
         <div className="grid grid-cols-2 gap-[9px]">
+          {/* ── Workspace mode selector ── */}
+          <div className="col-span-2 mb-[2px]">
+            <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-[8px]">
+              Workspace Mode
+            </label>
+            <div className="grid grid-cols-2 gap-[8px]">
+              {/* Canvas mode */}
+              <button
+                type="button"
+                onClick={() => setNpMode("canvas")}
+                className={`flex flex-col gap-[6px] p-[12px] rounded-[8px] border text-left transition-all duration-150 cursor-pointer ${
+                  npMode === "canvas"
+                    ? "border-gold bg-[rgba(200,175,120,0.08)]"
+                    : "border-[rgba(200,175,120,0.12)] bg-bg-3 hover:border-gold-3"
+                }`}
+              >
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[18px]">◈</span>
+                  <span className={`text-[11px] font-sans font-medium ${npMode === "canvas" ? "text-gold-2" : "text-vastu-text"}`}>
+                    Traditional Canvas
+                  </span>
+                  {npMode === "canvas" && (
+                    <span className="ml-auto text-[8px] px-[5px] py-[1px] rounded-full bg-gold/20 text-gold font-sans">
+                      Selected
+                    </span>
+                  )}
+                </div>
+                <p className="text-[9px] text-vastu-text-3 font-sans leading-[1.6]">
+                  Upload a floor plan image, draw the perimeter, mark cuts, and overlay the Shakti Chakra.
+                </p>
+              </button>
+
+              {/* Builder mode */}
+              <button
+                type="button"
+                onClick={() => setNpMode("builder")}
+                className={`flex flex-col gap-[6px] p-[12px] rounded-[8px] border text-left transition-all duration-150 cursor-pointer ${
+                  npMode === "builder"
+                    ? "border-gold bg-[rgba(200,175,120,0.08)]"
+                    : "border-[rgba(200,175,120,0.12)] bg-bg-3 hover:border-gold-3"
+                }`}
+              >
+                <div className="flex items-center gap-[8px]">
+                  <span className="text-[18px]">⬛</span>
+                  <span className={`text-[11px] font-sans font-medium ${npMode === "builder" ? "text-gold-2" : "text-vastu-text"}`}>
+                    Floor Plan Builder
+                  </span>
+                  {npMode === "builder" && (
+                    <span className="ml-auto text-[8px] px-[5px] py-[1px] rounded-full bg-gold/20 text-gold font-sans">
+                      Selected
+                    </span>
+                  )}
+                </div>
+                <p className="text-[9px] text-vastu-text-3 font-sans leading-[1.6]">
+                  Build the floor plan room-by-room using preset shapes, freehand drawing, and furniture placement.
+                </p>
+              </button>
+            </div>
+
+            {npMode === "builder" && (
+              <p className="mt-[6px] text-[8px] text-amber-400/80 font-sans leading-[1.5]">
+                ⚠ Builder and Canvas are separate workspaces. This project will always open in the Builder.
+              </p>
+            )}
+          </div>
+
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Project Name</label>
             <input value={npName} onChange={(e) => setNpName(e.target.value)} placeholder="e.g. Kapoor Residence — 2BHK"

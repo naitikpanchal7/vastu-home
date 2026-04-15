@@ -20,6 +20,9 @@ export interface Project {
   propertyType: PropertyType;
   areaSqFt?: number;
 
+  // Workspace mode — set at creation, immutable after that
+  workspaceMode?: "canvas" | "builder";
+
   // Status
   status: ProjectStatus;
   notes?: string;                  // Consultant's private notes

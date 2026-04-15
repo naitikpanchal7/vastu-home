@@ -15,17 +15,23 @@ export default function ProjectCanvasPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (project) {
-      loadCanvasState(
-        project.canvasState ?? {},
-        project.id,
-        project.name,
-        project.clientName,
-        project.floors
-      );
-      setLoaded(true);
+    if (!project) return;
+
+    // Builder projects must open in the builder — never in the canvas workspace
+    if (project.workspaceMode === "builder") {
+      router.replace(`/builder?project=${project.id}`);
+      return;
     }
-  }, [project, loadCanvasState]);
+
+    loadCanvasState(
+      project.canvasState ?? {},
+      project.id,
+      project.name,
+      project.clientName,
+      project.floors
+    );
+    setLoaded(true);
+  }, [project, loadCanvasState, router]);
 
   if (!project) {
     return (
@@ -45,6 +51,9 @@ export default function ProjectCanvasPage() {
       </AppShell>
     );
   }
+
+  // Show nothing while redirecting builder projects
+  if (project.workspaceMode === "builder") return null;
 
   if (!loaded) return null;
 

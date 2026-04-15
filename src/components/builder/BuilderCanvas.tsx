@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Stage, Layer, Line, Rect, Text, Circle, Group, Arrow } from "react-konva";
+import { Stage, Layer, Line, Rect, Text, Circle, Group } from "react-konva";
 import {
   useBuilderStore,
   SCALE,
   getPlacedRoomCanvasPoints,
 } from "@/store/builderStore";
-import { useCanvasStore } from "@/store/canvasStore";
-import { pointInPolygon } from "@/lib/vastu/geometry";
+import { pointInPolygon, polygonCentroid } from "@/lib/vastu/geometry";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
 import { FURNITURE_LIBRARY } from "@/lib/builder/furniture";
 import type { PlacedRoom } from "@/store/builderStore";
@@ -18,10 +17,11 @@ import type Konva from "konva";
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CANVAS_W = 860;
 const CANVAS_H = 600;
-const GRID_STEP = SCALE;        // 20px = 1ft
-const SNAP_CLOSE_PX = 18;       // pixels to snap-close a drawing polygon
-const DIM_LABEL_OFFSET = 16;    // px outward from edge for dimension text
-const MIN_EDGE_FOR_LABEL = 30;  // px — don't show label on edges shorter than this
+const GRID_STEP = SCALE;
+const SNAP_CLOSE_PX = 18;
+const DIM_LABEL_OFFSET = 16;
+const MIN_EDGE_FOR_LABEL = 30;
+const CHAKRA_R = 250; // radius of the chakra overlay
 
 // ── Union perimeter ───────────────────────────────────────────────────────────
 function computeUnionPerimeter(rooms: PlacedRoom[]): Point[] {
@@ -41,9 +41,7 @@ function computeUnionPerimeter(rooms: PlacedRoom[]): Point[] {
       for (let gx = minGX; gx < maxGX; gx++) {
         const cx = gx * SCALE + SCALE / 2;
         const cy = gy * SCALE + SCALE / 2;
-        if (pointInPolygon(cx, cy, pts)) {
-          occupied.add(`${gx},${gy}`);
-        }
+        if (pointInPolygon(cx, cy, pts)) occupied.add(`${gx},${gy}`);
       }
     }
   }
@@ -130,47 +128,90 @@ interface EdgeDim {
 function getEdgeDimensions(absPts: Point[]): EdgeDim[] {
   const n = absPts.length;
   if (n < 2) return [];
-
   const cx = absPts.reduce((s, p) => s + p.x, 0) / n;
   const cy = absPts.reduce((s, p) => s + p.y, 0) / n;
-
   return absPts.map((p, i) => {
     const next = absPts[(i + 1) % n];
     const dx = next.x - p.x;
     const dy = next.y - p.y;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < MIN_EDGE_FOR_LABEL) return null as unknown as EdgeDim;
-
     const midX = (p.x + next.x) / 2;
     const midY = (p.y + next.y) / 2;
-
-    // Outward normal
     const nx = -dy / len;
     const ny = dx / len;
     const dot = (midX - cx) * nx + (midY - cy) * ny;
     const onx = dot >= 0 ? nx : -nx;
     const ony = dot >= 0 ? ny : -ny;
-
     const labelX = midX + onx * DIM_LABEL_OFFSET;
     const labelY = midY + ony * DIM_LABEL_OFFSET;
-
-    // Text angle — keep readable (don't flip upside-down)
     let angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
     if (angleDeg > 90 || angleDeg < -90) angleDeg += 180;
-
     return { midX, midY, labelX, labelY, angleDeg, lengthFt: len / SCALE, p1: p, p2: next };
   }).filter(Boolean);
 }
 
-// Snap point to grid
 function snap(v: number): number {
   return Math.round(v / SCALE) * SCALE;
+}
+
+// ── North Arrow SVG overlay ───────────────────────────────────────────────────
+function NorthArrowOverlay({ northDeg }: { northDeg: number }) {
+  return (
+    <div className="absolute top-3 left-3 pointer-events-none z-10">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="24" fill="rgba(15,14,11,0.75)" stroke="rgba(200,175,120,0.2)" strokeWidth="1" />
+        {/* Entire compass (needle + cardinal labels) rotates together — matches chakra direction */}
+        <g style={{ transformOrigin: "26px 26px", transform: `rotate(${-northDeg}deg)` }}>
+          {/* Cross hairs */}
+          <line x1="26" y1="4" x2="26" y2="48" stroke="rgba(200,175,120,0.18)" strokeWidth="0.5" />
+          <line x1="4" y1="26" x2="48" y2="26" stroke="rgba(200,175,120,0.18)" strokeWidth="0.5" />
+          {/* North half — gold */}
+          <polygon points="26,6 23,26 29,26" fill="#c8af78" />
+          {/* South half — muted */}
+          <polygon points="26,46 23,26 29,26" fill="rgba(200,175,120,0.25)" />
+          <circle cx="26" cy="26" r="3" fill="#0f0e0b" />
+          {/* Cardinal labels rotate with the needle */}
+          <text x="26" y="4.5" textAnchor="middle" fill="#c8af78" fontSize="7" fontFamily="DM Mono, monospace" fontWeight="700">N</text>
+          <text x="26" y="51" textAnchor="middle" fill="rgba(200,175,120,0.45)" fontSize="6" fontFamily="DM Mono, monospace">S</text>
+          <text x="49" y="29" textAnchor="middle" fill="rgba(200,175,120,0.45)" fontSize="6" fontFamily="DM Mono, monospace">E</text>
+          <text x="3"  y="29" textAnchor="middle" fill="rgba(200,175,120,0.45)" fontSize="6" fontFamily="DM Mono, monospace">W</text>
+        </g>
+      </svg>
+      <div className="text-center mt-[1px]">
+        <span className="font-mono text-[7px] text-gold-3">{northDeg.toFixed(1)}°</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Shakti Chakra SVG overlay ─────────────────────────────────────────────────
+function ChakraOverlay({ cx, cy, northDeg, visible }: { cx: number; cy: number; northDeg: number; visible: boolean }) {
+  if (!visible) return null;
+  return (
+    <svg
+      className="absolute inset-0 pointer-events-none z-10"
+      width={CANVAS_W}
+      height={CANVAS_H}
+      viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+    >
+      <image
+        href="/vastuchakra.png"
+        x={cx - CHAKRA_R}
+        y={cy - CHAKRA_R}
+        width={CHAKRA_R * 2}
+        height={CHAKRA_R * 2}
+        opacity={0.42}
+        transform={`rotate(${-northDeg}, ${cx}, ${cy})`}
+        style={{ mixBlendMode: "screen" }}
+      />
+    </svg>
+  );
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function BuilderCanvas() {
   const builder = useBuilderStore();
-  const canvasStore = useCanvasStore();
   const stageRef = useRef<Konva.Stage>(null);
 
   // Draw mode local state
@@ -179,6 +220,20 @@ export default function BuilderCanvas() {
   const [namingDialog, setNamingDialog] = useState<{ pts: Point[] } | null>(null);
   const [pendingName, setPendingName]   = useState("Custom Room");
   const [pendingType, setPendingType]   = useState<string>("living-room");
+
+  // Cut draw mode — use ref so handlers always see fresh points without stale closures
+  const cutPtsRef = useRef<Point[]>([]);
+  const [cutPts, setCutPts]   = useState<Point[]>([]);
+  const updateCutPts = useCallback((pts: Point[]) => {
+    cutPtsRef.current = pts;
+    setCutPts(pts);
+  }, []);
+  // Debounce ref — prevents Konva's dblClick from firing two onClick events and adding
+  // two ghost points before the polygon is closed (same pattern as VastuCanvas.tsx)
+  const lastCutClickTimeRef = useRef(0);
+
+  // Move-all drag state
+  const moveAllStartRef = useRef<Point | null>(null);
 
   // Context menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; roomId: string } | null>(null);
@@ -195,37 +250,47 @@ export default function BuilderCanvas() {
     updatePlacedRoomVertex,
     setAssembledPerimeter,
     isDrawingRoom, setDrawingRoom,
+    isCuttingMode, setCuttingMode,
+    isMovingAll, setMovingAll, moveAllRooms,
     addPlacedRoomFromDrawing,
+    addCut,
+    northDeg, brahmaX, brahmaY, setBrahma,
+    showChakra,
+    cuts,
   } = builder;
 
-  const { northDeg, brahmaX, brahmaY } = canvasStore;
-
-  // ── ESC to cancel drawing ──────────────────────────────────────────────────
+  // ── ESC to cancel drawing / modes ────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setDrawPts([]);
+        updateCutPts([]);
         setNamingDialog(null);
+        lastCutClickTimeRef.current = 0;
         if (isDrawingRoom) setDrawingRoom(false);
+        if (isCuttingMode) setCuttingMode(false);
+        if (isMovingAll) setMovingAll(false);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isDrawingRoom, setDrawingRoom]);
+  }, [isDrawingRoom, setDrawingRoom, isCuttingMode, setCuttingMode, isMovingAll, setMovingAll, updateCutPts]);
 
-  // ── Recompute perimeter ────────────────────────────────────────────────────
+  // ── Recompute perimeter + auto-detect Brahmasthan ─────────────────────────
   useEffect(() => {
     if (placedRooms.length === 0) {
       setAssembledPerimeter([]);
-      canvasStore.resetPerimeter();
       return;
     }
     const perimeter = computeUnionPerimeter(placedRooms);
     setAssembledPerimeter(perimeter);
+
+    // Auto-detect Brahmasthan as exact centroid of the union perimeter
     if (perimeter.length >= 3) {
-      canvasStore.resetPerimeter();
-      perimeter.forEach((pt) => canvasStore.addPerimeterPoint(pt));
-      canvasStore.closePerimeter();
+      const c = polygonCentroid(perimeter);
+      if (isFinite(c.x) && isFinite(c.y)) {
+        setBrahma(c.x, c.y);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placedRooms]);
@@ -241,55 +306,95 @@ export default function BuilderCanvas() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placedFurniture.length, brahmaX, brahmaY, northDeg]);
 
-  // ── Get snapped stage position ─────────────────────────────────────────────
-  const getSnapped = useCallback((e: Konva.KonvaEventObject<MouseEvent>): Point => {
-    const stage = stageRef.current;
-    const pos = stage?.getPointerPosition() ?? { x: 0, y: 0 };
+  // ── Snapped position from stage ────────────────────────────────────────────
+  const getSnappedPos = useCallback((): Point => {
+    const pos = stageRef.current?.getPointerPosition() ?? { x: 0, y: 0 };
     return { x: snap(pos.x), y: snap(pos.y) };
   }, []);
 
-  // ── Mouse move — update ghost line ─────────────────────────────────────────
+  // ── Mouse move — ghost line ────────────────────────────────────────────────
   const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (!isDrawingRoom) return;
-    const stage = stageRef.current;
-    const pos = stage?.getPointerPosition() ?? { x: 0, y: 0 };
-    setMousePos({ x: snap(pos.x), y: snap(pos.y) });
-  }, [isDrawingRoom]);
+    if (!isDrawingRoom && !isCuttingMode) return;
+    const pos = stageRef.current?.getPointerPosition() ?? { x: 0, y: 0 };
+    // snap for room drawing, raw for cut
+    if (isDrawingRoom) setMousePos({ x: snap(pos.x), y: snap(pos.y) });
+    else setMousePos({ x: pos.x, y: pos.y });
+  }, [isDrawingRoom, isCuttingMode]);
 
-  // ── Stage click ────────────────────────────────────────────────────────────
+  // ── Place a room draw point ────────────────────────────────────────────────
+  const handleDrawPoint = useCallback(() => {
+    const pt = getSnappedPos();
+    if (drawPts.length >= 3) {
+      const dist = Math.hypot(pt.x - drawPts[0].x, pt.y - drawPts[0].y);
+      if (dist <= SNAP_CLOSE_PX) {
+        setNamingDialog({ pts: drawPts });
+        setDrawPts([]);
+        return;
+      }
+    }
+    setDrawPts((prev) => [...prev, pt]);
+  }, [drawPts, getSnappedPos]);
+
+  // ── Close room drawing ─────────────────────────────────────────────────────
+  const handleDrawDblClick = useCallback(() => {
+    if (drawPts.length >= 3) {
+      setNamingDialog({ pts: drawPts });
+      setDrawPts([]);
+    }
+  }, [drawPts]);
+
+  // ── Stage click — handles draw, cut, deselect ─────────────────────────────
   const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    const isStage = e.target === e.target.getStage();
+    // Cut mode: add a cut point using ref (always fresh, no stale closure)
+    if (isCuttingMode) {
+      // Debounce: ignore clicks within 350 ms — prevents Konva's dblClick from adding
+      // two ghost points before the dblClick handler can close the polygon.
+      const now = Date.now();
+      if (now - lastCutClickTimeRef.current < 350) return;
+      lastCutClickTimeRef.current = now;
 
-    if (isDrawingRoom) {
-      const pt = getSnapped(e);
-      // Check if clicking near the first point to close
-      if (drawPts.length >= 3) {
-        const first = drawPts[0];
-        const dist = Math.hypot(pt.x - first.x, pt.y - first.y);
-        if (dist <= SNAP_CLOSE_PX) {
-          setNamingDialog({ pts: drawPts });
-          setDrawPts([]);
+      const pos = stageRef.current?.getPointerPosition() ?? { x: 0, y: 0 };
+      const pt: Point = { x: pos.x, y: pos.y };
+      const current = cutPtsRef.current;
+      if (current.length >= 3) {
+        const dist = Math.hypot(pt.x - current[0].x, pt.y - current[0].y);
+        if (dist <= SNAP_CLOSE_PX * 2) {
+          addCut(current);
+          updateCutPts([]);
+          lastCutClickTimeRef.current = 0;
+          setCuttingMode(false);
           return;
         }
       }
-      setDrawPts((prev) => [...prev, pt]);
+      updateCutPts([...current, pt]);
       return;
     }
 
+    if (isDrawingRoom) { handleDrawPoint(); return; }
+
+    const isStage = e.target === e.target.getStage();
     if (isStage) {
       selectRoom(null);
       selectFurniture(null);
       setContextMenu(null);
     }
-  }, [isDrawingRoom, drawPts, getSnapped, selectRoom, selectFurniture]);
+  }, [isCuttingMode, isDrawingRoom, handleDrawPoint, selectRoom, selectFurniture, addCut, updateCutPts, setCuttingMode]);
 
-  // ── Double-click — close polygon ───────────────────────────────────────────
-  const handleDblClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (isDrawingRoom && drawPts.length >= 3) {
-      setNamingDialog({ pts: drawPts });
-      setDrawPts([]);
+  const handleStageDblClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Cut mode: close polygon on double-click using ref (always fresh)
+    if (isCuttingMode) {
+      // Set timestamp so any trailing onClick fired by Konva after this dblClick is debounced away
+      lastCutClickTimeRef.current = Date.now();
+      const current = cutPtsRef.current;
+      if (current.length >= 3) {
+        addCut(current);
+        updateCutPts([]);
+        setCuttingMode(false);
+      }
+      return;
     }
-  }, [isDrawingRoom, drawPts]);
+    if (isDrawingRoom) handleDrawDblClick();
+  }, [isCuttingMode, isDrawingRoom, handleDrawDblClick, addCut, updateCutPts, setCuttingMode]);
 
   // ── Confirm drawn room ─────────────────────────────────────────────────────
   const confirmDrawnRoom = () => {
@@ -309,7 +414,7 @@ export default function BuilderCanvas() {
     }, []
   );
 
-  // ── Grid dots (cleaner floor plan look than lines) ─────────────────────────
+  // ── Grid dots ─────────────────────────────────────────────────────────────
   const dots: React.ReactNode[] = [];
   for (let x = GRID_STEP; x < CANVAS_W; x += GRID_STEP) {
     for (let y = GRID_STEP; y < CANVAS_H; y += GRID_STEP) {
@@ -322,26 +427,52 @@ export default function BuilderCanvas() {
   const perimeter = builder.assembledPerimeter;
   const perimeterFlat = perimeter.flatMap((p) => [p.x, p.y]);
 
+  // Active drawing points (room or cut)
+  const activePts  = isDrawingRoom ? drawPts : isCuttingMode ? cutPts : [];
+  const activeMode = isDrawingRoom ? "room" : isCuttingMode ? "cut" : null;
+
+  // ── Move-all drag handlers ────────────────────────────────────────────────
+  const handleMoveAllMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isMovingAll) return;
+    moveAllStartRef.current = { x: e.clientX, y: e.clientY };
+  }, [isMovingAll]);
+
+  const handleMoveAllMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isMovingAll || !moveAllStartRef.current) return;
+    const dx = e.clientX - moveAllStartRef.current.x;
+    const dy = e.clientY - moveAllStartRef.current.y;
+    moveAllStartRef.current = { x: e.clientX, y: e.clientY };
+    moveAllRooms(dx, dy);
+  }, [isMovingAll, moveAllRooms]);
+
+  const handleMoveAllMouseUp = useCallback(() => {
+    moveAllStartRef.current = null;
+  }, []);
+
+  const activeCursor = isMovingAll ? "grab" : (isDrawingRoom || isCuttingMode) ? "crosshair" : "default";
+
   return (
     <div
       className="relative bg-[#0f0e0b] overflow-hidden select-none"
-      style={{ width: CANVAS_W, height: CANVAS_H }}
+      style={{ width: CANVAS_W, height: CANVAS_H, cursor: isMovingAll ? "grab" : undefined }}
       onClick={() => setContextMenu(null)}
+      onMouseDown={handleMoveAllMouseDown}
+      onMouseMove={handleMoveAllMouseMove}
+      onMouseUp={handleMoveAllMouseUp}
     >
       <Stage
         ref={stageRef}
         width={CANVAS_W}
         height={CANVAS_H}
         onClick={handleStageClick}
-        onDblClick={handleDblClick}
+        onDblClick={handleStageDblClick}
         onMouseMove={handleMouseMove}
-        style={{ cursor: isDrawingRoom ? "crosshair" : "default" }}
+        style={{ cursor: activeCursor }}
       >
         {/* ── Background + Grid ─────────────────────────────────────────── */}
         <Layer listening={false}>
           <Rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="#0f0e0b" />
           {dots}
-          {/* Scale bar — bottom left */}
           <Line points={[20, CANVAS_H - 18, 20 + SCALE * 10, CANVAS_H - 18]} stroke="rgba(200,175,120,0.3)" strokeWidth={1} />
           <Line points={[20, CANVAS_H - 22, 20, CANVAS_H - 14]} stroke="rgba(200,175,120,0.3)" strokeWidth={1} />
           <Line points={[20 + SCALE * 10, CANVAS_H - 22, 20 + SCALE * 10, CANVAS_H - 14]} stroke="rgba(200,175,120,0.3)" strokeWidth={1} />
@@ -351,15 +482,38 @@ export default function BuilderCanvas() {
         {/* ── Perimeter outline ──────────────────────────────────────────── */}
         <Layer listening={false}>
           {perimeter.length >= 3 && (
-            <Line
-              points={perimeterFlat}
-              closed
-              stroke="#c8af78"
-              strokeWidth={2}
-              dash={[8, 4]}
-              opacity={0.5}
-            />
+            <Line points={perimeterFlat} closed stroke="#c8af78" strokeWidth={2} dash={[8, 4]} opacity={0.5} />
           )}
+        </Layer>
+
+        {/* ── Cut regions ───────────────────────────────────────────────── */}
+        <Layer listening={false}>
+          {cuts.map((cut) => (
+            <Group key={cut.id}>
+              <Line
+                points={cut.points.flatMap((p) => [p.x, p.y])}
+                closed
+                fill="rgba(200,60,40,0.2)"
+                stroke="rgba(200,60,40,0.7)"
+                strokeWidth={1.8}
+                dash={[6, 3]}
+              />
+              {/* Label at centroid — matches normal canvas style */}
+              {cut.points.length > 0 && (
+                <Text
+                  x={cut.points.reduce((s, p) => s + p.x, 0) / cut.points.length - 28}
+                  y={cut.points.reduce((s, p) => s + p.y, 0) / cut.points.length - 6}
+                  width={56}
+                  align="center"
+                  text={cut.label}
+                  fontSize={11}
+                  fontStyle="bold"
+                  fontFamily="DM Mono, monospace"
+                  fill="#e05050"
+                />
+              )}
+            </Group>
+          ))}
         </Layer>
 
         {/* ── Rooms layer ────────────────────────────────────────────────── */}
@@ -368,23 +522,18 @@ export default function BuilderCanvas() {
             const absPts = getPlacedRoomCanvasPoints(room);
             const flatLocal = room.localPoints.flatMap((p) => [p.x * SCALE, p.y * SCALE]);
             const isSelected = room.id === selectedRoomId;
-
-            // Centroid for label
             const lCx = room.localPoints.reduce((s, p) => s + p.x, 0) / room.localPoints.length * SCALE;
             const lCy = room.localPoints.reduce((s, p) => s + p.y, 0) / room.localPoints.length * SCALE;
-
-            // Edge dimension labels (in absolute coords for calculation, but rendered relative to group)
             const edgeDims = getEdgeDimensions(absPts);
-
             return (
               <Group
                 key={room.id}
                 x={room.x}
                 y={room.y}
-                draggable={!isDrawingRoom}
+                draggable={!isDrawingRoom && !isCuttingMode}
                 onDragEnd={(e) => movePlacedRoom(room.id, e.target.x(), e.target.y())}
                 onClick={(e) => {
-                  if (!isDrawingRoom) {
+                  if (!isDrawingRoom && !isCuttingMode) {
                     e.cancelBubble = true;
                     selectRoom(room.id);
                     setContextMenu(null);
@@ -392,80 +541,22 @@ export default function BuilderCanvas() {
                 }}
                 onContextMenu={(e) => handleRoomContextMenu(e, room.id)}
               >
-                {/* Room fill */}
-                <Line
-                  points={flatLocal}
-                  closed
-                  fill={room.color}
-                  stroke={isSelected ? "#e8d4a0" : room.borderColor}
-                  strokeWidth={isSelected ? 2.5 : 1.5}
-                />
-
-                {/* Room name */}
-                <Text
-                  x={lCx - 60}
-                  y={lCy - 12}
-                  width={120}
-                  align="center"
-                  text={room.name}
-                  fontSize={9}
-                  fontFamily="DM Sans, sans-serif"
-                  fill="rgba(232,224,208,0.92)"
-                  listening={false}
-                />
-
-                {/* Dimension labels on each edge */}
+                <Line points={flatLocal} closed fill={room.color} stroke={isSelected ? "#e8d4a0" : room.borderColor} strokeWidth={isSelected ? 2.5 : 1.5} />
+                <Text x={lCx - 60} y={lCy - 12} width={120} align="center" text={room.name} fontSize={9} fontFamily="DM Sans, sans-serif" fill="rgba(232,224,208,0.92)" listening={false} />
                 {edgeDims.map((dim, i) => {
-                  // Convert absolute label pos to group-local
                   const localLX = dim.labelX - room.x;
                   const localLY = dim.labelY - room.y;
-                  const ftLabel = Number.isInteger(dim.lengthFt)
-                    ? `${dim.lengthFt} ft`
-                    : `${dim.lengthFt.toFixed(1)} ft`;
+                  const ftLabel = Number.isInteger(dim.lengthFt) ? `${dim.lengthFt} ft` : `${dim.lengthFt.toFixed(1)} ft`;
                   return (
-                    <Text
-                      key={i}
-                      x={localLX - 24}
-                      y={localLY - 5}
-                      width={48}
-                      align="center"
-                      text={ftLabel}
-                      fontSize={7.5}
-                      fontFamily="DM Mono, monospace"
-                      fill={isSelected ? "rgba(232,212,160,0.85)" : "rgba(176,160,128,0.65)"}
-                      rotation={dim.angleDeg}
-                      offsetX={0}
-                      listening={false}
-                    />
+                    <Text key={i} x={localLX - 24} y={localLY - 5} width={48} align="center" text={ftLabel} fontSize={7.5} fontFamily="DM Mono, monospace" fill={isSelected ? "rgba(232,212,160,0.85)" : "rgba(176,160,128,0.65)"} rotation={dim.angleDeg} listening={false} />
                   );
                 })}
-
-                {/* Vertex handles — only when selected */}
                 {isSelected && room.localPoints.map((lp, vi) => (
                   <Circle
-                    key={`vh-${vi}`}
-                    x={lp.x * SCALE}
-                    y={lp.y * SCALE}
-                    radius={5}
-                    fill="#e8d4a0"
-                    stroke="#0f0e0b"
-                    strokeWidth={1.5}
-                    draggable
+                    key={`vh-${vi}`} x={lp.x * SCALE} y={lp.y * SCALE} radius={5} fill="#e8d4a0" stroke="#0f0e0b" strokeWidth={1.5} draggable
                     onMouseDown={(e) => { e.cancelBubble = true; }}
-                    onDragMove={(e) => {
-                      e.cancelBubble = true;
-                      // Live update while dragging
-                      const absX = room.x + e.target.x();
-                      const absY = room.y + e.target.y();
-                      updatePlacedRoomVertex(room.id, vi, absX, absY);
-                    }}
-                    onDragEnd={(e) => {
-                      e.cancelBubble = true;
-                      const absX = room.x + e.target.x();
-                      const absY = room.y + e.target.y();
-                      updatePlacedRoomVertex(room.id, vi, absX, absY);
-                    }}
-                    style={{ cursor: "grab" }}
+                    onDragMove={(e) => { e.cancelBubble = true; updatePlacedRoomVertex(room.id, vi, room.x + e.target.x(), room.y + e.target.y()); }}
+                    onDragEnd={(e) => { e.cancelBubble = true; updatePlacedRoomVertex(room.id, vi, room.x + e.target.x(), room.y + e.target.y()); }}
                   />
                 ))}
               </Group>
@@ -481,15 +572,10 @@ export default function BuilderCanvas() {
             const hPx = Math.max(furn.heightFt * SCALE, 22);
             const zone = furn.currentZone || "";
             const assessment = assessFurniture(furn.templateId, zone);
-
             return (
-              <Group
-                key={furn.id}
-                x={furn.x}
-                y={furn.y}
-                draggable={!isDrawingRoom}
+              <Group key={furn.id} x={furn.x} y={furn.y} draggable={!isDrawingRoom && !isCuttingMode}
                 onDragEnd={(e) => movePlacedFurniture(furn.id, e.target.x(), e.target.y())}
-                onClick={(e) => { e.cancelBubble = true; selectFurniture(furn.id); }}
+                onClick={(e) => { if (!isCuttingMode) { e.cancelBubble = true; selectFurniture(furn.id); } }}
                 onMouseEnter={() => setHoveredFurnId(furn.id)}
                 onMouseLeave={() => setHoveredFurnId(null)}
               >
@@ -501,74 +587,93 @@ export default function BuilderCanvas() {
           })}
         </Layer>
 
-        {/* ── Draw mode layer ────────────────────────────────────────────── */}
-        {isDrawingRoom && (
-          <Layer>
-            {/* Placed vertices */}
-            {drawPts.map((pt, i) => (
+        {/* ── Brahmasthan dot ───────────────────────────────────────────── */}
+        <Layer>
+          <Circle
+            x={brahmaX}
+            y={brahmaY}
+            radius={7}
+            fill="#c8af78"
+            stroke="#0f0e0b"
+            strokeWidth={1.5}
+            opacity={0.9}
+            draggable={!isDrawingRoom && !isCuttingMode}
+            onDragEnd={(e) => {
+              setBrahma(e.target.x(), e.target.y());
+            }}
+            onDragMove={(e) => {
+              setBrahma(e.target.x(), e.target.y());
+            }}
+          />
+          <Circle x={brahmaX} y={brahmaY} radius={2.5} fill="#0f0e0b" listening={false} />
+          <Text
+            x={brahmaX - 40}
+            y={brahmaY + 10}
+            width={80}
+            align="center"
+            text="Brahmasthan"
+            fontSize={7}
+            fontFamily="DM Mono, monospace"
+            fill="rgba(200,175,120,0.6)"
+            listening={false}
+          />
+        </Layer>
+
+        {/* ── Active draw overlay (room or cut) ──────────────────────────── */}
+        {activeMode && (
+          <Layer listening={false}>
+            {activePts.map((pt, i) => (
               <Circle
-                key={i}
-                x={pt.x}
-                y={pt.y}
+                key={i} x={pt.x} y={pt.y}
                 radius={i === 0 ? 6 : 4}
-                fill={i === 0 ? "#c8af78" : "#e8d4a0"}
-                stroke="#0f0e0b"
-                strokeWidth={1.5}
-                listening={false}
+                fill={activeMode === "cut" ? (i === 0 ? "#e05050" : "#f87171") : (i === 0 ? "#c8af78" : "#e8d4a0")}
+                stroke="#0f0e0b" strokeWidth={1.5} listening={false}
               />
             ))}
-
-            {/* Lines between placed vertices */}
-            {drawPts.length >= 2 && (
+            {activePts.length >= 2 && (
               <Line
-                points={drawPts.flatMap((p) => [p.x, p.y])}
-                stroke="#c8af78"
-                strokeWidth={1.5}
-                dash={[4, 3]}
-                listening={false}
+                points={activePts.flatMap((p) => [p.x, p.y])}
+                stroke={activeMode === "cut" ? "#e05050" : "#c8af78"}
+                strokeWidth={1.5} dash={[4, 3]} listening={false}
               />
             )}
-
-            {/* Ghost line from last vertex to mouse */}
-            {drawPts.length >= 1 && (
+            {activePts.length >= 1 && (
               <Line
-                points={[
-                  drawPts[drawPts.length - 1].x,
-                  drawPts[drawPts.length - 1].y,
-                  mousePos.x,
-                  mousePos.y,
-                ]}
-                stroke="rgba(200,175,120,0.5)"
-                strokeWidth={1}
-                dash={[4, 4]}
-                listening={false}
+                points={[activePts[activePts.length - 1].x, activePts[activePts.length - 1].y, mousePos.x, mousePos.y]}
+                stroke={activeMode === "cut" ? "rgba(224,80,80,0.5)" : "rgba(200,175,120,0.5)"}
+                strokeWidth={1} dash={[4, 4]} listening={false}
               />
             )}
-
-            {/* Closing hint: highlight first vertex when close enough */}
-            {drawPts.length >= 3 &&
-              Math.hypot(mousePos.x - drawPts[0].x, mousePos.y - drawPts[0].y) <= SNAP_CLOSE_PX && (
-              <Circle x={drawPts[0].x} y={drawPts[0].y} radius={10} stroke="#c8af78" strokeWidth={2} opacity={0.6} listening={false} />
+            {activePts.length >= 3 && Math.hypot(mousePos.x - activePts[0].x, mousePos.y - activePts[0].y) <= SNAP_CLOSE_PX * 2 && (
+              <Circle x={activePts[0].x} y={activePts[0].y} radius={12}
+                stroke={activeMode === "cut" ? "#e05050" : "#c8af78"}
+                strokeWidth={2} opacity={0.7} listening={false}
+              />
             )}
-
-            {/* Vertex count badge */}
-            <Rect x={CANVAS_W - 130} y={10} width={120} height={28} fill="rgba(15,14,11,0.85)" cornerRadius={5} listening={false} />
+            {/* Hint badge */}
+            <Rect x={CANVAS_W - 180} y={10} width={170} height={28} fill="rgba(15,14,11,0.85)" cornerRadius={5} listening={false} />
             <Text
-              x={CANVAS_W - 130}
-              y={16}
-              width={120}
-              align="center"
-              text={drawPts.length === 0 ? "Click to start" : `${drawPts.length} point${drawPts.length !== 1 ? "s" : ""} — dbl-click to finish`}
-              fontSize={8.5}
-              fontFamily="DM Sans, sans-serif"
-              fill="rgba(200,175,120,0.8)"
+              x={CANVAS_W - 180} y={16} width={170} align="center"
+              text={
+                activeMode === "cut"
+                  ? activePts.length === 0 ? "Click to mark cut region" : `${activePts.length} pts — dbl-click to finish`
+                  : activePts.length === 0 ? "Click to start room" : `${activePts.length} pts — dbl-click to finish`
+              }
+              fontSize={8.5} fontFamily="DM Sans, sans-serif"
+              fill={activeMode === "cut" ? "rgba(240,100,80,0.9)" : "rgba(200,175,120,0.8)"}
               listening={false}
             />
           </Layer>
         )}
       </Stage>
 
-      {/* ── Furniture tooltip (HTML overlay) ─────────────────────────────── */}
+      {/* ── Chakra SVG overlay ────────────────────────────────────────────── */}
+      <ChakraOverlay cx={brahmaX} cy={brahmaY} northDeg={northDeg} visible={showChakra} />
+
+      {/* ── North arrow ───────────────────────────────────────────────────── */}
+      <NorthArrowOverlay northDeg={northDeg} />
+
+      {/* ── Furniture tooltip ─────────────────────────────────────────────── */}
       {hoveredFurnId && (() => {
         const furn = placedFurniture.find((f) => f.id === hoveredFurnId);
         if (!furn) return null;
@@ -593,28 +698,22 @@ export default function BuilderCanvas() {
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="w-full text-left px-3 py-[6px] text-[11px] text-vastu-text font-sans hover:bg-[rgba(200,175,120,0.08)] transition-colors"
-            onClick={() => { rotatePlacedRoom(contextMenu.roomId); setContextMenu(null); }}
-          >
+          <button className="w-full text-left px-3 py-[6px] text-[11px] text-vastu-text font-sans hover:bg-[rgba(200,175,120,0.08)]"
+            onClick={() => { rotatePlacedRoom(contextMenu.roomId); setContextMenu(null); }}>
             ↻ Rotate 90°
           </button>
-          <button
-            className="w-full text-left px-3 py-[6px] text-[11px] text-red-400 font-sans hover:bg-red-900/10 transition-colors"
-            onClick={() => { removePlacedRoom(contextMenu.roomId); setContextMenu(null); }}
-          >
+          <button className="w-full text-left px-3 py-[6px] text-[11px] text-red-400 font-sans hover:bg-red-900/10"
+            onClick={() => { removePlacedRoom(contextMenu.roomId); setContextMenu(null); }}>
             ✕ Remove Room
           </button>
         </div>
       )}
 
-      {/* ── Selected furniture remove button ──────────────────────────────── */}
+      {/* ── Selected furniture remove ──────────────────────────────────────── */}
       {selectedFurnitureId && (
-        <div className="absolute top-2 right-2 bg-bg-2 border border-[rgba(200,175,120,0.15)] rounded-md px-2 py-1 flex gap-2 z-20">
-          <button
-            className="text-[9px] text-red-400 font-sans hover:text-red-300 transition-colors"
-            onClick={() => removePlacedFurniture(selectedFurnitureId)}
-          >
+        <div className="absolute top-2 right-[70px] bg-bg-2 border border-[rgba(200,175,120,0.15)] rounded-md px-2 py-1 flex gap-2 z-20">
+          <button className="text-[9px] text-red-400 font-sans hover:text-red-300"
+            onClick={() => removePlacedFurniture(selectedFurnitureId)}>
             ✕ Remove
           </button>
         </div>
@@ -623,29 +722,18 @@ export default function BuilderCanvas() {
       {/* ── Draw mode naming dialog ───────────────────────────────────────── */}
       {namingDialog && (
         <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/40">
-          <div
-            className="bg-bg-2 border border-[rgba(200,175,120,0.2)] rounded-[12px] p-5 w-[280px] shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-bg-2 border border-[rgba(200,175,120,0.2)] rounded-[12px] p-5 w-[280px] shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-serif text-[17px] text-gold-2 mb-3">Name Your Room</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-[8px] uppercase tracking-[1.5px] text-vastu-text-3 mb-1">Room Name</label>
-                <input
-                  autoFocus
-                  value={pendingName}
-                  onChange={(e) => setPendingName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && confirmDrawnRoom()}
-                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-md text-vastu-text font-sans text-[11px] outline-none focus:border-gold-3"
-                />
+                <input autoFocus value={pendingName} onChange={(e) => setPendingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && confirmDrawnRoom()}
+                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-md text-vastu-text font-sans text-[11px] outline-none focus:border-gold-3" />
               </div>
               <div>
                 <label className="block text-[8px] uppercase tracking-[1.5px] text-vastu-text-3 mb-1">Room Type</label>
-                <select
-                  value={pendingType}
-                  onChange={(e) => setPendingType(e.target.value)}
-                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-md text-vastu-text font-sans text-[11px] outline-none focus:border-gold-3"
-                >
+                <select value={pendingType} onChange={(e) => setPendingType(e.target.value)}
+                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-md text-vastu-text font-sans text-[11px] outline-none focus:border-gold-3">
                   {[
                     { value: "bedroom-master", label: "Master Bedroom" },
                     { value: "bedroom-child",  label: "Children's Bedroom" },
@@ -661,24 +749,12 @@ export default function BuilderCanvas() {
                     { value: "balcony",        label: "Balcony / Terrace" },
                     { value: "garage",         label: "Garage / Parking" },
                     { value: "store",          label: "Store Room" },
-                  ].map((opt) => (
-                    <option key={opt.value} value={opt.value} className="bg-bg-3">{opt.label}</option>
-                  ))}
+                  ].map((opt) => <option key={opt.value} value={opt.value} className="bg-bg-3">{opt.label}</option>)}
                 </select>
               </div>
               <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => setNamingDialog(null)}
-                  className="flex-1 py-[7px] bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 font-sans text-[11px] rounded-md hover:border-gold-3 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDrawnRoom}
-                  className="flex-1 py-[7px] bg-gold text-bg font-sans font-medium text-[11px] rounded-md hover:bg-gold-2 transition-colors"
-                >
-                  Add Room
-                </button>
+                <button onClick={() => setNamingDialog(null)} className="flex-1 py-[7px] bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 font-sans text-[11px] rounded-md hover:border-gold-3">Cancel</button>
+                <button onClick={confirmDrawnRoom} className="flex-1 py-[7px] bg-gold text-bg font-sans font-medium text-[11px] rounded-md hover:bg-gold-2">Add Room</button>
               </div>
             </div>
           </div>
@@ -686,17 +762,20 @@ export default function BuilderCanvas() {
       )}
 
       {/* ── Empty state ────────────────────────────────────────────────────── */}
-      {placedRooms.length === 0 && !isDrawingRoom && (
+      {placedRooms.length === 0 && !isDrawingRoom && !isCuttingMode && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
             <div className="text-[40px] opacity-10 mb-3 font-serif">⊞</div>
-            <p className="text-[11px] text-vastu-text-3 font-sans mb-1">
-              Add rooms from the left panel
-            </p>
-            <p className="text-[10px] text-vastu-text-3 font-sans opacity-60">
-              or click <span className="text-gold-3">✏ Draw Custom Room</span>
-            </p>
+            <p className="text-[11px] text-vastu-text-3 font-sans mb-1">Add rooms from the left panel</p>
+            <p className="text-[10px] text-vastu-text-3 font-sans opacity-60">or click <span className="text-gold-3">✏ Draw Custom Room</span></p>
           </div>
+        </div>
+      )}
+
+      {/* ── Cut mode active indicator ──────────────────────────────────────── */}
+      {isCuttingMode && cutPts.length === 0 && (
+        <div className="absolute bottom-4 right-4 bg-red-900/30 border border-red-800/40 rounded-md px-3 py-[5px] pointer-events-none z-20">
+          <span className="text-[9px] text-red-300 font-sans">✕ Cut mode — click to mark region, ESC to cancel</span>
         </div>
       )}
     </div>
