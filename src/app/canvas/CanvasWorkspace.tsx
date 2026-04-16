@@ -72,7 +72,6 @@ export default function CanvasWorkspace() {
     if (projectId) {
       projectStore.updateProject(projectId, { name: trimmed });
     } else {
-      // Create project now if not yet created
       if (!autoCreatedRef.current) {
         autoCreatedRef.current = true;
         const now = new Date().toISOString();
@@ -205,6 +204,7 @@ export default function CanvasWorkspace() {
         <button
           onClick={undo}
           disabled={undoStack.length === 0}
+          title="Undo (Ctrl+Z)"
           className="text-[10px] px-[5px] py-[2px] rounded-[3px] cursor-pointer text-vastu-text-3 hover:text-gold-2 disabled:opacity-30 disabled:cursor-default bg-transparent border-none transition-colors"
         >
           ↩ Undo
@@ -219,6 +219,7 @@ export default function CanvasWorkspace() {
         >
           ◎ {chakraVisible ? "Hide" : "Show"} Chakra
         </Button>
+
         <Button
           variant="primary"
           className="text-[10px] py-1 px-[9px]"
@@ -238,12 +239,12 @@ export default function CanvasWorkspace() {
         onRename={(id, name) => { renameFloor(id, name); persistFloors(); }}
       />
 
-      {/* Workspace */}
+      {/* Main workspace: LeftPanel | Canvas | RightPanel */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left panel */}
         <div
-          className={`bg-bg-2 border-r border-[rgba(200,175,120,0.15)] flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 z-[5] ${
-            leftExpanded ? "w-[186px]" : "w-[52px]"
+          className={`bg-bg-2 border-r border-[rgba(200,175,120,0.12)] flex flex-col flex-shrink-0 transition-[width] duration-[200ms] overflow-hidden ${
+            leftExpanded ? "w-[190px]" : "w-[52px]"
           }`}
         >
           {/* Toggle */}
@@ -328,7 +329,7 @@ export default function CanvasWorkspace() {
                   {[
                     { label: "Vastu Chakra", color: "rgba(200,175,120,.4)", action: toggleChakra },
                     { label: "Perimeter",    color: "rgba(200,175,120,.6)", action: () => {} },
-                    { label: "Cuts",         color: "rgba(200,60,40,.6)",  action: () => {} },
+                    { label: "Cuts",         color: "rgba(200,60,40,.6)",   action: () => {} },
                   ].map((layer) => (
                     <div
                       key={layer.label}
@@ -502,10 +503,7 @@ function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename
               )}
               {floors.length > 1 && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(floor.id);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); onDelete(floor.id); }}
                   className="ml-[1px] text-[9px] text-vastu-text-3 hover:text-red-400 transition-colors leading-none cursor-pointer bg-transparent border-none"
                   title={`Delete ${floor.name}`}
                 >
@@ -516,7 +514,6 @@ function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename
           );
         })}
 
-      {/* Add floor button */}
       <button
         onClick={onAdd}
         title="Add new floor"
