@@ -6,7 +6,6 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { useCanvasStore } from '@/store/canvasStore';
 import { useCadStore } from '@/store/cadStore';
 import { polygonCentroid, polygonArea, calculateZoneAreas } from '@/lib/vastu/geometry';
 import { VASTU_ZONES } from '@/lib/vastu/zones';
@@ -201,26 +200,27 @@ export default function PaperCanvas() {
 
   // Store references (avoid stale closures in paper event handlers)
   const cadStore = useCadStore();
-  const canvasStore = useCanvasStore();
   const cadRef = useRef(cadStore);
-  const csRef = useRef(canvasStore);
   useEffect(() => { cadRef.current = cadStore; }, [cadStore]);
-  useEffect(() => { csRef.current = canvasStore; }, [canvasStore]);
 
   // ── Zone recalc ─────────────────────────────────────────────────────────────
 
   const recalcZones = useCallback(() => {
-    const cs = csRef.current;
-    const pts = cs.perimeterPoints;
-    if (pts.length < 3) return;
+    const cad = cadRef.current;
+    const poly = detectClosedPolygon(cad.nodes, cad.walls);
+    if (!poly || poly.length < 3) {
+      cad.setZoneAnalysis([]);
+      return;
+    }
+    const cuts = cad.cuts.map((c) => ({ points: c.points }));
     const results = calculateZoneAreas(
-      pts,
-      cs.brahmaX,
-      cs.brahmaY,
-      cs.northDeg,
+      poly,
+      cad.brahmaX,
+      cad.brahmaY,
+      cad.northDeg,
       VASTU_ZONES,
-      cs.cuts,
-      cs.scale?.pixelsPerUnit
+      cuts,
+      cad.pixelsPerUnit > 0 ? cad.pixelsPerUnit : undefined
     );
     const analysis: ZoneAnalysis[] = VASTU_ZONES.map((z) => {
       const r = results.find((res) => res.zoneName === z.shortName);
@@ -237,38 +237,20 @@ export default function PaperCanvas() {
         status: pct >= 5 && pct <= 7.5 ? 'good' : pct < 3 ? 'critical' : 'warning',
       };
     });
-    cs.setZoneAnalysis(analysis);
+    cad.setZoneAnalysis(analysis);
   }, []);
 
-  // ── Sync walls → Vastu perimeter ────────────────────────────────────────────
+  // ── Sync walls → Builder brahma (cadStore only, never touches canvasStore) ────
 
   const syncToVastu = useCallback(() => {
     const cad = cadRef.current;
-    const cs = csRef.current;
     const poly = detectClosedPolygon(cad.nodes, cad.walls);
     if (!poly || poly.length < 3) {
-      cs.setZoneAnalysis([]);
+      cad.setZoneAnalysis([]);
       return;
     }
     const centroid = polygonCentroid(poly);
-
-    // Rebuild perimeter in canvasStore
-    cs.resetPerimeter();
-    for (const pt of poly) cs.addPerimeterPoint(pt);
-    cs.closePerimeter();
-    cs.setBrahma(centroid.x, centroid.y);
-    cs.confirmBrahma();
-
-    if (cad.pixelsPerUnit > 0) {
-      cs.setScale({
-        pt1: { x: 0, y: 0 },
-        pt2: { x: cad.pixelsPerUnit, y: 0 },
-        realDistance: 1,
-        unit: cad.unit,
-        pixelsPerUnit: cad.pixelsPerUnit,
-      });
-    }
-
+    cad.setBrahma(centroid.x, centroid.y);
     setTimeout(recalcZones, 50);
   }, [recalcZones]);
 
@@ -276,11 +258,11 @@ export default function PaperCanvas() {
 
   const updateChakra = useCallback(() => {
     const paper = paperRef.current;
-    const cs = csRef.current;
+    const cad = cadRef.current;
     if (!paper) return;
     try {
       const vp = paper.view.projectToView(
-        new paper.Point(cs.brahmaX, cs.brahmaY)
+        new paper.Point(cad.brahmaX, cad.brahmaY)
       );
       const size = CHAKRA_R * 2 * paper.view.zoom;
       setChakra({ left: vp.x, top: vp.y, size });
@@ -751,15 +733,6 @@ export default function PaperCanvas() {
 
   // ── Tool: Wall Line ─────────────────────────────────────────────────────────
 
-  const initWallLineTool = useCallback((paper: any) => {
-    const state = toolStateRef.current;
-    state.phase = 'idle';
-    state.startPoint = null;
-    state.lastNodeId = null;
-    state.chainPath = null; // shows current chain being drawn
-    setStatusMsg('Wall Line — Click to place points. Double-click to finish.');
-  }, []);
-
   const handleWallLineDown = useCallback((event: any) => {
     const paper = paperRef.current;
     const cad = cadRef.current;
@@ -1018,11 +991,15 @@ export default function PaperCanvas() {
 
   // ── Tool: Select ────────────────────────────────────────────────────────────
 
-  const [selectedWallId, setSelectedWallId] = useState<string | null>(null);
   const dragStartRef = useRef<{ nodeId: string; origX: number; origY: number } | null>(null);
   const isDraggingNode = useRef(false);
   const isPanningRef = useRef(false);
   const panOriginRef = useRef<{ mx: number; my: number; cx: number; cy: number } | null>(null);
+  // Project-move drag (drag a wall → move all nodes together)
+  const isProjectDraggingRef = useRef(false);
+  const hasActuallyDraggedProjectRef = useRef(false);
+  const projectDragOriginRef = useRef<{ projX: number; projY: number } | null>(null);
+  const allNodeOriginsRef = useRef<Record<string, { x: number; y: number }>>({});
 
   const handleSelectDown = useCallback((event: any) => {
     const paper = paperRef.current;
@@ -1040,21 +1017,37 @@ export default function PaperCanvas() {
       const item = hitResult.item;
       const data = item.data || item.parent?.data;
 
-      if (data?.type === 'wall') {
-        setSelectedWallId(data.id);
-        cad.setSelection([{ type: 'wall', id: data.id }]);
-      } else if (data?.type === 'node_dot') {
+      if (data?.type === 'node_dot') {
+        // Drag individual node to reshape
         const nodeId = data.nodeId;
         const node = cad.nodes[nodeId];
         if (node) {
           dragStartRef.current = { nodeId, origX: node.x, origY: node.y };
           isDraggingNode.current = false;
         }
-      } else if (data?.type === 'furniture') {
-        cad.setSelection([{ type: 'furniture', id: data.id }]);
+      } else if (data?.type === 'wall' || data?.type === 'opening' || data?.type === 'furniture' || data?.type === 'cut') {
+        // Drag the whole project (all nodes move together)
+        isProjectDraggingRef.current = true;
+        hasActuallyDraggedProjectRef.current = false;
+        projectDragOriginRef.current = { projX: event.point.x, projY: event.point.y };
+        // Snapshot all node positions
+        const origins: Record<string, { x: number; y: number }> = {};
+        for (const [id, node] of Object.entries(cad.nodes)) {
+          origins[id] = { x: node.x, y: node.y };
+        }
+        allNodeOriginsRef.current = origins;
+        cad.setSelection([{ type: data.type, id: data.id }]);
+      } else {
+        // Empty hit — start canvas pan
+        isPanningRef.current = true;
+        panOriginRef.current = {
+          mx: event.event.clientX,
+          my: event.event.clientY,
+          cx: paper.view.center.x,
+          cy: paper.view.center.y,
+        };
       }
     } else {
-      setSelectedWallId(null);
       cad.clearSelection();
       // Start panning
       isPanningRef.current = true;
@@ -1079,6 +1072,23 @@ export default function PaperCanvas() {
         panOriginRef.current.cy - dy
       );
       drawGrid();
+      updateChakra();
+      return;
+    }
+
+    if (isProjectDraggingRef.current && projectDragOriginRef.current) {
+      hasActuallyDraggedProjectRef.current = true;
+      const dx = event.point.x - projectDragOriginRef.current.projX;
+      const dy = event.point.y - projectDragOriginRef.current.projY;
+      // Move all nodes by delta from their origin positions
+      for (const [id, origin] of Object.entries(allNodeOriginsRef.current)) {
+        cad.updateNode(id, origin.x + dx, origin.y + dy);
+      }
+      // Re-render all walls, openings, node dots
+      cad.walls.forEach((w) => { renderWall(w.id); renderDimension(w.id); });
+      cad.openings.forEach((o) => renderOpening(o.id));
+      renderAllNodeDots();
+      syncToVastu();
       updateChakra();
       return;
     }
@@ -1113,16 +1123,23 @@ export default function PaperCanvas() {
       showSnapIndicator(snap);
       syncToVastu();
     }
-  }, [drawGrid, updateChakra, renderWall, renderDimension, renderAllNodeDots, showSnapIndicator, syncToVastu]);
+  }, [drawGrid, updateChakra, renderWall, renderDimension, renderOpening, renderAllNodeDots, showSnapIndicator, syncToVastu]);
 
   const handleSelectUp = useCallback(() => {
     if (isDraggingNode.current && dragStartRef.current) {
+      cadRef.current.pushHistory();
+    }
+    if (isProjectDraggingRef.current && hasActuallyDraggedProjectRef.current) {
       cadRef.current.pushHistory();
     }
     dragStartRef.current = null;
     isDraggingNode.current = false;
     isPanningRef.current = false;
     panOriginRef.current = null;
+    isProjectDraggingRef.current = false;
+    hasActuallyDraggedProjectRef.current = false;
+    projectDragOriginRef.current = null;
+    allNodeOriginsRef.current = {};
     hideSnapIndicator();
   }, [hideSnapIndicator]);
 
@@ -1188,16 +1205,7 @@ export default function PaperCanvas() {
     });
     renderOpening(id);
 
-    // Sync entrance to canvasStore if main door
-    if (opType === 'main_door') {
-      const cx = sNode.x + dx * t;
-      const cy = sNode.y + dy * t;
-      csRef.current.addEntrance({
-        id,
-        wallPoint: { x: cx, y: cy },
-        type: 'main',
-      });
-    }
+    // Note: entrance tracking is Builder-only — no canvasStore writes
   }, [renderOpening]);
 
   // ── Tool: Split ──────────────────────────────────────────────────────────────
@@ -1325,9 +1333,6 @@ export default function PaperCanvas() {
     cad.pushHistory();
     const cutId = cad.addCut(state.cutPts);
     renderCut(cutId, state.cutPts);
-
-    // Also sync to canvasStore cuts
-    csRef.current.addCut(state.cutPts);
 
     state.cutPts = [];
     if (previewRef.current) { previewRef.current.remove(); previewRef.current = null; }
@@ -1662,9 +1667,9 @@ export default function PaperCanvas() {
   useEffect(() => {
     updateChakra();
   }, [
-    canvasStore.brahmaX,
-    canvasStore.brahmaY,
-    canvasStore.chakraVisible,
+    cadStore.brahmaX,
+    cadStore.brahmaY,
+    cadStore.chakraVisible,
     updateChakra,
   ]);
 
@@ -1710,7 +1715,7 @@ export default function PaperCanvas() {
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
       {/* Shakti Chakra overlay */}
-      {chakra && canvasStore.chakraVisible && (
+      {chakra && cadStore.chakraVisible && (
         <div
           style={{
             position: 'absolute',
@@ -1718,8 +1723,8 @@ export default function PaperCanvas() {
             top: chakra.top,
             width: chakra.size,
             height: chakra.size,
-            transform: `translate(-50%, -50%) rotate(${-canvasStore.northDeg}deg)`,
-            opacity: canvasStore.chakraOpacity,
+            transform: `translate(-50%, -50%) rotate(${-cadStore.northDeg}deg)`,
+            opacity: cadStore.chakraOpacity,
             pointerEvents: 'none',
             mixBlendMode: 'screen',
           }}
@@ -1734,7 +1739,7 @@ export default function PaperCanvas() {
       )}
 
       {/* Brahmasthan indicator */}
-      {chakra && canvasStore.brahmaConfirmed && (
+      {chakra && cadStore.brahmaConfirmed && (
         <div
           style={{
             position: 'absolute',

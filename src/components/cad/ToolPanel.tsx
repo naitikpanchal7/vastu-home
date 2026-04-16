@@ -14,36 +14,14 @@ const TOOL_GROUPS: ToolGroup[] = [
   {
     label: 'Select',
     tools: [
-      { id: 'select', icon: '⊹', title: 'Select / Pan' },
+      { id: 'select', icon: '⊹', title: 'Select / Move — drag wall to move entire project, drag node to reshape' },
     ],
   },
   {
     label: 'Walls',
     tools: [
-      { id: 'wall_line',   icon: '╱',  title: 'Line Wall — click chain, double-click to finish' },
-      { id: 'wall_arc',    icon: '⌒',  title: 'Arc Wall — click start, through, end' },
-      { id: 'wall_bezier', icon: '~',  title: 'Bezier Wall — click start, drag handle, click end' },
-    ],
-  },
-  {
-    label: 'Openings',
-    tools: [
-      { id: 'door',   icon: '⌐', title: 'Door — click on a wall to place' },
-      { id: 'window', icon: '▯', title: 'Window — click on a wall to place' },
-    ],
-  },
-  {
-    label: 'Edit',
-    tools: [
-      { id: 'split',  icon: '⊣', title: 'Split Wall — click on wall to split' },
-      { id: 'extend', icon: '↔', title: 'Extend / Trim — click wall endpoint' },
-      { id: 'delete', icon: '✕', title: 'Delete — click any element to remove' },
-    ],
-  },
-  {
-    label: 'Vastu',
-    tools: [
-      { id: 'cut', icon: '◌', title: 'Draw Cut Region — click polygon, double-click to close' },
+      { id: 'wall_line', icon: '╱', title: 'Line Wall — click chain, double-click to finish' },
+      { id: 'wall_arc',  icon: '⌒', title: 'Arc Wall — click start, through, end' },
     ],
   },
   {

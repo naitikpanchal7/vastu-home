@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useProjectStore } from "@/store/projectStore";
 import { useCanvasStore } from "@/store/canvasStore";
 import CanvasWorkspace from "@/app/canvas/CanvasWorkspace";
+import BuilderWorkspace from "@/app/builder/BuilderWorkspace";
 
 export default function ProjectCanvasPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode"); // "builder" | null → canvas
+
   const project = useProjectStore((s) => s.projects.find((p) => p.id === id));
   const loadCanvasState = useCanvasStore((s) => s.loadCanvasState);
   const [loaded, setLoaded] = useState(false);
@@ -50,7 +54,7 @@ export default function ProjectCanvasPage() {
 
   return (
     <AppShell>
-      <CanvasWorkspace />
+      {mode === "builder" ? <BuilderWorkspace /> : <CanvasWorkspace />}
     </AppShell>
   );
 }

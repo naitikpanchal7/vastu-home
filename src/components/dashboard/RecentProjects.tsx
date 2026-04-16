@@ -40,14 +40,21 @@ export default function RecentProjects({ onNewProject }: RecentProjectsProps) {
           {projects.map((p) => (
             <div
               key={p.id}
-              onClick={() => router.push(`/projects/${p.id}`)}
-              className="bg-bg-4 border border-[rgba(200,175,120,0.08)] rounded-[7px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[1px]"
+              className="bg-bg-4 border border-[rgba(200,175,120,0.08)] rounded-[7px] overflow-hidden transition-all duration-150 hover:border-gold-3 hover:-translate-y-[1px]"
             >
-              <div className="h-[70px] bg-bg-2 flex items-center justify-center">
+              <div
+                className="h-[70px] bg-bg-2 flex items-center justify-center cursor-pointer"
+                onClick={() => router.push(`/projects/${p.id}`)}
+              >
                 <span className="text-[28px] opacity-20">🏠</span>
               </div>
               <div className="px-[10px] py-2">
-                <div className="text-[11px] font-medium text-vastu-text mb-[2px] truncate">{p.name}</div>
+                <div
+                  className="text-[11px] font-medium text-vastu-text mb-[2px] truncate cursor-pointer hover:text-gold-2 transition-colors"
+                  onClick={() => router.push(`/projects/${p.id}`)}
+                >
+                  {p.name}
+                </div>
                 <div className="text-[10px] text-vastu-text-3 truncate">{p.clientName}</div>
                 <div className="flex items-center justify-between mt-[6px]">
                   <Badge status={p.status} />
@@ -57,6 +64,21 @@ export default function RecentProjects({ onNewProject }: RecentProjectsProps) {
                       {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </span>
                   </div>
+                </div>
+                {/* Open in Canvas or Builder */}
+                <div className="flex gap-[4px] mt-[7px]">
+                  <button
+                    onClick={() => router.push(`/projects/${p.id}`)}
+                    className="flex-1 py-[3px] text-[8px] font-sans bg-bg-3 border border-[rgba(200,175,120,0.12)] rounded-[4px] text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer"
+                  >
+                    ◈ Canvas
+                  </button>
+                  <button
+                    onClick={() => router.push(`/projects/${p.id}?mode=builder`)}
+                    className="flex-1 py-[3px] text-[8px] font-sans bg-bg-3 border border-[rgba(200,175,120,0.12)] rounded-[4px] text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer"
+                  >
+                    ⬜ Builder
+                  </button>
                 </div>
               </div>
             </div>

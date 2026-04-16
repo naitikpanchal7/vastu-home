@@ -95,16 +95,23 @@ export default function ProjectsPage() {
             filteredProjects.map((p) => (
               <div
                 key={p.id}
-                onClick={() => router.push(`/projects/${p.id}`)}
-                className="bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[8px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_6px_18px_rgba(0,0,0,0.3)]"
+                className="bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[8px] overflow-hidden transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_6px_18px_rgba(0,0,0,0.3)]"
               >
-                <div className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(200,175,120,0.08)]">
+                <div
+                  className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(200,175,120,0.08)] cursor-pointer"
+                  onClick={() => router.push(`/projects/${p.id}`)}
+                >
                   <span className="text-[36px] opacity-20">🏠</span>
                 </div>
                 <div className="px-3 py-[10px]">
-                  <div className="text-[11px] font-medium text-vastu-text mb-[2px] truncate">{p.name}</div>
+                  <div
+                    className="text-[11px] font-medium text-vastu-text mb-[2px] truncate cursor-pointer hover:text-gold-2 transition-colors"
+                    onClick={() => router.push(`/projects/${p.id}`)}
+                  >
+                    {p.name}
+                  </div>
                   <div className="text-[9px] text-vastu-text-3 mb-[6px] truncate">{p.clientName}</div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-[8px]">
                     <Badge status={p.status} />
                     <div className="flex items-center gap-[6px]">
                       <span className="text-[8px] text-vastu-text-3 font-mono">
@@ -114,6 +121,21 @@ export default function ProjectsPage() {
                         {new Date(p.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                       </span>
                     </div>
+                  </div>
+                  {/* Open in Canvas or Builder */}
+                  <div className="flex gap-[5px]">
+                    <button
+                      onClick={() => router.push(`/projects/${p.id}`)}
+                      className="flex-1 py-[4px] text-[9px] font-sans bg-bg-4 border border-[rgba(200,175,120,0.12)] rounded-[4px] text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer"
+                    >
+                      ◈ Canvas
+                    </button>
+                    <button
+                      onClick={() => router.push(`/projects/${p.id}?mode=builder`)}
+                      className="flex-1 py-[4px] text-[9px] font-sans bg-bg-4 border border-[rgba(200,175,120,0.12)] rounded-[4px] text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer"
+                    >
+                      ⬜ Builder
+                    </button>
                   </div>
                 </div>
               </div>

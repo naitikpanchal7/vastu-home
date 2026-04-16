@@ -25,12 +25,16 @@ export default function BuilderWorkspace() {
   const autoCreatedRef = useRef(false);
 
   const {
-    northDeg, projectName, clientName, projectId,
-    chakraVisible, undoStack,
-    setNorth, toggleChakra, setChakraOpacity, chakraOpacity,
-    undo,
+    projectName, clientName, projectId,
+    undoStack, undo,
     floors, currentFloorId, addFloor, switchFloor, deleteFloor, renameFloor,
   } = store;
+
+  // Builder-specific display state — fully isolated from canvasStore
+  const {
+    northDeg, setNorth,
+    chakraVisible, chakraOpacity, toggleChakra, setChakraOpacity,
+  } = cadStore;
 
   // Persist floors to projectStore whenever floors change
   const persistFloors = () => {
@@ -94,14 +98,9 @@ export default function BuilderWorkspace() {
 
   // CAD quick-access tool buttons for topbar
   const CAD_QUICK_TOOLS: { id: CADTool; icon: string; title: string }[] = [
-    { id: 'select',    icon: '⊹', title: 'Select / Pan' },
+    { id: 'select',    icon: '⊹', title: 'Select / Move — drag wall to move project, drag node to reshape' },
     { id: 'wall_line', icon: '╱', title: 'Line Wall (draw walls)' },
     { id: 'wall_arc',  icon: '⌒', title: 'Arc Wall' },
-    { id: 'door',      icon: '⌐', title: 'Place Door' },
-    { id: 'window',    icon: '▯', title: 'Place Window' },
-    { id: 'split',     icon: '⊣', title: 'Split Wall' },
-    { id: 'delete',    icon: '✕', title: 'Delete Element' },
-    { id: 'cut',       icon: '◌', title: 'Draw Vastu Cut' },
   ];
 
   return (

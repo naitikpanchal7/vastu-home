@@ -107,8 +107,8 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 gap-[6px]">
                 {[
                   { icon: "＋", label: "New Project",    action: () => setShowNewProject(true) },
-                  { icon: "↑",  label: "Upload Plan",    action: () => router.push("/canvas") },
-                  { icon: "⊙",  label: "Open Canvas",    action: () => router.push("/canvas") },
+                  { icon: "◈",  label: "Open Canvas",    action: () => router.push("/canvas") },
+                  { icon: "⬜", label: "Open Builder",   action: () => router.push("/builder") },
                   { icon: "⎙",  label: "Export Report",  action: () => {} },
                 ].map((qa) => (
                   <button

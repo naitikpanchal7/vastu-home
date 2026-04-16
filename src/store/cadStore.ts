@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { polygonArea } from '@/lib/vastu/geometry';
+import type { ZoneAnalysis } from '@/lib/types';
 import type {
   CADTool,
   CADNode,
@@ -127,6 +128,20 @@ interface CADStore {
   setSnapEnabled: (v: boolean) => void;
   setUnit: (unit: 'ft' | 'm', ppu: number) => void;
 
+  // ── Builder display state (isolated from canvasStore) ────────────────────
+  northDeg: number;
+  setNorth: (deg: number) => void;
+  brahmaX: number;
+  brahmaY: number;
+  brahmaConfirmed: boolean;
+  setBrahma: (x: number, y: number) => void;
+  chakraVisible: boolean;
+  chakraOpacity: number;
+  toggleChakra: () => void;
+  setChakraOpacity: (pct: number) => void;
+  zoneAnalysis: ZoneAnalysis[];
+  setZoneAnalysis: (analysis: ZoneAnalysis[]) => void;
+
   // Derived helpers
   getNode: (id: string) => CADNode | undefined;
   getWallNodes: (wallId: string) => { start: CADNode; end: CADNode } | null;
@@ -157,6 +172,14 @@ const DEFAULTS = {
   activeFurnitureTemplateId: null as string | null,
   history: [] as HistorySnapshot[],
   historyIndex: -1,
+  // Builder display state — fully isolated from canvasStore
+  northDeg: 0,
+  brahmaX: 0,
+  brahmaY: 0,
+  brahmaConfirmed: false,
+  chakraVisible: false,
+  chakraOpacity: 0.35,
+  zoneAnalysis: [] as ZoneAnalysis[],
 };
 
 // ── Closed polygon detection ──────────────────────────────────────────────────
@@ -479,6 +502,14 @@ export const useCadStore = create<CADStore>()(
       setShowDimensions: (v) => set({ showDimensions: v }),
       setSnapEnabled: (v) => set({ snapEnabled: v }),
       setUnit: (unit, ppu) => set({ unit, pixelsPerUnit: ppu }),
+
+      // ── Builder display state ─────────────────────────────────────────────
+
+      setNorth: (deg) => set({ northDeg: deg }),
+      setBrahma: (x, y) => set({ brahmaX: x, brahmaY: y, brahmaConfirmed: true }),
+      toggleChakra: () => set((s) => ({ chakraVisible: !s.chakraVisible })),
+      setChakraOpacity: (pct) => set({ chakraOpacity: pct / 100 }),
+      setZoneAnalysis: (analysis) => set({ zoneAnalysis: analysis }),
 
       // ── Derived ───────────────────────────────────────────────────────────
 
