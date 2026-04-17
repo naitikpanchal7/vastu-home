@@ -30,6 +30,7 @@ export default function CanvasWorkspace() {
     floorPlanImage, setFloorPlanImage, cuts, clearCuts,
     floors, currentFloorId, addFloor, switchFloor, deleteFloor, renameFloor,
     zoneMode, setZoneMode,
+    perimeterVisible, cutsVisible, togglePerimeterVisible, toggleCutsVisible,
   } = store;
 
   // Persist floors to projectStore whenever floors change
@@ -343,19 +344,38 @@ export default function CanvasWorkspace() {
               {/* Layers */}
               <LpSection title="Layers" defaultOpen>
                 <div className="flex flex-col gap-[2px]">
-                  {[
-                    { label: "Vastu Chakra", color: "rgba(200,175,120,.4)", action: toggleChakra },
-                    { label: "Perimeter",    color: "rgba(200,175,120,.6)", action: () => {} },
-                    { label: "Cuts",         color: "rgba(200,60,40,.6)",  action: () => {} },
-                  ].map((layer) => (
+                  {([
+                    { label: "Vastu Chakra", color: "rgba(200,175,120,.4)", visible: chakraVisible,    toggle: toggleChakra },
+                    { label: "Perimeter",    color: "rgba(200,175,120,.6)", visible: perimeterVisible, toggle: togglePerimeterVisible },
+                    { label: "Cuts",         color: "rgba(200,60,40,.6)",   visible: cutsVisible,       toggle: toggleCutsVisible },
+                  ] as const).map((layer) => (
                     <div
                       key={layer.label}
-                      onClick={layer.action}
-                      className="flex items-center gap-[7px] px-[5px] py-[5px] rounded-[4px] cursor-pointer text-[10px] text-vastu-text-2 hover:bg-[rgba(200,175,120,0.06)]"
+                      onClick={layer.toggle}
+                      className={`flex items-center gap-[7px] px-[5px] py-[5px] rounded-[4px] cursor-pointer text-[10px] hover:bg-[rgba(200,175,120,0.06)] transition-opacity ${
+                        layer.visible ? "text-vastu-text-2" : "text-vastu-text-3 opacity-50"
+                      }`}
                     >
-                      <div className="w-[7px] h-[7px] rounded-[2px] flex-shrink-0" style={{ background: layer.color }} />
+                      <div
+                        className="w-[7px] h-[7px] rounded-[2px] flex-shrink-0"
+                        style={{ background: layer.visible ? layer.color : "rgba(100,100,100,0.3)" }}
+                      />
                       <span>{layer.label}</span>
-                      <span className="ml-auto text-[11px] opacity-50">👁</span>
+                      {/* Eye icon — slashed when hidden */}
+                      <span className="ml-auto flex-shrink-0">
+                        {layer.visible ? (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-60">
+                            <path d="M1 6C1 6 3 2 6 2C9 2 11 6 11 6C11 6 9 10 6 10C3 10 1 6 1 6Z" stroke="currentColor" strokeWidth="1.2"/>
+                            <circle cx="6" cy="6" r="1.5" fill="currentColor"/>
+                          </svg>
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
+                            <path d="M1 6C1 6 3 2 6 2C9 2 11 6 11 6C11 6 9 10 6 10C3 10 1 6 1 6Z" stroke="currentColor" strokeWidth="1.2" opacity="0.4"/>
+                            <circle cx="6" cy="6" r="1.5" fill="currentColor" opacity="0.4"/>
+                            <line x1="2" y1="10.5" x2="10" y2="1.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                          </svg>
+                        )}
+                      </span>
                     </div>
                   ))}
                   <div className="flex items-center gap-[5px] px-[5px] py-[3px_5px_7px]">

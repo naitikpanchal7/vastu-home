@@ -118,6 +118,12 @@ interface CanvasStore {
   toggleChakra: () => void;
   setChakraOpacity: (v: number) => void;
 
+  // Layer visibility
+  perimeterVisible: boolean;
+  cutsVisible: boolean;
+  togglePerimeterVisible: () => void;
+  toggleCutsVisible: () => void;
+
   // Zone grid (division lines from Brahmasthan — 8 compass or 16 Vastu zones)
   zoneMode: "off" | "8" | "16";
   setZoneMode: (mode: "off" | "8" | "16") => void;
@@ -185,6 +191,8 @@ export const useCanvasStore = create<CanvasStore>()(
       panY: 0,
       chakraVisible: true,
       chakraOpacity: 0.42,
+      perimeterVisible: true,
+      cutsVisible: true,
       zoneMode: "off" as "off" | "8" | "16",
       zoneAnalysis: [],
       floorPlanImage: null,
@@ -461,6 +469,8 @@ export const useCanvasStore = create<CanvasStore>()(
 
       toggleChakra: () => set((s) => ({ chakraVisible: !s.chakraVisible })),
       setChakraOpacity: (v) => set({ chakraOpacity: v / 100 }),
+      togglePerimeterVisible: () => set((s) => ({ perimeterVisible: !s.perimeterVisible })),
+      toggleCutsVisible: () => set((s) => ({ cutsVisible: !s.cutsVisible })),
       setZoneMode: (mode) => set({ zoneMode: mode }),
 
       setZoneAnalysis: (results) => set({ zoneAnalysis: results }),

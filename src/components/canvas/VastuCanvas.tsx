@@ -40,7 +40,7 @@ export default function VastuCanvas() {
     zoomLevel, panX, panY, cuts, floorPlanImage, setFloorPlanImage,
     addPerimeterPoint, closePerimeter,
     addCut, setScale, setTool, setZoom, setPan,
-    zoneMode,
+    zoneMode, perimeterVisible, cutsVisible,
   } = store;
 
   // ── Cut drawing state (local, not in store until complete) ──
@@ -256,7 +256,7 @@ export default function VastuCanvas() {
           )}
 
           {/* User-drawn perimeter */}
-          {perimeterPts && (
+          {perimeterPts && perimeterVisible && (
             <g>
               <polygon
                 points={perimeterStr}
@@ -391,7 +391,7 @@ export default function VastuCanvas() {
           </g>
 
           {/* Cuts */}
-          {cuts.map((cut) => {
+          {cutsVisible && cuts.map((cut) => {
             const cx2 = cut.points.reduce((s, p) => s + p.x, 0) / cut.points.length;
             const cy2 = cut.points.reduce((s, p) => s + p.y, 0) / cut.points.length;
             return (
