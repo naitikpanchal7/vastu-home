@@ -7,6 +7,7 @@ import ShaktiChakra from "./ShaktiChakra";
 import BrahmasthanDot from "./BrahmasthanDot";
 import CompassRose from "./NorthArrow";
 import type { Point } from "@/lib/vastu/geometry";
+import { VASTU_ZONES } from "@/lib/vastu/zones";
 
 const SVG_W = 760;
 const SVG_H = 620;
@@ -39,6 +40,7 @@ export default function VastuCanvas() {
     zoomLevel, panX, panY, cuts, floorPlanImage, setFloorPlanImage,
     addPerimeterPoint, closePerimeter,
     addCut, setScale, setTool, setZoom, setPan,
+    zoneMode,
   } = store;
 
   // ── Cut drawing state (local, not in store until complete) ──
@@ -284,6 +286,96 @@ export default function VastuCanvas() {
               )}
             </g>
           )}
+
+          {/* Zone division lines — radiating from Brahmasthan, clipped to perimeter */}
+          {zoneMode !== "off" && perimeterComplete && perimeterPts && (() => {
+            const FAR = 2000;
+            const LABEL_R = zoneMode === "8" ? 110 : 90;
+
+            // 8-zone compass: N NE E SE S SW W NW at 45° intervals
+            const EIGHT_ZONES = [
+              { shortName: "N",  angle: 0 },
+              { shortName: "NE", angle: 45 },
+              { shortName: "E",  angle: 90 },
+              { shortName: "SE", angle: 135 },
+              { shortName: "S",  angle: 180 },
+              { shortName: "SW", angle: 225 },
+              { shortName: "W",  angle: 270 },
+              { shortName: "NW", angle: 315 },
+            ];
+
+            const zones16 = VASTU_ZONES.map((z) => ({
+              shortName: z.shortName,
+              // boundary line at zone start; label at zone mid
+              lineAngle: z.startDeg,
+              labelAngle: z.startDeg + 11.25,
+            }));
+
+            const zones8 = EIGHT_ZONES.map((z) => ({
+              shortName: z.shortName,
+              // boundary line sits 22.5° before zone center, dividing the 45° sector
+              lineAngle: z.angle - 22.5,
+              // label sits at zone center — inside the sector, not on the line
+              labelAngle: z.angle,
+            }));
+
+            const zones = zoneMode === "16" ? zones16 : zones8;
+
+            return (
+              <g>
+                <defs>
+                  <clipPath id="zone-perimeter-clip">
+                    <polygon points={perimeterStr} />
+                  </clipPath>
+                </defs>
+
+                {/* Lines clipped to perimeter */}
+                <g clipPath="url(#zone-perimeter-clip)">
+                  {zones.map((z) => {
+                    // Convention matches geometry.ts: screenAngle = vastu angle - northDeg
+                    const screenAngle = ((z.lineAngle - northDeg) % 360 + 360) % 360;
+                    const rad = (screenAngle * Math.PI) / 180;
+                    return (
+                      <line
+                        key={`zone-line-${z.shortName}`}
+                        x1={brahmaX} y1={brahmaY}
+                        x2={brahmaX + Math.sin(rad) * FAR}
+                        y2={brahmaY - Math.cos(rad) * FAR}
+                        stroke="#4a90e2"
+                        strokeWidth="2"
+                        strokeOpacity="0.85"
+                      />
+                    );
+                  })}
+                </g>
+
+                {/* Labels clipped to perimeter */}
+                <g clipPath="url(#zone-perimeter-clip)">
+                  {zones.map((z) => {
+                    const screenAngle = ((z.labelAngle - northDeg) % 360 + 360) % 360;
+                    const rad = (screenAngle * Math.PI) / 180;
+                    const lx = brahmaX + Math.sin(rad) * LABEL_R;
+                    const ly = brahmaY - Math.cos(rad) * LABEL_R;
+                    return (
+                      <text
+                        key={`zone-label-${z.shortName}`}
+                        x={lx} y={ly}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#4a90e2"
+                        fontSize="8.5"
+                        fontFamily="var(--font-dm-mono), monospace"
+                        fontWeight="700"
+                        opacity="0.9"
+                      >
+                        {z.shortName}
+                      </text>
+                    );
+                  })}
+                </g>
+              </g>
+            );
+          })()}
 
           {/* Shakti Chakra overlay — isolated so its screen blend-mode composes
               against the group's transparent background, not the floor plan image
