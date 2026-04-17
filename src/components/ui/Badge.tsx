@@ -7,9 +7,9 @@ interface BadgeProps {
 }
 
 const STATUS_STYLES: Record<ProjectStatus, string> = {
-  draft:  "bg-amber-900/40 text-amber-400",
-  active: "bg-blue-900/40 text-blue-300",
-  done:   "bg-green-900/40 text-green-400",
+  draft:  "bg-[rgba(160,110,10,0.12)] text-[#7a5808] border border-[rgba(160,110,10,0.20)]",
+  active: "bg-[rgba(40,90,180,0.10)] text-[#2a5aad] border border-[rgba(40,90,180,0.18)]",
+  done:   "bg-[rgba(30,110,60,0.10)] text-[#1e6e3a] border border-[rgba(30,110,60,0.18)]",
 };
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {

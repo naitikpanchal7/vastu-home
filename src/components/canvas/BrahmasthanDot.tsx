@@ -52,7 +52,7 @@ export default function BrahmasthanDot({ svgRef, onMove }: BrahmasthanDotProps) 
       <text
         x={brahmaX} y={brahmaY + 34}
         textAnchor="middle"
-        fill="rgba(200,175,120,0.6)"
+        fill="rgba(100,70,20,0.52)"
         fontFamily="var(--font-cormorant), Georgia, serif"
         fontSize="10"
         fontStyle="italic"

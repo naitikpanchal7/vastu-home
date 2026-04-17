@@ -10,7 +10,7 @@ interface TopbarProps {
 
 export default function Topbar({ title, subtitle, actions }: TopbarProps) {
   return (
-    <div className="h-[44px] bg-bg-2 border-b border-[rgba(200,175,120,0.15)] flex items-center px-4 gap-[9px] flex-shrink-0">
+    <div className="h-[44px] bg-bg-2 border-b border-[rgba(100,70,20,0.20)] flex items-center px-4 gap-[9px] flex-shrink-0">
       <div className="flex-1 min-w-0">
         <span className="font-serif text-[16px] font-medium text-vastu-text">
           {title}

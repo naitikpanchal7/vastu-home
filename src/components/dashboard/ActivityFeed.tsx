@@ -29,7 +29,7 @@ export default function ActivityFeed() {
           {activities.map((a) => (
             <div
               key={a.id}
-              className="flex items-start gap-2 py-[7px] border-b border-[rgba(200,175,120,0.08)] last:border-none"
+              className="flex items-start gap-2 py-[7px] border-b border-[rgba(100,70,20,0.12)] last:border-none"
             >
               <div
                 className="w-[6px] h-[6px] rounded-full mt-1 flex-shrink-0"

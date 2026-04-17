@@ -22,7 +22,7 @@ export default function StatsBar() {
       {stats.map((s) => (
         <div
           key={s.label}
-          className="bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[9px] px-4 py-[14px] relative overflow-hidden"
+          className="bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[9px] px-4 py-[14px] relative overflow-hidden"
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-gold-3 via-saffron to-transparent" />
           <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] mb-[5px]">{s.label}</div>

@@ -114,7 +114,7 @@ export default function DashboardPage() {
                   <button
                     key={qa.label}
                     onClick={qa.action}
-                    className="py-2 px-[9px] bg-bg-4 border border-[rgba(200,175,120,0.08)] rounded-[6px] cursor-pointer hover:border-gold-3 hover:text-gold-2 transition-all duration-[130ms] text-vastu-text-2 text-[10px] font-sans text-center"
+                    className="py-2 px-[9px] bg-bg-4 border border-[rgba(100,70,20,0.12)] rounded-[6px] cursor-pointer hover:border-gold-3 hover:text-gold-2 transition-all duration-[130ms] text-vastu-text-2 text-[10px] font-sans text-center"
                   >
                     <span className="text-[15px] block mb-[2px]">{qa.icon}</span>
                     {qa.label}
@@ -144,27 +144,27 @@ export default function DashboardPage() {
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Project Name</label>
             <input value={npName} onChange={(e) => setNpName(e.target.value)} placeholder="e.g. Kapoor Residence — 2BHK"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Client Name</label>
             <input value={npClient} onChange={(e) => setNpClient(e.target.value)} placeholder="Full name"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Client Contact</label>
             <input value={npContact} onChange={(e) => setNpContact(e.target.value)} placeholder="+91 98…"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Property Address</label>
             <input value={npAddress} onChange={(e) => setNpAddress(e.target.value)} placeholder="Address or Google Maps URL"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Property Type</label>
             <select value={npType} onChange={(e) => setNpType(e.target.value as PropertyType)}
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3">
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3">
               {["Residential", "Commercial", "Industrial", "Plot"].map((t) => (
                 <option key={t}>{t}</option>
               ))}
@@ -173,14 +173,14 @@ export default function DashboardPage() {
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Area (sq ft)</label>
             <input type="number" value={npArea} onChange={(e) => setNpArea(e.target.value)} placeholder="e.g. 1840"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Initial Notes</label>
             <textarea value={npNotes} onChange={(e) => setNpNotes(e.target.value)}
               placeholder="Client concerns, special requirements…"
               rows={3}
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3 resize-none leading-relaxed" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3 resize-none leading-relaxed" />
           </div>
         </div>
       </Modal>

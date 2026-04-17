@@ -95,7 +95,7 @@ export default function ChatPanel() {
   return (
     <div className="flex flex-col h-full gap-[6px]">
       {/* Header */}
-      <div className="text-[8px] text-vastu-text-3 pb-[6px] border-b border-[rgba(200,175,120,0.08)] flex-shrink-0">
+      <div className="text-[8px] text-vastu-text-3 pb-[6px] border-b border-[rgba(100,70,20,0.12)] flex-shrink-0">
         ✦ Vastu AI · Grounded in Vishwakarma Prakash
       </div>
 
@@ -109,8 +109,8 @@ export default function ChatPanel() {
             key={msg.id}
             className={`max-w-[92%] px-[10px] py-[7px] rounded-[8px] text-[11px] leading-relaxed ${
               msg.role === "user"
-                ? "self-end bg-[rgba(200,175,120,0.13)] border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-br-[2px]"
-                : "self-start bg-bg-3 border border-[rgba(200,175,120,0.08)] text-vastu-text-2 rounded-bl-[2px]"
+                ? "self-end bg-[rgba(100,70,20,0.16)] border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-br-[2px]"
+                : "self-start bg-bg-3 border border-[rgba(100,70,20,0.12)] text-vastu-text-2 rounded-bl-[2px]"
             }`}
           >
             {msg.content}
@@ -121,7 +121,7 @@ export default function ChatPanel() {
         ))}
 
         {loading && (
-          <div className="self-start bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[8px] rounded-bl-[2px] px-[10px] py-[7px]">
+          <div className="self-start bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-[8px] rounded-bl-[2px] px-[10px] py-[7px]">
             <div className="inline-flex items-center gap-[3px] p-[2px_3px]">
               {[0, 0.2, 0.4].map((delay, i) => (
                 <span
@@ -141,7 +141,7 @@ export default function ChatPanel() {
           <button
             key={chip}
             onClick={() => sendMessage(chip)}
-            className="text-[9px] px-[7px] py-[3px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-full cursor-pointer text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all duration-[130ms] font-sans"
+            className="text-[9px] px-[7px] py-[3px] bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-full cursor-pointer text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all duration-[130ms] font-sans"
           >
             {chip.length > 28 ? chip.slice(0, 27) + "…" : chip}
           </button>
@@ -155,12 +155,12 @@ export default function ChatPanel() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
           placeholder="Ask about this floor plan…"
-          className="flex-1 px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text text-[11px] font-sans outline-none focus:border-gold-3 resize-none"
+          className="flex-1 px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[11px] font-sans outline-none focus:border-gold-3 resize-none"
         />
         <button
           onClick={() => sendMessage(input)}
           disabled={loading || !input.trim()}
-          className="w-[30px] h-[30px] bg-gold border-none rounded-[5px] cursor-pointer text-[13px] text-bg flex items-center justify-center hover:bg-gold-2 transition-colors disabled:opacity-50 flex-shrink-0"
+          className="w-[30px] h-[30px] bg-gold border-none rounded-[5px] cursor-pointer text-[13px] text-[#faf7f0] flex items-center justify-center hover:bg-gold-2 transition-colors disabled:opacity-50 flex-shrink-0"
         >
           ↑
         </button>

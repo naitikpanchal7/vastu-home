@@ -89,7 +89,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
         {zoneRows.map(({ zone, pct, status, hasCut, cutPct }) => (
           <div
             key={zone.shortName}
-            className="group flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] cursor-default hover:bg-[rgba(200,175,120,0.05)] relative"
+            className="group flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] cursor-default hover:bg-[rgba(100,70,20,0.07)] relative"
           >
             {/* Color swatch */}
             <div
@@ -122,7 +122,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
             </span>
 
             {/* Hover tooltip */}
-            <div className="hidden group-hover:block absolute left-full top-1/2 -translate-y-1/2 ml-[6px] bg-bg-2 border border-[rgba(200,175,120,0.15)] rounded-[6px] px-[10px] py-[7px] min-w-[190px] z-50 pointer-events-none shadow-lg">
+            <div className="hidden group-hover:block absolute left-full top-1/2 -translate-y-1/2 ml-[6px] bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[6px] px-[10px] py-[7px] min-w-[190px] z-50 pointer-events-none shadow-lg">
               <div className="text-[10px] text-gold-2 font-medium mb-[4px]">{zone.name}</div>
               <div className="text-[9px] text-vastu-text-2 leading-[1.8]">
                 <span className="text-vastu-text-3">Deity:</span> {zone.deity}<br />
@@ -143,7 +143,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
       </div>{/* end zone rows */}
 
       {/* ── Bar Chart ── */}
-      <div className="mt-[8px] pt-[8px] border-t border-[rgba(200,175,120,0.08)]">
+      <div className="mt-[8px] pt-[8px] border-t border-[rgba(100,70,20,0.12)]">
         <div className="text-[8px] text-vastu-text-3 mb-[4px]">Zone Distribution</div>
         <div className="flex items-end gap-[2px] h-[44px]">
           {zoneRows.map(({ zone, pct, status }) => (
@@ -175,7 +175,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
 
       {/* ── Cut Analysis ── */}
       {cutRows.length > 0 && (
-        <div className="mt-[10px] pt-[9px] border-t border-[rgba(200,175,120,0.12)]">
+        <div className="mt-[10px] pt-[9px] border-t border-[rgba(100,70,20,0.15)]">
 
           {/* Section header */}
           <div className="flex items-center justify-between mb-[7px]">
@@ -198,7 +198,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
               return (
                 <div
                   key={row.id}
-                  className="flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] hover:bg-[rgba(200,175,120,0.04)]"
+                  className="flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] hover:bg-[rgba(100,70,20,0.06)]"
                 >
                   {/* Severity swatch */}
                   <div
@@ -212,7 +212,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
                   {/* Zone badge */}
                   <span
                     className="text-[7px] font-mono px-[4px] py-[1px] rounded-[3px] flex-shrink-0"
-                    style={{ background: "rgba(200,175,120,0.1)", color: "var(--gold-3)" }}
+                    style={{ background: "rgba(100,70,20,0.14)", color: "var(--gold-3)" }}
                   >
                     {row.primaryZone}
                   </span>

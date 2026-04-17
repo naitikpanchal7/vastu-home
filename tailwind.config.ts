@@ -9,25 +9,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // vastu@home design tokens
+        // vastu@home design tokens — warm daylight theme
         bg: {
-          DEFAULT: "#0f0e0b",
-          2: "#161410",
-          3: "#1e1b16",
-          4: "#252018",
+          DEFAULT: "#f7f3ed",
+          2: "#ede9e0",
+          3: "#e3ddd2",
+          4: "#d8d1c4",
         },
         gold: {
-          DEFAULT: "#c8af78",
-          2: "#e8d4a0",
-          3: "#a08050",
+          DEFAULT: "#9a7820",
+          2: "#735a10",
+          3: "#b89040",
         },
-        saffron: "#e8912a",
+        saffron: "#c46c0e",
         vastu: {
-          text: "#e8e0d0",
-          "text-2": "#b0a080",
-          "text-3": "#706050",
-          border: "rgba(200,175,120,0.15)",
-          "border-2": "rgba(200,175,120,0.08)",
+          text: "#1c1710",
+          "text-2": "#5c4730",
+          "text-3": "#9a8060",
+          border: "rgba(100,70,20,0.20)",
+          "border-2": "rgba(100,70,20,0.12)",
         },
         // Zone colors
         zone: {

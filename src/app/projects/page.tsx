@@ -58,7 +58,7 @@ export default function ProjectsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="🔍 Search client, project name…"
-            className="flex-1 max-w-[300px] px-[11px] py-[7px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[6px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3"
+            className="flex-1 max-w-[300px] px-[11px] py-[7px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3"
           />
           <div className="flex gap-[5px]">
             {FILTERS.map((f) => (
@@ -67,8 +67,8 @@ export default function ProjectsPage() {
                 onClick={() => setStatusFilter(f.value)}
                 className={`px-[10px] py-[5px] rounded-[5px] text-[10px] cursor-pointer font-sans transition-all duration-[130ms] border ${
                   statusFilter === f.value
-                    ? "bg-[rgba(200,175,120,0.12)] border-gold text-gold-2"
-                    : "border-[rgba(200,175,120,0.15)] bg-transparent text-vastu-text-2 hover:border-gold-3 hover:text-gold-2"
+                    ? "bg-[rgba(100,70,20,0.15)] border-gold text-gold-2"
+                    : "border-[rgba(100,70,20,0.20)] bg-transparent text-vastu-text-2 hover:border-gold-3 hover:text-gold-2"
                 }`}
               >
                 {f.label}
@@ -96,9 +96,9 @@ export default function ProjectsPage() {
               <div
                 key={p.id}
                 onClick={() => router.push(`/projects/${p.id}`)}
-                className="bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[8px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_6px_18px_rgba(0,0,0,0.3)]"
+                className="bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[8px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_4px_16px_rgba(100,70,20,0.12)]"
               >
-                <div className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(200,175,120,0.08)]">
+                <div className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(100,70,20,0.12)]">
                   <span className="text-[36px] opacity-20">🏠</span>
                 </div>
                 <div className="px-3 py-[10px]">
@@ -140,39 +140,39 @@ export default function ProjectsPage() {
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Project Name</label>
             <input value={npName} onChange={(e) => setNpName(e.target.value)} placeholder="e.g. Kapoor Residence — 2BHK"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Client Name</label>
             <input value={npClient} onChange={(e) => setNpClient(e.target.value)} placeholder="Full name"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Client Contact</label>
             <input value={npContact} onChange={(e) => setNpContact(e.target.value)} placeholder="+91 98…"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Property Address</label>
             <input value={npAddress} onChange={(e) => setNpAddress(e.target.value)} placeholder="Address"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Property Type</label>
             <select value={npType} onChange={(e) => setNpType(e.target.value as PropertyType)}
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3">
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3">
               {["Residential", "Commercial", "Industrial", "Plot"].map((t) => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Area (sq ft)</label>
             <input type="number" value={npArea} onChange={(e) => setNpArea(e.target.value)} placeholder="e.g. 1840"
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3" />
           </div>
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Initial Notes</label>
             <textarea value={npNotes} onChange={(e) => setNpNotes(e.target.value)} placeholder="Client concerns…" rows={3}
-              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3 resize-none leading-relaxed" />
+              className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3 resize-none leading-relaxed" />
           </div>
         </div>
       </Modal>

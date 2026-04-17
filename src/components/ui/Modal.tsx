@@ -34,7 +34,7 @@ export default function Modal({ open, onClose, title, subtitle, wide, children, 
     >
       <div
         className={cn(
-          "bg-bg-2 border border-[rgba(200,175,120,0.15)] rounded-[10px] p-[22px] animate-fade-up",
+          "bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[10px] p-[22px] animate-fade-up",
           wide ? "w-[490px]" : "w-[420px]"
         )}
       >

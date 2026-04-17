@@ -23,13 +23,13 @@ export default function CollapsibleCard({
   return (
     <div
       className={cn(
-        "bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[9px] mb-3 overflow-hidden",
+        "bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[9px] mb-3 overflow-hidden",
         className
       )}
     >
       <div
-        className="flex items-center justify-between px-[14px] py-[10px] cursor-pointer select-none hover:bg-[rgba(200,175,120,0.03)]"
-        style={{ borderBottom: open ? "1px solid rgba(200,175,120,0.08)" : "none" }}
+        className="flex items-center justify-between px-[14px] py-[10px] cursor-pointer select-none hover:bg-[rgba(100,70,20,0.05)]"
+        style={{ borderBottom: open ? "1px solid rgba(100,70,20,0.12)" : "none" }}
         onClick={() => setOpen((v) => !v)}
       >
         <div className="font-serif text-[14px] font-medium text-vastu-text flex items-center gap-[7px]">
