@@ -29,6 +29,7 @@ export default function CanvasWorkspace() {
     setNotes, undo, perimeterPoints, perimeterComplete, resetPerimeter,
     floorPlanImage, setFloorPlanImage, cuts, clearCuts,
     floors, currentFloorId, addFloor, switchFloor, deleteFloor, renameFloor,
+    zoneMode, setZoneMode,
   } = store;
 
   // Persist floors to projectStore whenever floors change
@@ -219,6 +220,23 @@ export default function CanvasWorkspace() {
         >
           ◎ {chakraVisible ? "Hide" : "Show"} Chakra
         </Button>
+        {/* Zone mode selector */}
+        <div className="flex items-center gap-[2px] border border-[rgba(200,175,120,0.15)] rounded-md p-[2px]" title="Zone division lines from Brahmasthan (requires closed perimeter)">
+          <span className="text-[9px] text-vastu-text-3 px-[5px] font-sans whitespace-nowrap">⊹ Zones</span>
+          {(["off", "8", "16"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setZoneMode(mode)}
+              className={`text-[9px] px-[7px] py-[3px] rounded-[4px] font-mono cursor-pointer transition-all duration-[120ms] border ${
+                zoneMode === mode
+                  ? "bg-[rgba(74,144,226,0.2)] border-[rgba(74,144,226,0.6)] text-[#4a90e2]"
+                  : "bg-transparent border-transparent text-vastu-text-3 hover:text-vastu-text-2 hover:border-[rgba(200,175,120,0.15)]"
+              }`}
+            >
+              {mode === "off" ? "Off" : `${mode}`}
+            </button>
+          ))}
+        </div>
         <Button
           variant="primary"
           className="text-[10px] py-1 px-[9px]"
