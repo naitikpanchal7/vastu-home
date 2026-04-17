@@ -61,14 +61,14 @@ export default function AnalysisFullPage() {
     <div className="h-screen bg-bg text-vastu-text font-sans flex flex-col">
 
       {/* ── Top bar ── */}
-      <div className="h-[52px] bg-bg-2 border-b border-[rgba(200,175,120,0.12)] flex items-center px-6 gap-4 flex-shrink-0">
+      <div className="h-[52px] bg-bg-2 border-b border-[rgba(100,70,20,0.15)] flex items-center px-6 gap-4 flex-shrink-0">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-[6px] text-[11px] text-vastu-text-2 hover:text-gold-2 transition-colors cursor-pointer"
         >
           ← Back to Canvas
         </button>
-        <div className="w-[1px] h-[16px] bg-[rgba(200,175,120,0.12)]" />
+        <div className="w-[1px] h-[16px] bg-[rgba(100,70,20,0.15)]" />
         <div className="flex flex-col">
           <span className="text-[13px] text-gold-2 font-serif">
             {projectName || "Untitled Project"}
@@ -89,7 +89,7 @@ export default function AnalysisFullPage() {
       <div className="flex-1 overflow-y-auto px-6 py-6 max-w-[1100px] w-full mx-auto">
 
         {!hasPerimeter && (
-          <div className="mb-6 px-4 py-3 bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[8px] text-[11px] text-vastu-text-3">
+          <div className="mb-6 px-4 py-3 bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[8px] text-[11px] text-vastu-text-3">
             No perimeter drawn yet — showing ideal 6.25% per zone. Go back to the canvas and draw the floor plan perimeter to see real analysis.
           </div>
         )}
@@ -115,7 +115,7 @@ export default function AnalysisFullPage() {
         {/* ── Bar Chart ── */}
         <section className="mb-8">
           <h2 className="text-[11px] uppercase tracking-[1.5px] text-vastu-text-3 mb-4">Zone Area Distribution</h2>
-          <div className="bg-bg-2 border border-[rgba(200,175,120,0.12)] rounded-[10px] p-5">
+          <div className="bg-bg-2 border border-[rgba(100,70,20,0.15)] rounded-[10px] p-5">
 
             {/* Y-axis label + chart area */}
             <div className="flex gap-3">
@@ -136,13 +136,13 @@ export default function AnalysisFullPage() {
                     className="absolute left-0 right-0 border-t border-dashed pointer-events-none z-10"
                     style={{
                       bottom: `${(IDEAL_PCT / maxPct) * 100}%`,
-                      borderColor: "rgba(200,175,120,0.4)",
+                      borderColor: "rgba(100,70,20,0.38)",
                     }}
                   >
                     <span
                       className="absolute right-0 text-[7px] font-mono px-[4px] py-[1px] rounded"
                       style={{
-                        color: "rgba(200,175,120,0.6)",
+                        color: "rgba(100,70,20,0.52)",
                         background: "var(--bg-2)",
                         transform: "translateY(-50%)",
                       }}
@@ -158,7 +158,7 @@ export default function AnalysisFullPage() {
                       className="absolute left-0 right-0 border-t pointer-events-none"
                       style={{
                         bottom: `${f * 100}%`,
-                        borderColor: "rgba(200,175,120,0.05)",
+                        borderColor: "rgba(100,70,20,0.07)",
                       }}
                     />
                   ))}
@@ -214,9 +214,9 @@ export default function AnalysisFullPage() {
         {/* ── Zone Table ── */}
         <section className="mb-8">
           <h2 className="text-[11px] uppercase tracking-[1.5px] text-vastu-text-3 mb-4">Zone Detail</h2>
-          <div className="bg-bg-2 border border-[rgba(200,175,120,0.12)] rounded-[10px] overflow-hidden">
+          <div className="bg-bg-2 border border-[rgba(100,70,20,0.15)] rounded-[10px] overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[20px_60px_1fr_80px_80px_60px_60px] gap-3 px-4 py-2 border-b border-[rgba(200,175,120,0.08)] text-[8px] uppercase tracking-[1px] text-vastu-text-3">
+            <div className="grid grid-cols-[20px_60px_1fr_80px_80px_60px_60px] gap-3 px-4 py-2 border-b border-[rgba(100,70,20,0.12)] text-[8px] uppercase tracking-[1px] text-vastu-text-3">
               <div />
               <div>Zone</div>
               <div>Governs</div>
@@ -228,8 +228,8 @@ export default function AnalysisFullPage() {
             {zoneRows.map(({ zone, pct, status, hasCut, cutPct }, i) => (
               <div
                 key={zone.shortName}
-                className="grid grid-cols-[20px_60px_1fr_80px_80px_60px_60px] gap-3 px-4 py-[9px] items-center border-b border-[rgba(200,175,120,0.05)] hover:bg-[rgba(200,175,120,0.04)] transition-colors"
-                style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}
+                className="grid grid-cols-[20px_60px_1fr_80px_80px_60px_60px] gap-3 px-4 py-[9px] items-center border-b border-[rgba(100,70,20,0.07)] hover:bg-[rgba(100,70,20,0.06)] transition-colors"
+                style={{ background: i % 2 === 0 ? "transparent" : "rgba(100,70,20,0.03)" }}
               >
                 {/* Color swatch */}
                 <div className="w-[5px] h-[20px] rounded-[2px]" style={{ background: zone.color }} />
@@ -275,8 +275,8 @@ export default function AnalysisFullPage() {
         {cutRows.length > 0 && (
           <section className="mb-8">
             <h2 className="text-[11px] uppercase tracking-[1.5px] text-vastu-text-3 mb-4">Cut Analysis</h2>
-            <div className="bg-bg-2 border border-[rgba(200,175,120,0.12)] rounded-[10px] overflow-hidden">
-              <div className="grid grid-cols-[20px_80px_60px_1fr_70px_70px] gap-3 px-4 py-2 border-b border-[rgba(200,175,120,0.08)] text-[8px] uppercase tracking-[1px] text-vastu-text-3">
+            <div className="bg-bg-2 border border-[rgba(100,70,20,0.15)] rounded-[10px] overflow-hidden">
+              <div className="grid grid-cols-[20px_80px_60px_1fr_70px_70px] gap-3 px-4 py-2 border-b border-[rgba(100,70,20,0.12)] text-[8px] uppercase tracking-[1px] text-vastu-text-3">
                 <div />
                 <div>Cut</div>
                 <div>Zone</div>
@@ -289,13 +289,13 @@ export default function AnalysisFullPage() {
                 return (
                   <div
                     key={row.id}
-                    className="grid grid-cols-[20px_80px_60px_1fr_70px_70px] gap-3 px-4 py-[9px] items-center border-b border-[rgba(200,175,120,0.05)] hover:bg-[rgba(200,175,120,0.04)] transition-colors"
+                    className="grid grid-cols-[20px_80px_60px_1fr_70px_70px] gap-3 px-4 py-[9px] items-center border-b border-[rgba(100,70,20,0.07)] hover:bg-[rgba(100,70,20,0.06)] transition-colors"
                   >
                     <div className="w-[5px] h-[20px] rounded-[2px]" style={{ background: s.bar, opacity: 0.75 }} />
                     <div className="font-mono text-[10px] text-vastu-text-3">{row.label}</div>
                     <div
                       className="text-[8px] font-mono px-[5px] py-[2px] rounded-[3px] w-fit"
-                      style={{ background: "rgba(200,175,120,0.1)", color: "var(--gold-3)" }}
+                      style={{ background: "rgba(100,70,20,0.14)", color: "var(--gold-3)" }}
                     >
                       {row.primaryZone}
                     </div>

@@ -22,7 +22,7 @@ export default function RightPanel({ onExport }: RightPanelProps) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="flex-shrink-0 w-[28px] bg-bg-2 border-l border-[rgba(200,175,120,0.15)] flex items-center justify-center text-vastu-text-3 hover:text-gold-2 cursor-pointer text-[10px] transition-colors"
+          className="flex-shrink-0 w-[28px] bg-bg-2 border-l border-[rgba(100,70,20,0.20)] flex items-center justify-center text-vastu-text-3 hover:text-gold-2 cursor-pointer text-[10px] transition-colors"
         >
           ◁
         </button>
@@ -30,10 +30,10 @@ export default function RightPanel({ onExport }: RightPanelProps) {
 
       {open && (
         <div
-          className="w-[290px] bg-bg-2 border-l border-[rgba(200,175,120,0.15)] flex flex-col flex-shrink-0 overflow-hidden z-[5]"
+          className="w-[290px] bg-bg-2 border-l border-[rgba(100,70,20,0.20)] flex flex-col flex-shrink-0 overflow-hidden z-[5]"
         >
           {/* Tab header */}
-          <div className="flex items-center h-9 border-b border-[rgba(200,175,120,0.08)] flex-shrink-0 px-[10px]">
+          <div className="flex items-center h-9 border-b border-[rgba(100,70,20,0.12)] flex-shrink-0 px-[10px]">
             <div className="flex flex-1">
               {(["analysis", "north", "chatbot"] as Tab[]).map((tab) => (
                 <button

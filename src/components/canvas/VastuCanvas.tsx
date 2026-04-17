@@ -192,7 +192,7 @@ export default function VastuCanvas() {
     : "Perimeter: not drawn";
 
   return (
-    <div className="flex-1 relative overflow-hidden flex flex-col min-h-0 bg-bg">
+    <div className="flex-1 relative overflow-hidden flex flex-col min-h-0 bg-white">
       {/* Canvas stage */}
       <div
         className="flex-1 relative overflow-hidden min-h-0"
@@ -207,15 +207,6 @@ export default function VastuCanvas() {
         }}
         onDragLeave={() => setShowDropZone(false)}
       >
-        {/* Grid background */}
-        <div
-          className="absolute inset-0 z-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(200,175,120,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,175,120,.04) 1px,transparent 1px)",
-            backgroundSize: "50px 50px",
-          }}
-        />
 
         {/* SVG fills the full container so every pixel is interactive — no dead zones
             when panels collapse. preserveAspectRatio keeps the viewBox centred.
@@ -260,8 +251,8 @@ export default function VastuCanvas() {
             <g>
               <polygon
                 points={perimeterStr}
-                fill="rgba(200,175,120,0.04)"
-                stroke="rgba(200,175,120,0.9)"
+                fill="rgba(100,70,20,0.06)"
+                stroke="rgba(120,85,20,0.90)"
                 strokeWidth="2"
                 strokeDasharray={perimeterComplete ? "none" : "6,3"}
               />
@@ -270,7 +261,7 @@ export default function VastuCanvas() {
                   key={i}
                   cx={p.x.toFixed(1)} cy={p.y.toFixed(1)}
                   r={i === 0 ? 5 : 3.5}
-                  fill={i === 0 ? "var(--gold)" : "rgba(200,175,120,0.7)"}
+                  fill={i === 0 ? "var(--gold)" : "rgba(120,85,20,0.65)"}
                   stroke="var(--gold-2)" strokeWidth="1"
                 />
               ))}
@@ -279,7 +270,7 @@ export default function VastuCanvas() {
                 <polyline
                   points={[...perimeterPoints, mousePos].map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}
                   fill="none"
-                  stroke="rgba(200,175,120,0.5)"
+                  stroke="rgba(100,70,20,0.45)"
                   strokeWidth="1.5"
                   strokeDasharray="5,3"
                 />
@@ -451,7 +442,7 @@ export default function VastuCanvas() {
                 <line
                   x1={scalePt1.x} y1={scalePt1.y}
                   x2={mousePos.x} y2={mousePos.y}
-                  stroke="rgba(200,175,120,0.5)" strokeWidth="1.5" strokeDasharray="4,3"
+                  stroke="rgba(100,70,20,0.45)" strokeWidth="1.5" strokeDasharray="4,3"
                 />
               )}
             </>
@@ -473,7 +464,7 @@ export default function VastuCanvas() {
 
         {/* Scale input dialog */}
         {showScaleDlg && (
-          <div className="absolute bottom-11 left-1/2 -translate-x-1/2 bg-bg-2 border border-[rgba(200,175,120,0.15)] rounded-[8px] p-[11px_15px] min-w-[250px] z-20 animate-fade-up">
+          <div className="absolute bottom-11 left-1/2 -translate-x-1/2 bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[8px] p-[11px_15px] min-w-[250px] z-20 animate-fade-up">
             <h4 className="text-[12px] text-vastu-text mb-[2px]">⊷ Set Scale Reference</h4>
             <p className="text-[9px] text-vastu-text-3 mb-[9px] leading-relaxed">
               Enter the real-world distance between the two points you marked.
@@ -484,23 +475,23 @@ export default function VastuCanvas() {
                 value={scaleDistance}
                 onChange={(e) => setScaleDistance(e.target.value)}
                 placeholder="e.g. 22"
-                className="flex-1 px-[9px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3"
+                className="flex-1 px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3"
                 min={1}
               />
               <select
                 value={scaleUnit}
                 onChange={(e) => setScaleUnit(e.target.value as "ft" | "m")}
-                className="w-[60px] px-[6px] py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none"
+                className="w-[60px] px-[6px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none"
               >
                 <option value="ft">ft</option>
                 <option value="m">m</option>
               </select>
             </div>
             <div className="flex gap-[6px]">
-              <button onClick={cancelScale} className="flex-1 text-[10px] px-[9px] py-1 bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans">
+              <button onClick={cancelScale} className="flex-1 text-[10px] px-[9px] py-1 bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans">
                 Cancel
               </button>
-              <button onClick={confirmScale} className="flex-1 text-[10px] px-[9px] py-1 bg-gold text-bg rounded-md hover:bg-gold-2 cursor-pointer font-sans font-medium">
+              <button onClick={confirmScale} className="flex-1 text-[10px] px-[9px] py-1 bg-gold text-[#faf7f0] rounded-md hover:bg-gold-2 cursor-pointer font-sans font-medium">
                 ✓ Set Scale
               </button>
             </div>
@@ -509,7 +500,7 @@ export default function VastuCanvas() {
 
         {/* Brahmasthan confirm dialog */}
         {showBrahmaDlg && (
-          <div className="absolute bottom-11 left-1/2 -translate-x-1/2 bg-bg-2 border border-[rgba(200,175,120,0.15)] rounded-[8px] p-[11px_15px] min-w-[250px] z-20 animate-fade-up">
+          <div className="absolute bottom-11 left-1/2 -translate-x-1/2 bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[8px] p-[11px_15px] min-w-[250px] z-20 animate-fade-up">
             <h4 className="text-[12px] text-vastu-text mb-[2px]">✦ Brahmasthan Located</h4>
             <p className="text-[9px] text-vastu-text-3 mb-[9px] leading-relaxed">
               Center calculated from your floor plan perimeter. Drag the gold dot to fine-tune if needed.
@@ -517,13 +508,13 @@ export default function VastuCanvas() {
             <div className="flex gap-[6px]">
               <button
                 onClick={() => { setShowBrahmaDlg(false); setTool("brahma"); }}
-                className="flex-1 text-[10px] px-[9px] py-1 bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans"
+                className="flex-1 text-[10px] px-[9px] py-1 bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans"
               >
                 Adjust
               </button>
               <button
                 onClick={() => { store.confirmBrahma(); setShowBrahmaDlg(false); }}
-                className="flex-1 text-[10px] px-[9px] py-1 bg-gold text-bg rounded-md hover:bg-gold-2 cursor-pointer font-sans font-medium"
+                className="flex-1 text-[10px] px-[9px] py-1 bg-gold text-[#faf7f0] rounded-md hover:bg-gold-2 cursor-pointer font-sans font-medium"
               >
                 ✓ Confirm
               </button>
@@ -542,13 +533,13 @@ export default function VastuCanvas() {
             <div className="flex gap-2 mt-[14px]">
               <label className="cursor-pointer">
                 <input type="file" accept="image/*,.svg" className="hidden" onChange={handleFileInput} />
-                <span className="inline-flex items-center gap-1 text-[10px] px-[13px] py-[6px] bg-gold text-bg rounded-md hover:bg-gold-2 font-sans font-medium">
+                <span className="inline-flex items-center gap-1 text-[10px] px-[13px] py-[6px] bg-gold text-[#faf7f0] rounded-md hover:bg-gold-2 font-sans font-medium">
                   📂 Choose File
                 </span>
               </label>
               <button
                 onClick={() => setShowDropZone(false)}
-                className="text-[10px] px-[13px] py-[6px] bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans"
+                className="text-[10px] px-[13px] py-[6px] bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans"
               >
                 Cancel
               </button>
@@ -558,33 +549,33 @@ export default function VastuCanvas() {
       </div>
 
       {/* Bottom bar */}
-      <div className="h-8 bg-bg-2 border-t border-[rgba(200,175,120,0.15)] flex items-center px-3 gap-[9px] text-[10px] text-vastu-text-3 flex-shrink-0">
+      <div className="h-8 bg-bg-2 border-t border-[rgba(100,70,20,0.20)] flex items-center px-3 gap-[9px] text-[10px] text-vastu-text-3 flex-shrink-0">
         {/* Zoom controls */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setZoom(zoomLevel - 10)}
-            className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[3px] flex items-center justify-center text-[11px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
+            className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-[3px] flex items-center justify-center text-[11px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
           >
             −
           </button>
           <span className="font-mono min-w-[32px] text-center">{zoomLevel}%</span>
           <button
             onClick={() => setZoom(zoomLevel + 10)}
-            className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[3px] flex items-center justify-center text-[11px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
+            className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-[3px] flex items-center justify-center text-[11px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
           >
             +
           </button>
           <button
             onClick={() => { setZoom(100); setPan(0, 0); }}
-            className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[3px] flex items-center justify-center text-[10px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
+            className="w-[19px] h-[19px] bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-[3px] flex items-center justify-center text-[10px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 cursor-pointer"
             title="Reset zoom & pan"
           >
             ⊙
           </button>
         </div>
-        <div className="w-[1px] h-[13px] bg-[rgba(200,175,120,0.08)]" />
+        <div className="w-[1px] h-[13px] bg-[rgba(100,70,20,0.12)]" />
         <span>{scaleInfo}</span>
-        <div className="w-[1px] h-[13px] bg-[rgba(200,175,120,0.08)]" />
+        <div className="w-[1px] h-[13px] bg-[rgba(100,70,20,0.12)]" />
         <span>{perimeterStatus}</span>
         <div className="flex-1" />
         {mousePos && (

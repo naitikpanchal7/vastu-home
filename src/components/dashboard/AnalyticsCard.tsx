@@ -37,7 +37,7 @@ export default function AnalyticsCard() {
                   minHeight: b.count > 0 ? "4px" : "2px",
                   background: b.count > 0
                     ? "linear-gradient(to top, #a08050, #e8912a)"
-                    : "rgba(200,175,120,0.12)",
+                    : "rgba(100,70,20,0.15)",
                 }}
               />
             ))}

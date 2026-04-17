@@ -107,7 +107,7 @@ export default function CanvasWorkspace() {
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Canvas topbar */}
-      <div className="h-[42px] bg-bg-2 border-b border-[rgba(200,175,120,0.15)] flex items-center px-[11px] gap-[7px] flex-shrink-0 overflow-hidden">
+      <div className="h-[42px] bg-bg-2 border-b border-[rgba(100,70,20,0.20)] flex items-center px-[11px] gap-[7px] flex-shrink-0 overflow-hidden">
         {/* Project info — click to rename */}
         <div className="min-w-0 flex-shrink-0">
           {editingName ? (
@@ -138,7 +138,7 @@ export default function CanvasWorkspace() {
           )}
         </div>
 
-        <div className="w-[1px] h-4 bg-[rgba(200,175,120,0.15)] flex-shrink-0" />
+        <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
 
         {/* North input */}
         <span className="text-[10px] text-vastu-text-3 whitespace-nowrap flex-shrink-0">🧭 N:</span>
@@ -147,10 +147,10 @@ export default function CanvasWorkspace() {
           value={northDeg.toFixed(1)}
           min={0} max={360} step={0.5}
           onChange={(e) => setNorth(parseFloat(e.target.value) || 0)}
-          className="w-[54px] px-[6px] py-[3px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-[4px] text-gold-2 font-mono text-[11px] font-semibold outline-none focus:border-gold-3 flex-shrink-0"
+          className="w-[54px] px-[6px] py-[3px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[4px] text-gold-2 font-mono text-[11px] font-semibold outline-none focus:border-gold-3 flex-shrink-0"
         />
 
-        <div className="w-[1px] h-4 bg-[rgba(200,175,120,0.15)] flex-shrink-0" />
+        <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
 
         {/* Tool buttons */}
         <div className="flex gap-[2px]">
@@ -161,8 +161,8 @@ export default function CanvasWorkspace() {
               onClick={() => setTool(t.id)}
               className={`w-[27px] h-[27px] flex items-center justify-center rounded-[5px] text-[12px] cursor-pointer transition-all duration-[120ms] border font-sans ${
                 currentTool === t.id
-                  ? "bg-[rgba(200,175,120,0.15)] border-gold text-gold-2"
-                  : "bg-bg-3 border-[rgba(200,175,120,0.15)] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2"
+                  ? "bg-[rgba(100,70,20,0.20)] border-gold text-gold-2"
+                  : "bg-bg-3 border-[rgba(100,70,20,0.20)] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2"
               }`}
             >
               {t.icon}
@@ -186,7 +186,7 @@ export default function CanvasWorkspace() {
               e.target.value = "";
             }}
           />
-          <span className="inline-flex items-center gap-1 text-[10px] px-[9px] py-[5px] bg-bg-3 border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors">
+          <span className="inline-flex items-center gap-1 text-[10px] px-[9px] py-[5px] bg-bg-3 border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors">
             📂 Import Floor Plan
           </span>
         </label>
@@ -201,7 +201,7 @@ export default function CanvasWorkspace() {
           </button>
         )}
 
-        <div className="w-[1px] h-4 bg-[rgba(200,175,120,0.15)] flex-shrink-0" />
+        <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
 
         {/* Undo */}
         <button
@@ -212,7 +212,7 @@ export default function CanvasWorkspace() {
           ↩ Undo
         </button>
 
-        <div className="w-[1px] h-4 bg-[rgba(200,175,120,0.15)] flex-shrink-0" />
+        <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
 
         <Button
           variant="ghost"
@@ -222,7 +222,7 @@ export default function CanvasWorkspace() {
           ◎ {chakraVisible ? "Hide" : "Show"} Chakra
         </Button>
         {/* Zone mode selector */}
-        <div className="flex items-center gap-[2px] border border-[rgba(200,175,120,0.15)] rounded-md p-[2px]" title="Zone division lines from Brahmasthan (requires closed perimeter)">
+        <div className="flex items-center gap-[2px] border border-[rgba(100,70,20,0.20)] rounded-md p-[2px]" title="Zone division lines from Brahmasthan (requires closed perimeter)">
           <span className="text-[9px] text-vastu-text-3 px-[5px] font-sans whitespace-nowrap">⊹ Zones</span>
           {(["off", "8", "16"] as const).map((mode) => (
             <button
@@ -231,7 +231,7 @@ export default function CanvasWorkspace() {
               className={`text-[9px] px-[7px] py-[3px] rounded-[4px] font-mono cursor-pointer transition-all duration-[120ms] border ${
                 zoneMode === mode
                   ? "bg-[rgba(74,144,226,0.2)] border-[rgba(74,144,226,0.6)] text-[#4a90e2]"
-                  : "bg-transparent border-transparent text-vastu-text-3 hover:text-vastu-text-2 hover:border-[rgba(200,175,120,0.15)]"
+                  : "bg-transparent border-transparent text-vastu-text-3 hover:text-vastu-text-2 hover:border-[rgba(100,70,20,0.20)]"
               }`}
             >
               {mode === "off" ? "Off" : `${mode}`}
@@ -261,14 +261,14 @@ export default function CanvasWorkspace() {
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left panel */}
         <div
-          className={`bg-bg-2 border-r border-[rgba(200,175,120,0.15)] flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 z-[5] ${
+          className={`bg-bg-2 border-r border-[rgba(100,70,20,0.20)] flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-200 z-[5] ${
             leftExpanded ? "w-[186px]" : "w-[52px]"
           }`}
         >
           {/* Toggle */}
           <div
             onClick={() => setLeftExpanded((v) => !v)}
-            className="px-[9px] py-[9px] flex justify-center border-b border-[rgba(200,175,120,0.08)] cursor-pointer text-vastu-text-3 text-[12px] hover:text-gold-2 transition-colors flex-shrink-0"
+            className="px-[9px] py-[9px] flex justify-center border-b border-[rgba(100,70,20,0.12)] cursor-pointer text-vastu-text-3 text-[12px] hover:text-gold-2 transition-colors flex-shrink-0"
           >
             ≡
           </div>
@@ -284,7 +284,7 @@ export default function CanvasWorkspace() {
                 <div
                   key={btn.label}
                   onClick={() => setLeftExpanded(true)}
-                  className="w-10 h-10 flex flex-col items-center justify-center rounded-[6px] cursor-pointer text-vastu-text-3 text-[14px] hover:bg-[rgba(200,175,120,0.07)] hover:text-gold-2 transition-all border border-transparent hover:border-[rgba(200,175,120,0.08)] flex-shrink-0"
+                  className="w-10 h-10 flex flex-col items-center justify-center rounded-[6px] cursor-pointer text-vastu-text-3 text-[14px] hover:bg-[rgba(100,70,20,0.09)] hover:text-gold-2 transition-all border border-transparent hover:border-[rgba(100,70,20,0.12)] flex-shrink-0"
                 >
                   {btn.icon}
                   <span className="text-[6px] mt-[2px] font-mono uppercase tracking-[0.5px]">{btn.label}</span>
@@ -308,7 +308,7 @@ export default function CanvasWorkspace() {
                       e.target.value = "";
                     }}
                   />
-                  <span className="w-full flex items-center justify-center gap-1 text-[9px] px-2 py-[6px] bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors mb-1">
+                  <span className="w-full flex items-center justify-center gap-1 text-[9px] px-2 py-[6px] bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors mb-1">
                     📂 Import Floor Plan
                   </span>
                 </label>
@@ -345,14 +345,14 @@ export default function CanvasWorkspace() {
               <LpSection title="Layers" defaultOpen>
                 <div className="flex flex-col gap-[2px]">
                   {([
-                    { label: "Vastu Chakra", color: "rgba(200,175,120,.4)", visible: chakraVisible,    toggle: toggleChakra },
-                    { label: "Perimeter",    color: "rgba(200,175,120,.6)", visible: perimeterVisible, toggle: togglePerimeterVisible },
+                    { label: "Vastu Chakra", color: "rgba(100,70,20,.38)", visible: chakraVisible,    toggle: toggleChakra },
+                    { label: "Perimeter",    color: "rgba(100,70,20,.52)", visible: perimeterVisible, toggle: togglePerimeterVisible },
                     { label: "Cuts",         color: "rgba(200,60,40,.6)",   visible: cutsVisible,       toggle: toggleCutsVisible },
                   ] as const).map((layer) => (
                     <div
                       key={layer.label}
                       onClick={layer.toggle}
-                      className={`flex items-center gap-[7px] px-[5px] py-[5px] rounded-[4px] cursor-pointer text-[10px] hover:bg-[rgba(200,175,120,0.06)] transition-opacity ${
+                      className={`flex items-center gap-[7px] px-[5px] py-[5px] rounded-[4px] cursor-pointer text-[10px] hover:bg-[rgba(100,70,20,0.08)] transition-opacity ${
                         layer.visible ? "text-vastu-text-2" : "text-vastu-text-3 opacity-50"
                       }`}
                     >
@@ -414,7 +414,7 @@ export default function CanvasWorkspace() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Client concerns, observations…"
-                  className="w-full px-2 py-[6px] bg-bg-4 border border-[rgba(200,175,120,0.08)] rounded-[5px] text-vastu-text-2 font-sans text-[10px] outline-none resize-none leading-relaxed min-h-[70px] focus:border-gold-3"
+                  className="w-full px-2 py-[6px] bg-bg-4 border border-[rgba(100,70,20,0.12)] rounded-[5px] text-vastu-text-2 font-sans text-[10px] outline-none resize-none leading-relaxed min-h-[70px] focus:border-gold-3"
                 />
                 <div className="text-[8px] text-vastu-text-3 mt-1">Saved automatically</div>
               </LpSection>
@@ -450,7 +450,7 @@ export default function CanvasWorkspace() {
           { section: "Recommendations", items: ["AI-generated zone-by-zone recommendations", "Remedy suggestions (non-demolition)", "Classical text references (Vishwakarma Prakash)"] },
         ].map(({ section, items }) => (
           <div key={section}>
-            <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1px] my-[9px] pb-[3px] border-b border-[rgba(200,175,120,0.08)]">
+            <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1px] my-[9px] pb-[3px] border-b border-[rgba(100,70,20,0.12)]">
               {section}
             </div>
             <div className="flex flex-col gap-[5px]">
@@ -463,7 +463,7 @@ export default function CanvasWorkspace() {
             </div>
           </div>
         ))}
-        <div className="mt-[10px] p-[9px] bg-bg-3 border border-[rgba(200,175,120,0.08)] rounded-[6px] text-[9px] text-vastu-text-3">
+        <div className="mt-[10px] p-[9px] bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-[6px] text-[9px] text-vastu-text-3">
           PDF generation requires completing the floor plan analysis first. Draw your perimeter and confirm Brahmasthan to unlock full export.
         </div>
       </Modal>
@@ -502,7 +502,7 @@ function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename
   };
 
   return (
-    <div className="h-[30px] bg-bg-2 border-b border-[rgba(200,175,120,0.15)] flex items-center px-[9px] gap-[2px] flex-shrink-0 overflow-x-auto">
+    <div className="h-[30px] bg-bg-2 border-b border-[rgba(100,70,20,0.20)] flex items-center px-[9px] gap-[2px] flex-shrink-0 overflow-x-auto">
       {floors
         .slice()
         .sort((a, b) => a.order - b.order)
@@ -514,8 +514,8 @@ function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename
               onClick={() => !isActive && onSwitch(floor.id)}
               className={`flex items-center gap-[5px] px-[8px] h-[22px] rounded-[4px] text-[10px] font-mono flex-shrink-0 cursor-pointer select-none transition-all duration-[120ms] border ${
                 isActive
-                  ? "bg-[rgba(200,175,120,0.12)] border-[rgba(200,175,120,0.4)] text-gold-2"
-                  : "bg-transparent border-transparent text-vastu-text-3 hover:bg-[rgba(200,175,120,0.06)] hover:text-vastu-text-2"
+                  ? "bg-[rgba(100,70,20,0.15)] border-[rgba(100,70,20,0.38)] text-gold-2"
+                  : "bg-transparent border-transparent text-vastu-text-3 hover:bg-[rgba(100,70,20,0.08)] hover:text-vastu-text-2"
               }`}
             >
               <span className="text-[8px] opacity-50">◫</span>
@@ -558,7 +558,7 @@ function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename
       <button
         onClick={onAdd}
         title="Add new floor"
-        className="flex items-center gap-[3px] px-[6px] h-[22px] rounded-[4px] text-[10px] font-mono text-vastu-text-3 hover:text-gold-2 hover:bg-[rgba(200,175,120,0.06)] transition-all border border-transparent hover:border-[rgba(200,175,120,0.15)] cursor-pointer bg-transparent flex-shrink-0"
+        className="flex items-center gap-[3px] px-[6px] h-[22px] rounded-[4px] text-[10px] font-mono text-vastu-text-3 hover:text-gold-2 hover:bg-[rgba(100,70,20,0.08)] transition-all border border-transparent hover:border-[rgba(100,70,20,0.20)] cursor-pointer bg-transparent flex-shrink-0"
       >
         <span className="text-[11px] leading-none">+</span>
         <span>Floor</span>
@@ -572,7 +572,7 @@ function FloorTabs({ floors, currentFloorId, onSwitch, onAdd, onDelete, onRename
 function LpSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-[rgba(200,175,120,0.08)]">
+    <div className="border-b border-[rgba(100,70,20,0.12)]">
       <div
         className="flex items-center justify-between px-[11px] py-2 text-[9px] uppercase tracking-[1.5px] text-vastu-text-3 cursor-pointer hover:text-vastu-text-2 select-none"
         onClick={() => setOpen((v) => !v)}

@@ -31,7 +31,7 @@ export default function ShaktiChakra({
       height={size}
       opacity={opacity}
       transform={`rotate(${-northDeg}, ${cx}, ${cy})`}
-      style={{ mixBlendMode: "screen" }}
+      style={{ mixBlendMode: "multiply" }}
     />
   );
 }

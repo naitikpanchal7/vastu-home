@@ -32,7 +32,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="bg-bg-2 border border-[rgba(200,175,120,0.3)] rounded-full px-4 py-2 text-[11px] text-vastu-text animate-fade-up whitespace-nowrap shadow-lg"
+            className="bg-bg-2 border border-[rgba(100,70,20,0.25)] rounded-full px-4 py-2 text-[11px] text-vastu-text animate-fade-up whitespace-nowrap shadow-lg"
           >
             {t.message}
           </div>

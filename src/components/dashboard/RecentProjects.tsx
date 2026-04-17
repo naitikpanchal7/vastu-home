@@ -41,7 +41,7 @@ export default function RecentProjects({ onNewProject }: RecentProjectsProps) {
             <div
               key={p.id}
               onClick={() => router.push(`/projects/${p.id}`)}
-              className="bg-bg-4 border border-[rgba(200,175,120,0.08)] rounded-[7px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[1px]"
+              className="bg-bg-4 border border-[rgba(100,70,20,0.12)] rounded-[7px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[1px]"
             >
               <div className="h-[70px] bg-bg-2 flex items-center justify-center">
                 <span className="text-[28px] opacity-20">🏠</span>

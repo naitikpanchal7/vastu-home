@@ -32,21 +32,21 @@ export default function Sidebar() {
   return (
     <nav
       className={cn(
-        "bg-bg-2 border-r border-[rgba(200,175,120,0.15)] flex flex-col flex-shrink-0 transition-[width] duration-[220ms] ease-[cubic-bezier(.4,0,.2,1)] overflow-hidden z-20 relative",
+        "bg-bg-2 border-r border-[rgba(100,70,20,0.20)] flex flex-col flex-shrink-0 transition-[width] duration-[220ms] ease-[cubic-bezier(.4,0,.2,1)] overflow-hidden z-20 relative",
         collapsed ? "w-[52px]" : "w-[220px]"
       )}
     >
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed((v) => !v)}
-        className="absolute top-[14px] -right-[11px] w-[22px] h-[22px] rounded-full bg-bg-3 border border-[rgba(200,175,120,0.15)] flex items-center justify-center z-30 text-[10px] text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all duration-150 cursor-pointer"
+        className="absolute top-[14px] -right-[11px] w-[22px] h-[22px] rounded-full bg-bg-3 border border-[rgba(100,70,20,0.20)] flex items-center justify-center z-30 text-[10px] text-vastu-text-3 hover:border-gold-3 hover:text-gold-2 transition-all duration-150 cursor-pointer"
       >
         {collapsed ? "▶" : "◀"}
       </button>
 
       {/* Logo */}
-      <div className="px-3 py-[15px] border-b border-[rgba(200,175,120,0.08)] flex items-center gap-[9px] flex-shrink-0 min-h-[54px] overflow-hidden whitespace-nowrap">
-        <div className="w-[28px] h-[28px] bg-gradient-to-br from-gold-3 to-saffron rounded-[7px] flex items-center justify-center font-serif text-[15px] font-semibold text-bg flex-shrink-0">
+      <div className="px-3 py-[15px] border-b border-[rgba(100,70,20,0.12)] flex items-center gap-[9px] flex-shrink-0 min-h-[54px] overflow-hidden whitespace-nowrap">
+        <div className="w-[28px] h-[28px] bg-gradient-to-br from-gold-3 to-saffron rounded-[7px] flex items-center justify-center font-serif text-[15px] font-semibold text-[#faf7f0] flex-shrink-0">
           V
         </div>
         <div className={cn("overflow-hidden transition-[opacity,width] duration-[220ms]", collapsed && "opacity-0 w-0")}>
@@ -80,8 +80,8 @@ export default function Sidebar() {
                 onClick={() => router.push(item.href)}
                 className={cn(
                   "flex items-center gap-[10px] px-[14px] py-2 cursor-pointer text-vastu-text-2 text-[12px] transition-all duration-[120ms] border-l-2 border-transparent whitespace-nowrap overflow-hidden",
-                  "hover:text-vastu-text hover:bg-[rgba(200,175,120,0.05)]",
-                  isActive && "text-gold-2 bg-[rgba(200,175,120,0.08)] border-l-gold"
+                  "hover:text-vastu-text hover:bg-[rgba(100,70,20,0.07)]",
+                  isActive && "text-gold-2 bg-[rgba(100,70,20,0.12)] border-l-gold"
                 )}
               >
                 <span className="text-[16px] w-6 text-center flex-shrink-0">{item.icon}</span>
@@ -95,12 +95,12 @@ export default function Sidebar() {
       </div>
 
       {/* User chip */}
-      <div className="p-[9px] border-t border-[rgba(200,175,120,0.08)] flex-shrink-0 overflow-hidden">
+      <div className="p-[9px] border-t border-[rgba(100,70,20,0.12)] flex-shrink-0 overflow-hidden">
         <div
           className="flex items-center gap-2 px-2 py-[7px] bg-bg-3 rounded-[7px] cursor-pointer overflow-hidden"
           onClick={() => { setEditing(true); setEditVal(userName); }}
         >
-          <div className="w-[27px] h-[27px] bg-gradient-to-br from-gold-3 to-saffron rounded-full flex items-center justify-center font-serif text-[13px] font-semibold text-bg flex-shrink-0">
+          <div className="w-[27px] h-[27px] bg-gradient-to-br from-gold-3 to-saffron rounded-full flex items-center justify-center font-serif text-[13px] font-semibold text-[#faf7f0] flex-shrink-0">
             {userName.charAt(0).toUpperCase()}
           </div>
           <div className={cn("overflow-hidden transition-[opacity] duration-150 flex-1 min-w-0", collapsed && "opacity-0 w-0")}>
