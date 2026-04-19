@@ -161,6 +161,92 @@ export interface ConsultantProfile {
   reportShowBranding?: boolean;   // Show "Prepared using vastu@home" in report
 }
 
+// ── Report Builder ────────────────────────────────────────────────────────────
+export type ReportPageType =
+  | "plan-only"
+  | "plan-with-brahma"
+  | "plan-with-chakra"
+  | "plan-perimeter-only"
+  | "plan-cuts-only"
+  | "plan-perimeter-cuts"
+  | "plan-full"
+  | "16zone-lines"
+  | "16-zone"
+  | "bar-graph-16"
+  | "8zone-lines"
+  | "8-zone"
+  | "bar-graph-8"
+  | "cut-analysis"
+  | "panchabhuta"
+  | "ai-summary"
+  | "consultant-summary";
+
+export type ReportPreset = "consultant-standard" | "quick-summary" | "custom";
+export type ReportStatus = "draft" | "generating" | "generated" | "downloaded";
+
+export const REPORT_PAGE_META: Record<
+  ReportPageType,
+  { label: string; description: string; requiresCuts?: boolean; group: string }
+> = {
+  // ── Floor Plan visuals ────────────────────────────────────────────────────
+  "plan-only":           { label: "Floor Plan",                   description: "Clean floor plan image with north indicator only",                     group: "Floor Plan" },
+  "plan-with-brahma":    { label: "Floor Plan + Brahmasthan",     description: "Floor plan with Brahmasthan center marker",                             group: "Floor Plan" },
+  "plan-with-chakra":    { label: "Floor Plan + Vastu Chakra",    description: "Floor plan with Chakra overlay — no perimeter or cuts",                group: "Floor Plan" },
+  "plan-perimeter-only": { label: "Perimeter View",               description: "Floor plan with drawn perimeter outline",                               group: "Floor Plan" },
+  "plan-cuts-only":      { label: "Cuts View",                    description: "Floor plan with cut regions highlighted",                               group: "Floor Plan", requiresCuts: true },
+  "plan-perimeter-cuts": { label: "Perimeter + Cuts",             description: "Floor plan with perimeter outline and cut regions",                     group: "Floor Plan" },
+  "plan-full":           { label: "Full Composition",             description: "Floor plan with perimeter, cuts, and Vastu Chakra overlay",             group: "Floor Plan" },
+  // ── Analysis ──────────────────────────────────────────────────────────────
+  "16zone-lines":        { label: "16-Zone Lines View",           description: "Perimeter with 16-zone division lines — labels outside boundary",      group: "Analysis" },
+  "16-zone":             { label: "16-Zone Analysis Table",       description: "All 16 zones with area percentages",                                    group: "Analysis" },
+  "bar-graph-16":        { label: "16-Zone Bar Graph",            description: "Zone area distribution chart vs 6.25% ideal",                          group: "Analysis" },
+  "8zone-lines":         { label: "8-Zone Lines View",            description: "Perimeter with 8-direction division lines — labels outside boundary",  group: "Analysis" },
+  "8-zone":              { label: "8-Zone Analysis Table",        description: "8-direction aggregated zone area percentages",                          group: "Analysis" },
+  "bar-graph-8":         { label: "8-Zone Bar Graph",             description: "8-direction distribution chart vs 12.5% ideal",                        group: "Analysis" },
+  "cut-analysis":        { label: "Cut Analysis",                 description: "Cut severity, affected zones, area percentages",                        group: "Analysis", requiresCuts: true },
+  "panchabhuta":         { label: "Panchabhuta (5 Elements)",     description: "Fire / Earth / Water / Air / Space zone grouping",                     group: "Analysis" },
+  // ── Summary (placeholder) ────────────────────────────────────────────────
+  "ai-summary":          { label: "AI Summary",                   description: "AI-generated analysis summary — placeholder, extension-ready",         group: "Summary" },
+  "consultant-summary":  { label: "Consultant Summary",           description: "Consultant notes and recommendations — placeholder",                    group: "Summary" },
+};
+
+export const REPORT_PRESET_PAGES: Record<ReportPreset, ReportPageType[]> = {
+  "consultant-standard": [
+    "plan-only", "plan-with-brahma", "plan-with-chakra",
+    "plan-perimeter-only", "plan-cuts-only", "plan-perimeter-cuts", "plan-full",
+    "16zone-lines", "16-zone", "bar-graph-16",
+    "8zone-lines", "8-zone", "bar-graph-8",
+    "cut-analysis",
+  ],
+  "quick-summary": ["plan-only", "16-zone", "bar-graph-16", "8-zone"],
+  "custom":        [],
+};
+
+export interface ReportFloorSelection {
+  floorId: string;
+  floorName: string;
+  floorOrder: number;
+  enabled: boolean;
+  pages: ReportPageType[];
+  pageNotes: Partial<Record<ReportPageType, string>>;
+}
+
+export interface Report {
+  id: string;
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  propertyAddress?: string;
+  northDeg: number;
+  reportName: string;
+  preset: ReportPreset;
+  floorSelections: ReportFloorSelection[];
+  status: ReportStatus;
+  createdAt: string;
+  updatedAt: string;
+  pdfDataUrl?: string;
+}
+
 // ── API Response types ────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
   data?: T;

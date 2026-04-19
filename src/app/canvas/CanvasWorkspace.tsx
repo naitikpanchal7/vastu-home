@@ -5,10 +5,10 @@ import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import VastuCanvas from "@/components/canvas/VastuCanvas";
 import RightPanel from "@/components/panels/RightPanel";
-import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import type { CanvasTool } from "@/store/canvasStore";
 import type { Floor, Project } from "@/lib/types";
+import ReportBuilder from "@/components/reports/ReportBuilder";
 
 interface ExportModalState { open: boolean }
 
@@ -172,23 +172,23 @@ export default function CanvasWorkspace() {
 
         <div className="flex-1" />
 
-        {/* Import Floor Plan */}
-        <label className="cursor-pointer flex-shrink-0">
+        {/* Import Floor Plan — input covers the label so the user clicks it directly */}
+        <label
+          className="relative inline-flex items-center gap-1 text-[10px] px-[9px] py-[5px] bg-bg-3 border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors flex-shrink-0"
+          style={{ position: "relative" }}
+        >
           <input
             type="file"
             accept="image/*,.svg"
-            className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              const url = URL.createObjectURL(file);
-              setFloorPlanImage(url);
+              setFloorPlanImage(URL.createObjectURL(file));
               e.target.value = "";
             }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
           />
-          <span className="inline-flex items-center gap-1 text-[10px] px-[9px] py-[5px] bg-bg-3 border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors">
-            📂 Import Floor Plan
-          </span>
+          📂 Import Floor Plan
         </label>
 
         {floorPlanImage && (
@@ -296,22 +296,6 @@ export default function CanvasWorkspace() {
             <div className="flex flex-col flex-1 overflow-y-auto">
               {/* Floor Plan */}
               <LpSection title="Floor Plan" defaultOpen>
-                <label className="cursor-pointer block mb-1">
-                  <input
-                    type="file"
-                    accept="image/*,.svg"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setFloorPlanImage(URL.createObjectURL(file));
-                      e.target.value = "";
-                    }}
-                  />
-                  <span className="w-full flex items-center justify-center gap-1 text-[9px] px-2 py-[6px] bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 hover:text-gold-2 cursor-pointer font-sans transition-colors mb-1">
-                    📂 Import Floor Plan
-                  </span>
-                </label>
                 {floorPlanImage && (
                   <button
                     onClick={() => setFloorPlanImage(null)}
@@ -429,44 +413,11 @@ export default function CanvasWorkspace() {
         <RightPanel onExport={() => setExportModal({ open: true })} />
       </div>
 
-      {/* Export Modal */}
-      <Modal
+      {/* Report Builder — full-screen overlay (replaces old export modal) */}
+      <ReportBuilder
         open={exportModal.open}
         onClose={() => setExportModal({ open: false })}
-        title="⎙ Export Report"
-        subtitle="Select what to include in the PDF report for your client."
-        wide
-        footer={
-          <>
-            <Button variant="ghost" size="sm" onClick={() => setExportModal({ open: false })}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={() => setExportModal({ open: false })}>⎙ Generate PDF</Button>
-          </>
-        }
-      >
-        {[
-          { section: "Cover Page", items: ["Project name, client name, consultant name, date", "Company logo (upload in Settings)"] },
-          { section: "Floor Plan", items: ["Floor plan image (clean, no overlay)", "Floor plan with Vastu Shakti Chakra overlay", "Floor plan with cuts highlighted"] },
-          { section: "Analysis",   items: ["Zone area table (all 16 zones)", "Bar Graph: Zone area distribution", "Bar Graph: Cut area by zone"] },
-          { section: "Recommendations", items: ["AI-generated zone-by-zone recommendations", "Remedy suggestions (non-demolition)", "Classical text references (Vishwakarma Prakash)"] },
-        ].map(({ section, items }) => (
-          <div key={section}>
-            <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1px] my-[9px] pb-[3px] border-b border-[rgba(100,70,20,0.12)]">
-              {section}
-            </div>
-            <div className="flex flex-col gap-[5px]">
-              {items.map((item, i) => (
-                <label key={i} className="flex items-center gap-2 px-[7px] py-[5px] rounded-[4px] bg-bg-3 cursor-pointer text-[11px] text-vastu-text-2">
-                  <input type="checkbox" defaultChecked={i === 0} className="accent-gold cursor-pointer" />
-                  {item}
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
-        <div className="mt-[10px] p-[9px] bg-bg-3 border border-[rgba(100,70,20,0.12)] rounded-[6px] text-[9px] text-vastu-text-3">
-          PDF generation requires completing the floor plan analysis first. Draw your perimeter and confirm Brahmasthan to unlock full export.
-        </div>
-      </Modal>
+      />
     </div>
   );
 }

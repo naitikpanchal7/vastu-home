@@ -147,13 +147,6 @@ export default function VastuCanvas() {
     setTool("select");
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setFloorPlanImage(url);
-    setShowDropZone(false);
-  };
 
   const svgCursor = {
     select:    "default",
@@ -531,11 +524,23 @@ export default function VastuCanvas() {
               <span className="text-[9px] text-vastu-text-3">JPG · PNG · SVG</span>
             </div>
             <div className="flex gap-2 mt-[14px]">
-              <label className="cursor-pointer">
-                <input type="file" accept="image/*,.svg" className="hidden" onChange={handleFileInput} />
-                <span className="inline-flex items-center gap-1 text-[10px] px-[13px] py-[6px] bg-gold text-[#faf7f0] rounded-md hover:bg-gold-2 font-sans font-medium">
-                  📂 Choose File
-                </span>
+              <label
+                className="relative inline-flex items-center gap-1 text-[10px] px-[13px] py-[6px] bg-gold text-[#faf7f0] rounded-md hover:bg-gold-2 font-sans font-medium cursor-pointer"
+                style={{ position: "relative" }}
+              >
+                <input
+                  type="file"
+                  accept="image/*,.svg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setFloorPlanImage(URL.createObjectURL(file));
+                    setShowDropZone(false);
+                    e.target.value = "";
+                  }}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
+                />
+                📂 Choose File
               </label>
               <button
                 onClick={() => setShowDropZone(false)}
