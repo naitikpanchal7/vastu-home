@@ -27,10 +27,6 @@ import { generateAllSnapshots } from "@/lib/vastu/canvasSnapshot";
 // ── Status colors / helpers ────────────────────────────────────────────────────
 const PAGE_GROUP_ORDER = ["Floor Plan", "Analysis", "Summary"];
 
-function statusColor(s: "good" | "warning" | "critical") {
-  return s === "good" ? "#2a7a3a" : s === "warning" ? "#b87820" : "#c03030";
-}
-
 // ── Build zone rows for a floor ───────────────────────────────────────────────
 function buildZoneRows(floor: Floor) {
   const cs = floor.canvasState;
@@ -58,10 +54,12 @@ function buildZoneRows(floor: Floor) {
 interface ReportBuilderProps {
   open: boolean;
   onClose: () => void;
+  /** Pre-populate builder from a previously saved draft report */
+  initialReport?: Report;
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
+export default function ReportBuilder({ open, onClose, initialReport }: ReportBuilderProps) {
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
@@ -80,13 +78,16 @@ export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
 
   // ── Report state ────────────────────────────────────────────────────────────
   const defaultReportName = useMemo(() => {
+    if (initialReport) return initialReport.reportName;
     const d = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
     return `${canvasStore.projectName} — ${d}`;
-  }, [canvasStore.projectName]);
+  }, [canvasStore.projectName, initialReport]);
 
   const [reportName, setReportName] = useState(defaultReportName);
-  const [preset, setPreset] = useState<ReportPreset>("consultant-standard");
+  const [preset, setPreset] = useState<ReportPreset>(initialReport?.preset ?? "consultant-standard");
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Per-floor selection state: floorId → { enabled, pages, pageNotes }
@@ -95,6 +96,16 @@ export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
   >(() => {
     const initial: Record<string, { enabled: boolean; pages: ReportPageType[]; pageNotes: Partial<Record<ReportPageType, string>> }> = {};
     for (const floor of allFloors) {
+      // Restore from initialReport if available
+      const savedSel = initialReport?.floorSelections.find((s) => s.floorId === floor.id);
+      if (savedSel) {
+        initial[floor.id] = {
+          enabled: savedSel.enabled,
+          pages: savedSel.pages,
+          pageNotes: savedSel.pageNotes,
+        };
+        continue;
+      }
       const hasCuts = floor.canvasState.cuts.length > 0;
       const hasPerimeter = floor.canvasState.perimeterPoints.length >= 3;
       const presetPages = REPORT_PRESET_PAGES["consultant-standard"].filter(
@@ -177,6 +188,54 @@ export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
     if (incompleteFloor) return `${incompleteFloor.name} has no perimeter drawn. Draw a perimeter first.`;
     return null;
   }, [reportName, selectedFloors]);
+
+  // ── Save report without generating PDF ───────────────────────────────────────
+  const handleSave = useCallback(() => {
+    if (validationError) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
+    const project = projectStore.projects.find((p) => p.id === projectId);
+    const floorSelectionsArr: ReportFloorSelection[] = allFloors
+      .filter((f) => floorSelections[f.id]?.enabled)
+      .map((f) => ({
+        floorId: f.id,
+        floorName: f.name,
+        floorOrder: f.order,
+        enabled: true,
+        pages: floorSelections[f.id]?.pages ?? [],
+        pageNotes: floorSelections[f.id]?.pageNotes ?? {},
+      }));
+
+    const report: Report = {
+      id: initialReport?.id ?? `report-${Date.now()}`,
+      projectId,
+      projectName: canvasStore.projectName,
+      clientName: canvasStore.clientName,
+      propertyAddress: project?.propertyAddress ?? "",
+      northDeg: canvasStore.northDeg,
+      reportName: reportName.trim(),
+      preset,
+      floorSelections: floorSelectionsArr,
+      status: "draft",
+      createdAt: initialReport?.createdAt ?? now,
+      updatedAt: now,
+      pdfDataUrl: initialReport?.pdfDataUrl,
+    };
+
+    if (initialReport) {
+      reportStore.updateReport(initialReport.id, report);
+    } else {
+      reportStore.addReport(report);
+    }
+
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      onClose();
+    }, 900);
+  }, [validationError, canvasStore, projectStore, allFloors, floorSelections, reportName, preset, initialReport, reportStore, onClose]);
 
   // ── Computed page list for preview ───────────────────────────────────────────
   const previewPages = useMemo(() => {
@@ -287,7 +346,7 @@ export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
         }));
 
       const report: Report = {
-        id: `report-${Date.now()}`,
+        id: initialReport?.id ?? `report-${Date.now()}`,
         projectId,
         projectName: canvasStore.projectName,
         clientName: canvasStore.clientName,
@@ -297,11 +356,15 @@ export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
         preset,
         floorSelections: floorSelectionsArr,
         status: "downloaded",
-        createdAt: now,
+        createdAt: initialReport?.createdAt ?? now,
         updatedAt: now,
         pdfDataUrl,
       };
-      reportStore.addReport(report);
+      if (initialReport) {
+        reportStore.updateReport(initialReport.id, report);
+      } else {
+        reportStore.addReport(report);
+      }
 
     } catch (err) {
       console.error("PDF generation failed:", err);
@@ -379,12 +442,30 @@ export default function ReportBuilder({ open, onClose }: ReportBuilderProps) {
           Cancel
         </button>
 
+        {/* Save without PDF */}
+        <button
+          onClick={handleSave}
+          disabled={!!validationError || saving || generating || saved}
+          className={cn(
+            "text-[10px] px-3 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer border",
+            saved
+              ? "bg-[rgba(42,122,58,0.15)] border-[rgba(42,122,58,0.4)] text-green-400"
+              : validationError || saving || generating
+              ? "bg-transparent border-[rgba(100,70,20,0.1)] text-vastu-text-3 cursor-not-allowed"
+              : "bg-transparent border-[rgba(100,70,20,0.25)] text-vastu-text-2 hover:border-gold-3 hover:text-vastu-text"
+          )}
+          title={validationError ?? "Save report configuration without generating PDF"}
+        >
+          {saved ? "✓ Saved" : saving ? "Saving…" : "✦ Save"}
+        </button>
+
+        {/* Generate PDF */}
         <button
           onClick={handleGenerate}
-          disabled={!!validationError || generating}
+          disabled={!!validationError || generating || saving}
           className={cn(
             "text-[10px] px-4 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer",
-            validationError || generating
+            validationError || generating || saving
               ? "bg-[rgba(100,70,20,0.15)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.1)]"
               : "bg-gold text-bg hover:bg-gold-2 border border-transparent"
           )}

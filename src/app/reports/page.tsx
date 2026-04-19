@@ -11,7 +11,7 @@ import type { Report, ReportStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<ReportStatus, { bg: string; text: string; label: string }> = {
-  draft:      { bg: "rgba(100,70,20,0.15)",  text: "#a08050",  label: "Draft" },
+  draft:      { bg: "rgba(100,70,20,0.18)",  text: "#c8af78",  label: "Saved" },
   generating: { bg: "rgba(74,144,226,0.15)", text: "#4a90e2",  label: "Generating" },
   generated:  { bg: "rgba(42,122,58,0.15)",  text: "#2a7a3a",  label: "Ready" },
   downloaded: { bg: "rgba(42,122,58,0.15)",  text: "#2a7a3a",  label: "Downloaded" },
@@ -31,7 +31,13 @@ export default function ReportsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [builderInitialReport, setBuilderInitialReport] = useState<Report | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const openBuilder = (report?: Report) => {
+    setBuilderInitialReport(report);
+    setBuilderOpen(true);
+  };
 
   const filtered = useMemo(() => {
     return reportStore.reports
@@ -86,7 +92,7 @@ export default function ReportsPage() {
             </p>
           </div>
           <button
-            onClick={() => setBuilderOpen(true)}
+            onClick={() => openBuilder()}
             className="flex items-center gap-2 text-[11px] px-4 py-[7px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
           >
             <span>⎙</span>
@@ -139,7 +145,7 @@ export default function ReportsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setBuilderOpen(true)}
+                onClick={() => openBuilder()}
                 className="text-[10px] px-4 py-[6px] bg-gold text-bg rounded-md font-sans hover:bg-gold-2 transition-colors cursor-pointer"
               >
                 ⎙ New Report
@@ -192,21 +198,32 @@ export default function ReportsPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Draft: open builder to generate PDF */}
+                      {report.status === "draft" && (
+                        <button
+                          onClick={() => openBuilder(report)}
+                          className="text-[9px] px-3 py-[4px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
+                        >
+                          ⎙ Make PDF
+                        </button>
+                      )}
+                      {/* Edit / re-open builder for any report */}
+                      <button
+                        onClick={() => openBuilder(report)}
+                        title="Edit this report configuration"
+                        className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md hover:border-gold-3 hover:text-vastu-text-2 cursor-pointer font-sans transition-colors"
+                      >
+                        Edit
+                      </button>
+                      {/* Download if PDF exists */}
                       {report.pdfDataUrl && (
                         <button
                           onClick={() => handleDownload(report)}
-                          className="text-[9px] px-3 py-[4px] bg-gold text-bg rounded-md font-sans hover:bg-gold-2 transition-colors cursor-pointer"
+                          className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md font-sans hover:border-gold-3 hover:text-vastu-text-2 transition-colors cursor-pointer"
                         >
                           ↓ Download
                         </button>
                       )}
-                      <button
-                        onClick={() => setBuilderOpen(true)}
-                        title="Create variant of this report"
-                        className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md hover:border-gold-3 hover:text-vastu-text-2 cursor-pointer font-sans transition-colors"
-                      >
-                        ⎙ Variant
-                      </button>
                       {isDeleting ? (
                         <>
                           <button
@@ -241,7 +258,11 @@ export default function ReportsPage() {
       </div>
 
       {/* Report Builder overlay */}
-      <ReportBuilder open={builderOpen} onClose={() => setBuilderOpen(false)} />
+      <ReportBuilder
+        open={builderOpen}
+        onClose={() => { setBuilderOpen(false); setBuilderInitialReport(undefined); }}
+        initialReport={builderInitialReport}
+      />
     </AppShell>
   );
 }

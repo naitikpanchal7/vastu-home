@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable}`}>
-      <body className="bg-bg text-vastu-text font-sans antialiased">{children}</body>
+      <body className="bg-bg text-vastu-text font-sans antialiased" suppressHydrationWarning>{children}</body>
     </html>
   );
 }

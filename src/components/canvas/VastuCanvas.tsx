@@ -325,9 +325,9 @@ export default function VastuCanvas() {
                         x1={brahmaX} y1={brahmaY}
                         x2={brahmaX + Math.sin(rad) * FAR}
                         y2={brahmaY - Math.cos(rad) * FAR}
-                        stroke="#4a90e2"
-                        strokeWidth="2"
-                        strokeOpacity="0.85"
+                        stroke={zoneMode === "16" ? "#c8af78" : "#e8912a"}
+                        strokeWidth={zoneMode === "16" ? "1.2" : "2"}
+                        strokeOpacity={zoneMode === "16" ? "0.7" : "0.9"}
                       />
                     );
                   })}
@@ -346,11 +346,13 @@ export default function VastuCanvas() {
                         x={lx} y={ly}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fill="#4a90e2"
-                        fontSize="8.5"
+                        fill={zoneMode === "16" ? "#c8af78" : "#e8912a"}
+                        fontSize={zoneMode === "16" ? "8" : "10"}
                         fontFamily="var(--font-dm-mono), monospace"
                         fontWeight="700"
-                        opacity="0.9"
+                        stroke="rgba(15,14,11,0.6)"
+                        strokeWidth="3"
+                        paintOrder="stroke"
                       >
                         {z.shortName}
                       </text>
@@ -361,18 +363,14 @@ export default function VastuCanvas() {
             );
           })()}
 
-          {/* Shakti Chakra overlay — isolated so its screen blend-mode composes
-              against the group's transparent background, not the floor plan image
-              (screen + white floor plan = invisible without this). */}
-          <g style={{ isolation: "isolate" }}>
-            <ShaktiChakra
-              cx={brahmaX}
-              cy={brahmaY}
-              northDeg={northDeg}
-              opacity={chakraOpacity}
-              visible={chakraVisible}
-            />
-          </g>
+          {/* Shakti Chakra overlay */}
+          <ShaktiChakra
+            cx={brahmaX}
+            cy={brahmaY}
+            northDeg={northDeg}
+            opacity={chakraOpacity}
+            visible={chakraVisible}
+          />
 
           {/* Cuts */}
           {cutsVisible && cuts.map((cut) => {

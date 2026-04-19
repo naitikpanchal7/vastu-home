@@ -65,7 +65,7 @@ function clipToPerimeter(
   return true;
 }
 
-/** 16 zone boundary radial lines — thin white lines, no fill. */
+/** 16 zone boundary radial lines — gold, matching VastuCanvas SVG style. */
 function drawZoneLines16(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -73,9 +73,8 @@ function drawZoneLines16(
 ) {
   const R = Math.hypot(SNAP_W, SNAP_H) * 1.5;
   ctx.save();
-  ctx.globalAlpha = 0.65;
-  ctx.strokeStyle = "rgba(255,255,255,0.85)";
-  ctx.lineWidth   = 1;
+  ctx.strokeStyle = "rgba(200,175,120,0.7)";
+  ctx.lineWidth   = 1.2;
   ctx.setLineDash([]);
   for (const zone of VASTU_ZONES) {
     const angle = toRad(zone.startDeg - northDeg);
@@ -87,19 +86,17 @@ function drawZoneLines16(
   ctx.restore();
 }
 
-/** 8 compass boundary radial lines — slightly thicker white lines, no fill. */
+/** 8 compass boundary radial lines — saffron, matching VastuCanvas SVG style. */
 function drawZoneLines8(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
   northDeg: number
 ) {
   const R = Math.hypot(SNAP_W, SNAP_H) * 1.5;
-  // 8 boundary lines at −22.5° of each 45° sector
   const boundaries = [0, 45, 90, 135, 180, 225, 270, 315].map((d) => d - 22.5);
   ctx.save();
-  ctx.globalAlpha = 0.75;
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
-  ctx.lineWidth   = 1.5;
+  ctx.strokeStyle = "rgba(232,145,42,0.9)";
+  ctx.lineWidth   = 2;
   ctx.setLineDash([]);
   for (const deg of boundaries) {
     const angle = toRad(deg - northDeg);
@@ -111,7 +108,7 @@ function drawZoneLines8(
   ctx.restore();
 }
 
-/** Zone name labels at a given radius from Brahmasthan — inside the perimeter. */
+/** Zone name labels — gold text with dark outline, matching canvas style. */
 function drawZoneLabels16(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -119,7 +116,7 @@ function drawZoneLabels16(
   labelR: number
 ) {
   ctx.save();
-  ctx.font = "bold 9px sans-serif";
+  ctx.font = "bold 9px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const zone of VASTU_ZONES) {
@@ -127,10 +124,11 @@ function drawZoneLabels16(
     const angle  = toRad(midDeg - northDeg);
     const lx = cx + labelR * Math.cos(angle);
     const ly = cy + labelR * Math.sin(angle);
-    // Drop-shadow for legibility
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillText(zone.shortName, lx + 1, ly + 1);
-    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(15,14,11,0.6)";
+    ctx.lineWidth   = 3;
+    ctx.lineJoin    = "round";
+    ctx.strokeText(zone.shortName, lx, ly);
+    ctx.fillStyle   = "#c8af78";
     ctx.fillText(zone.shortName, lx, ly);
   }
   ctx.restore();
@@ -144,7 +142,7 @@ function drawZoneLabelsOutside16(
 ) {
   const R = Math.min(SNAP_W, SNAP_H) * 0.44;
   ctx.save();
-  ctx.font = "bold 10px sans-serif";
+  ctx.font = "bold 10px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const zone of VASTU_ZONES) {
@@ -152,9 +150,11 @@ function drawZoneLabelsOutside16(
     const angle  = toRad(midDeg - northDeg);
     const lx = Math.max(14, Math.min(SNAP_W - 14, cx + R * Math.cos(angle)));
     const ly = Math.max(14, Math.min(SNAP_H - 14, cy + R * Math.sin(angle)));
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillText(zone.shortName, lx + 1, ly + 1);
-    ctx.fillStyle = "#ffd070";
+    ctx.strokeStyle = "rgba(15,14,11,0.6)";
+    ctx.lineWidth   = 3;
+    ctx.lineJoin    = "round";
+    ctx.strokeText(zone.shortName, lx, ly);
+    ctx.fillStyle   = "#c8af78";
     ctx.fillText(zone.shortName, lx, ly);
   }
   ctx.restore();
@@ -178,16 +178,18 @@ function drawZoneLabelsOutside8(
   ];
   const R = Math.min(SNAP_W, SNAP_H) * 0.44;
   ctx.save();
-  ctx.font = "bold 12px sans-serif";
+  ctx.font = "bold 12px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const z of EIGHT) {
     const angle = toRad(z.centerDeg - northDeg);
     const lx = Math.max(16, Math.min(SNAP_W - 16, cx + R * Math.cos(angle)));
     const ly = Math.max(16, Math.min(SNAP_H - 16, cy + R * Math.sin(angle)));
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillText(z.label, lx + 1, ly + 1);
-    ctx.fillStyle = "#ffd070";
+    ctx.strokeStyle = "rgba(15,14,11,0.6)";
+    ctx.lineWidth   = 3;
+    ctx.lineJoin    = "round";
+    ctx.strokeText(z.label, lx, ly);
+    ctx.fillStyle   = "#e8912a";
     ctx.fillText(z.label, lx, ly);
   }
   ctx.restore();
@@ -210,18 +212,42 @@ function drawZoneLabels8(
     { label: "NW", centerDeg: 315 },
   ];
   ctx.save();
-  ctx.font = "bold 11px sans-serif";
+  ctx.font = "bold 11px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const z of EIGHT) {
     const angle = toRad(z.centerDeg - northDeg);
     const lx = cx + labelR * Math.cos(angle);
     const ly = cy + labelR * Math.sin(angle);
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillText(z.label, lx + 1, ly + 1);
-    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(15,14,11,0.6)";
+    ctx.lineWidth   = 3;
+    ctx.lineJoin    = "round";
+    ctx.strokeText(z.label, lx, ly);
+    ctx.fillStyle   = "#e8912a";
     ctx.fillText(z.label, lx, ly);
   }
+  ctx.restore();
+}
+
+/**
+ * Draw the /vastuchakra.png image centered on Brahmasthan, rotated by -northDeg.
+ * Uses multiply composite to let the floor plan show through the white PNG background.
+ */
+async function drawChakraImage(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number,
+  northDeg: number,
+  opacity = 0.75
+): Promise<void> {
+  const R = 250; // matches ShaktiChakra.tsx constant
+  const img = await loadImage("/vastuchakra.png");
+  if (!img) return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((-northDeg * Math.PI) / 180);
+  ctx.globalAlpha = opacity;
+  ctx.globalCompositeOperation = "multiply";
+  ctx.drawImage(img, -R, -R, R * 2, R * 2);
   ctx.restore();
 }
 
@@ -440,7 +466,10 @@ export async function snapshotPlanWithChakraOnly(
   const cx = cs.brahmaX;
   const cy = cs.brahmaY;
 
-  // Zone lines — clipped to perimeter for clean look, but perimeter NOT drawn
+  // Draw the chakra PNG image centered on Brahmasthan with multiply blend
+  await drawChakraImage(ctx, cx, cy, cs.northDeg);
+
+  // Zone lines on top — clipped to perimeter for clean look, but perimeter NOT drawn
   if (cs.perimeterPoints.length >= 3) {
     ctx.save();
     clipToPerimeter(ctx, cs.perimeterPoints);
@@ -526,6 +555,9 @@ export async function snapshotPlanFull(
 
   const cx = cs.brahmaX;
   const cy = cs.brahmaY;
+
+  // Chakra image first (behind zone lines)
+  await drawChakraImage(ctx, cx, cy, cs.northDeg);
 
   if (cs.perimeterPoints.length >= 3) {
     ctx.save();
