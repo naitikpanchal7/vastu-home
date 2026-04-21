@@ -231,6 +231,17 @@ export interface ReportFloorSelection {
   pageNotes: Partial<Record<ReportPageType, string>>;
 }
 
+export type ReportSupplementaryPosition = "after-intro" | "before-summary";
+
+export interface ReportAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  position: ReportSupplementaryPosition;
+  dataUrl: string;
+}
+
 export interface Report {
   id: string;
   projectId: string;
@@ -241,6 +252,7 @@ export interface Report {
   reportName: string;
   preset: ReportPreset;
   floorSelections: ReportFloorSelection[];
+  attachments?: ReportAttachment[];
   status: ReportStatus;
   createdAt: string;
   updatedAt: string;

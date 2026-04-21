@@ -15,7 +15,7 @@ import {
   Line,
   G,
 } from "@react-pdf/renderer";
-import type { ReportPageType } from "@/lib/types";
+import type { ReportPageType, ReportAttachment } from "@/lib/types";
 import { REPORT_PAGE_META } from "@/lib/types";
 import type { ZoneAreaResult, CutAnalysisResult } from "@/lib/vastu/geometry";
 import type { VastuZone } from "@/lib/vastu/zones";
@@ -95,7 +95,14 @@ export interface ReportDocumentData {
   date: string;
   northDeg: number;
   floors: FloorPDFData[];
+  attachments: ReportAttachment[];
 }
+
+type ReportPageEntry =
+  | { kind: "attachment"; attachment: ReportAttachment; pageNum: number }
+  | { kind: "floor"; floor: FloorPDFData; pageType: ReportPageType; pageNum: number };
+
+const SUMMARY_PAGE_TYPES = new Set<ReportPageType>(["ai-summary", "consultant-summary"]);
 
 // ── Page labels ───────────────────────────────────────────────────────────────
 const PAGE_LABELS: Record<ReportPageType, string> = {
@@ -120,25 +127,42 @@ const PAGE_LABELS: Record<ReportPageType, string> = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Page 1 = Cover, Page 2 = Table of Contents, Pages 3+ = floor pages
-function pageNumber(
-  floors: FloorPDFData[],
-  targetFloorIdx: number,
-  targetPage: ReportPageType
-): number {
-  let n = 3; // 1=cover, 2=toc
-  for (let fi = 0; fi <= targetFloorIdx; fi++) {
-    const floor = floors[fi];
-    for (const page of floor.selectedPages) {
-      if (fi === targetFloorIdx && page === targetPage) return n;
-      n++;
+function buildPageEntries(data: ReportDocumentData): ReportPageEntry[] {
+  const entries: ReportPageEntry[] = [];
+  let pageNum = 3; // 1=cover, 2=toc
+
+  const topAttachments = data.attachments.filter((attachment) => attachment.position === "after-intro");
+  const bottomAttachments = data.attachments.filter((attachment) => attachment.position === "before-summary");
+
+  for (const attachment of topAttachments) {
+    entries.push({ kind: "attachment", attachment, pageNum });
+    pageNum++;
+  }
+
+  for (const floor of data.floors) {
+    for (const pageType of floor.selectedPages.filter((page) => !SUMMARY_PAGE_TYPES.has(page))) {
+      entries.push({ kind: "floor", floor, pageType, pageNum });
+      pageNum++;
     }
   }
-  return n;
+
+  for (const attachment of bottomAttachments) {
+    entries.push({ kind: "attachment", attachment, pageNum });
+    pageNum++;
+  }
+
+  for (const floor of data.floors) {
+    for (const pageType of floor.selectedPages.filter((page) => SUMMARY_PAGE_TYPES.has(page))) {
+      entries.push({ kind: "floor", floor, pageType, pageNum });
+      pageNum++;
+    }
+  }
+
+  return entries;
 }
 
-function totalPages(floors: FloorPDFData[]): number {
-  return 2 + floors.reduce((sum, f) => sum + f.selectedPages.length, 0);
+function totalPages(pageEntries: ReportPageEntry[]): number {
+  return 2 + pageEntries.length;
 }
 
 // Maps each page type to the correct pre-rendered snapshot
@@ -176,6 +200,37 @@ function PageFooter({ label, page, total }: { label: string; page: number; total
   );
 }
 
+function formatFileSize(bytes: number): string {
+  if (!bytes) return "0 KB";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isImageAttachment(attachment: ReportAttachment): boolean {
+  return attachment.mimeType.startsWith("image/");
+}
+
+function isTextAttachment(attachment: ReportAttachment): boolean {
+  return (
+    attachment.mimeType.startsWith("text/") ||
+    ["application/json", "application/xml", "application/csv"].includes(attachment.mimeType) ||
+    /\.(txt|md|csv|json|xml|yml|yaml)$/i.test(attachment.name)
+  );
+}
+
+function extractTextPreview(dataUrl: string): string {
+  try {
+    const commaIdx = dataUrl.indexOf(",");
+    if (commaIdx < 0) return "";
+    const encoded = dataUrl.slice(commaIdx + 1);
+    const body = dataUrl.includes(";base64,") ? atob(encoded) : decodeURIComponent(encoded);
+    return body.slice(0, 1200);
+  } catch {
+    return "";
+  }
+}
+
 // ── Page header component ─────────────────────────────────────────────────────
 function FloorPageHeader({ pageType, floorName, northDeg, pageNum, total }: {
   pageType: ReportPageType; floorName: string; northDeg: number; pageNum: number; total: number;
@@ -199,9 +254,76 @@ function FloorPageHeader({ pageType, floorName, northDeg, pageNum, total }: {
   );
 }
 
+function SupplementaryInsertPage({ attachment, pageNum, total }: { attachment: ReportAttachment; pageNum: number; total: number }) {
+  const isImage = isImageAttachment(attachment);
+  const isText = isTextAttachment(attachment);
+  const textPreview = isText ? extractTextPreview(attachment.dataUrl) : "";
+
+  return (
+    <Page size="A4" style={styles.page}>
+      <View style={styles.goldBar} />
+      <View style={{ flex: 1, paddingTop: 10 }}>
+        <View style={{ marginBottom: 14 }}>
+          <View style={[styles.row, { alignItems: "center", marginBottom: 4 }]}> 
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pageLabel}>Page {pageNum} of {total} — Supplementary Insert</Text>
+              <Text style={styles.h3}>Inserted File</Text>
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={[styles.small, { color: C.text3 }]}>Placement</Text>
+              <Text style={[styles.body, { color: C.gold, fontFamily: "Helvetica-Bold" }]}> 
+                {attachment.position === "after-intro" ? "After Intro" : "Before Summary"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.goldBarThin} />
+        </View>
+
+        <View style={[styles.card, { marginBottom: 10 }]}> 
+          <Text style={[styles.sectionTitle, { marginBottom: 8 }]}>Attachment Details</Text>
+          {[
+            ["File", attachment.name],
+            ["Type", attachment.mimeType || "unknown"],
+            ["Size", formatFileSize(attachment.sizeBytes)],
+            ["Placement", attachment.position === "after-intro" ? "After Intro" : "Before Summary"],
+          ].map(([k, v]) => (
+            <View key={k} style={[styles.row, { marginBottom: 5 }]}> 
+              <Text style={[styles.small, { width: 80, color: C.text3 }]}>{k}</Text>
+              <Text style={[styles.body, { flex: 1 }]}>{v}</Text>
+            </View>
+          ))}
+        </View>
+
+        {isImage ? (
+          <View style={{ alignItems: "center", marginBottom: 8 }}>
+            <Image src={attachment.dataUrl} style={{ width: 460, height: 360, objectFit: "contain" }} />
+          </View>
+        ) : isText && textPreview ? (
+          <View style={[styles.card, { padding: 12, backgroundColor: "#fffdf8" }]}> 
+            <Text style={[styles.small, { fontFamily: "Courier", color: C.text2, lineHeight: 1.35 }]}> 
+              {textPreview}
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.card, { padding: 24, alignItems: "center" }]}> 
+            <Text style={[styles.body, { color: C.text3, textAlign: "center", marginBottom: 6 }]}> 
+              Supplementary file inserted into the report.
+            </Text>
+            <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}> 
+              This file type is shown as a document insert page.
+            </Text>
+          </View>
+        )}
+      </View>
+      <PageFooter label={`Supplementary Insert — ${attachment.name}`} page={pageNum} total={total} />
+    </Page>
+  );
+}
+
 // ── Cover page ────────────────────────────────────────────────────────────────
 function CoverPage({ data }: { data: ReportDocumentData }) {
-  const total = totalPages(data.floors);
+  const pageEntries = buildPageEntries(data);
+  const total = totalPages(pageEntries);
   return (
     <Page size="A4" style={[styles.page, { paddingTop: 0, paddingHorizontal: 0 }]}>
       {/* Gold header */}
@@ -232,6 +354,7 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
             ["Client",    data.clientName],
             ["Address",   data.propertyAddress || "—"],
             ["North",     `${data.northDeg.toFixed(1)}° True North`],
+            ["Scope",     data.floors.length === 1 ? data.floors[0].floorName : `${data.floors.length} floors`],
             ["Floors",    `${data.floors.length} floor${data.floors.length > 1 ? "s" : ""}`],
             ["Pages",     `${total} pages`],
           ].map(([k, v]) => (
@@ -272,7 +395,8 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
 
 // ── Table of Contents page ────────────────────────────────────────────────────
 function TableOfContentsPage({ data }: { data: ReportDocumentData }) {
-  const total = totalPages(data.floors);
+  const pageEntries = buildPageEntries(data);
+  const total = totalPages(pageEntries);
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.goldBar} />
@@ -283,7 +407,7 @@ function TableOfContentsPage({ data }: { data: ReportDocumentData }) {
         </View>
 
         {/* Fixed pages */}
-        {[["Cover Page", "1"], ["Table of Contents", "2"]].map(([label, pg]) => (
+        {[ ["Cover Page", "1"], ["Table of Contents", "2"] ].map(([label, pg]) => (
           <View key={label} style={[styles.row, { paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: C.border, alignItems: "center" }]}>
             <Text style={[styles.body, { flex: 1 }]}>{label}</Text>
             <Text style={[styles.small, { color: C.text3, width: 20, textAlign: "right" }]}>{pg}</Text>
@@ -292,27 +416,23 @@ function TableOfContentsPage({ data }: { data: ReportDocumentData }) {
 
         <View style={{ height: 8 }} />
 
-        {/* Floor pages */}
-        {data.floors.map((floor, fi) => {
-          if (floor.selectedPages.length === 0) return null;
-          return (
-            <View key={floor.floorId}>
-              {/* Floor heading row */}
-              <View style={[styles.row, { paddingVertical: 5, marginTop: 6, borderBottomWidth: 1, borderBottomColor: C.gold }]}>
-                <Text style={[styles.small, { flex: 1, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 1, textTransform: "uppercase" }]}>
-                  {floor.floorName}
-                </Text>
+        {/* All report pages in final order */}
+        {pageEntries.map((entry) => {
+          if (entry.kind === "attachment") {
+            return (
+              <View key={entry.attachment.id} style={[styles.row, { paddingVertical: 4, borderBottomWidth: 0.5, borderBottomColor: C.border + "80", alignItems: "center" }]}> 
+                <View style={{ width: 3, height: 3, backgroundColor: entry.attachment.position === "after-intro" ? C.gold : C.sevMod, borderRadius: 1.5, marginRight: 8 }} />
+                <Text style={[styles.small, { flex: 1 }]}>Supplementary Insert · {entry.attachment.name}</Text>
+                <Text style={[styles.small, { color: C.text3, width: 24, textAlign: "right" }]}>{entry.pageNum}</Text>
               </View>
-              {floor.selectedPages.map((page) => {
-                const pn = pageNumber(data.floors, fi, page);
-                return (
-                  <View key={`${floor.floorId}-${page}`} style={[styles.row, { paddingVertical: 4, paddingLeft: 10, borderBottomWidth: 0.5, borderBottomColor: C.border + "80", alignItems: "center" }]}>
-                    <View style={{ width: 3, height: 3, backgroundColor: C.border, borderRadius: 1.5, marginRight: 8 }} />
-                    <Text style={[styles.small, { flex: 1 }]}>{PAGE_LABELS[page]}</Text>
-                    <Text style={[styles.small, { color: C.text3, width: 24, textAlign: "right" }]}>{pn}</Text>
-                  </View>
-                );
-              })}
+            );
+          }
+
+          return (
+            <View key={`${entry.floor.floorId}-${entry.pageType}`} style={[styles.row, { paddingVertical: 4, borderBottomWidth: 0.5, borderBottomColor: C.border + "80", alignItems: "center" }]}> 
+              <View style={{ width: 3, height: 3, backgroundColor: C.border, borderRadius: 1.5, marginRight: 8 }} />
+              <Text style={[styles.small, { flex: 1 }]}>{PAGE_LABELS[entry.pageType]} · {entry.floor.floorName}</Text>
+              <Text style={[styles.small, { color: C.text3, width: 24, textAlign: "right" }]}>{entry.pageNum}</Text>
             </View>
           );
         })}
@@ -790,58 +910,38 @@ function CutAnalysisPage({ floor, pageNum, total }: { floor: FloorPDFData; pageN
 const PANCHABHUTA_DEF = [
   {
     key: "fire"  as const,
-    label: "Fire — Agni",
+    label: "Fire",
     sanskrit: "अग्नि",
     color: "#e84020",
-    bg: "#fff2f0",
     zones: ["ESE", "SE", "SSE"],
-    governs: "Energy, cash flow, cooking, electrical systems",
-    element: "Transformative force — enables digestion, financial activity and warmth",
-    remedy: "Keep SE zone active with kitchen or electrical room. Avoid water bodies.",
   },
   {
     key: "earth" as const,
-    label: "Earth — Prithvi",
+    label: "Earth",
     sanskrit: "पृथ्वी",
     color: "#9a6010",
-    bg: "#fffaf0",
     zones: ["S", "SSW", "SW", "WSW"],
-    governs: "Stability, savings, relationships, ancestral wealth",
-    element: "Grounding force — provides foundation, weight and permanence",
-    remedy: "Keep SW/S heavy and solid. Master bedroom and locker room ideal. Avoid open spaces.",
   },
   {
     key: "water" as const,
-    label: "Water — Jal",
+    label: "Water",
     sanskrit: "जल",
     color: "#1860c0",
-    bg: "#f0f4ff",
     zones: ["N", "NNE", "W"],
-    governs: "Wealth, career, health, learning, prosperity",
-    element: "Flowing force — enables growth, career opportunities and financial flow",
-    remedy: "Keep N open and clutter-free. Water features in N or NE are highly beneficial.",
   },
   {
     key: "air"   as const,
-    label: "Air — Vayu",
+    label: "Air",
     sanskrit: "वायु",
     color: "#38a850",
-    bg: "#f0fff4",
     zones: ["ENE", "E", "WNW", "NW", "NNW"],
-    governs: "Networking, travel, social connections, recreation",
-    element: "Mobile force — facilitates communication, movement and new experiences",
-    remedy: "Keep E and NW well-ventilated and airy. Avoid heavy walls blocking sunrise.",
   },
   {
     key: "space" as const,
-    label: "Space — Akasha",
+    label: "Space",
     sanskrit: "आकाश",
     color: "#7040b8",
-    bg: "#f8f0ff",
     zones: ["NE"],
-    governs: "Wisdom, spirituality, clarity, mental peace",
-    element: "Expansive force — the most sattvic zone; gateway to higher consciousness",
-    remedy: "NE cut is most critical. Keep completely open and sacred. Pooja room ideal.",
   },
 ] as const;
 
@@ -855,9 +955,18 @@ function PanchabhutaPage({ floor, pageNum, total }: { floor: FloorPDFData; pageN
       <View style={{ flex: 1, paddingTop: 10 }}>
         <FloorPageHeader pageType="panchabhuta" floorName={floor.floorName} northDeg={floor.northDeg} pageNum={pageNum} total={total} />
 
-        <Text style={[styles.body, { color: C.text3, marginBottom: 10 }]}>
-          The Panchabhuta (five elements) governs the energy quality of each zone. Every zone belongs to one of five elements, each with distinct characteristics and ideal uses.
+        <Text style={[styles.body, { color: C.text3, marginBottom: 10 }]}> 
+          Color key for the Panchabhuta zones. Red = Fire (Agni).
         </Text>
+
+        <View style={[styles.row, { flexWrap: "wrap", gap: 8, marginBottom: 10 }]}> 
+          {PANCHABHUTA_DEF.map((el) => (
+            <View key={el.key} style={[styles.row, { alignItems: "center", gap: 6, paddingVertical: 4, paddingHorizontal: 8, borderWidth: 1, borderColor: el.color + "33", borderRadius: 999, backgroundColor: el.color + "10" }]}> 
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: el.color }} />
+              <Text style={{ fontSize: 8.5, fontFamily: "Helvetica-Bold", color: el.color }}>{el.label}</Text>
+            </View>
+          ))}
+        </View>
 
         {overlayImage && (
           <View style={{ alignItems: "center", marginBottom: 10 }}>
@@ -868,27 +977,29 @@ function PanchabhutaPage({ floor, pageNum, total }: { floor: FloorPDFData; pageN
           </View>
         )}
 
-        {PANCHABHUTA_DEF.map((el) => (
-          <View key={el.key} style={[styles.row, { marginBottom: 6, borderWidth: 1, borderColor: el.color + "44", borderRadius: 4, overflow: "hidden" }]}>
-            <View style={{ width: 5, backgroundColor: el.color }} />
-            <View style={{ flex: 1, padding: 7, backgroundColor: el.bg }}>
-              <View style={[styles.row, { alignItems: "center", marginBottom: 3, gap: 6 }]}>
-                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", color: el.color }}>{el.label}</Text>
-                <Text style={{ fontSize: 8, fontFamily: "Helvetica", color: "#8a7a60" }}>({el.sanskrit})</Text>
-                <View style={[styles.row, { gap: 2, flexWrap: "wrap" }]}>
-                  {el.zones.map((z) => (
-                    <View key={z} style={[styles.badge, { backgroundColor: el.color + "22" }]}>
-                      <Text style={{ fontSize: 6.5, fontFamily: "Helvetica-Bold", color: el.color }}>{z}</Text>
+        <View style={[styles.row, { flexWrap: "wrap", gap: 6, marginBottom: 2 }]}> 
+          {PANCHABHUTA_DEF.map((el) => (
+            <View key={el.key} style={{ width: "48%", borderWidth: 1, borderColor: el.color + "44", borderRadius: 6, overflow: "hidden", marginBottom: 6 }}>
+              <View style={[styles.row, { alignItems: "stretch" }]}> 
+                <View style={{ width: 6, backgroundColor: el.color }} />
+                <View style={{ flex: 1, paddingVertical: 7, paddingHorizontal: 8, backgroundColor: el.color + "08" }}>
+                  <View style={[styles.row, { alignItems: "center", justifyContent: "space-between", marginBottom: 4 }]}> 
+                    <View style={[styles.row, { alignItems: "center", gap: 6 }]}> 
+                      <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", color: el.color }}>{el.label}</Text>
                     </View>
-                  ))}
+                  </View>
+                  <View style={[styles.row, { gap: 4, flexWrap: "wrap" }]}> 
+                    {el.zones.map((z) => (
+                      <View key={z} style={[styles.badge, { backgroundColor: el.color + "1a" }]}> 
+                        <Text style={{ fontSize: 6.5, fontFamily: "Helvetica-Bold", color: el.color }}>{z}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               </View>
-              <Text style={[styles.small, { marginBottom: 2 }]}>{el.governs}</Text>
-              <Text style={[styles.small, { color: "#8a7a60", fontStyle: "italic", marginBottom: 2 }]}>{el.element}</Text>
-              <Text style={[styles.small, { color: "#8a7a60" }]}>Remedy: {el.remedy}</Text>
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
 
         {notes && (
           <View style={styles.noteBox}>
@@ -998,7 +1109,8 @@ function ConsultantSummaryPage({ floor, pageNum, total }: { floor: FloorPDFData;
 
 // ── Main Document ─────────────────────────────────────────────────────────────
 export function VastuReportDocument({ data }: { data: ReportDocumentData }) {
-  const total = totalPages(data.floors);
+  const pageEntries = buildPageEntries(data);
+  const total = totalPages(pageEntries);
 
   return (
     <Document
@@ -1013,56 +1125,65 @@ export function VastuReportDocument({ data }: { data: ReportDocumentData }) {
       {/* Page 2: Table of Contents */}
       <TableOfContentsPage data={data} />
 
-      {/* Pages 3+: Floor pages in canonical order */}
-      {data.floors.map((floor, fi) =>
-        floor.selectedPages.map((pageType) => {
-          const pn = pageNumber(data.floors, fi, pageType);
+      {/* Pages 3+: Full report in final order */}
+      {pageEntries.map((entry) => {
+        if (entry.kind === "attachment") {
+          return (
+            <SupplementaryInsertPage
+              key={`attachment-${entry.attachment.id}`}
+              attachment={entry.attachment}
+              pageNum={entry.pageNum}
+              total={total}
+            />
+          );
+        }
 
-          // All visual floor plan pages (including zone-lines views)
-          if (
-            pageType === "plan-only" ||
-            pageType === "plan-with-brahma" ||
-            pageType === "plan-with-chakra" ||
-            pageType === "plan-perimeter-only" ||
-            pageType === "plan-cuts-only" ||
-            pageType === "plan-perimeter-cuts" ||
-            pageType === "plan-full" ||
-            pageType === "16zone-lines" ||
-            pageType === "8zone-lines"
-          ) {
-            return (
-              <FloorImagePage
-                key={`${floor.floorId}-${pageType}`}
-                floor={floor}
-                pageType={pageType}
-                pageNum={pn}
-                total={total}
-              />
-            );
-          }
+        const { floor, pageType, pageNum } = entry;
 
-          switch (pageType) {
-            case "16-zone":
-              return <ZoneAnalysisPage key={`${floor.floorId}-16zone`} floor={floor} pageNum={pn} total={total} />;
-            case "bar-graph-16":
-              return <BarGraph16Page key={`${floor.floorId}-bargraph16`} floor={floor} pageNum={pn} total={total} />;
-            case "8-zone":
-              return <EightZonePage key={`${floor.floorId}-8zone`} floor={floor} pageNum={pn} total={total} />;
-            case "bar-graph-8":
-              return <BarGraph8Page key={`${floor.floorId}-bargraph8`} floor={floor} pageNum={pn} total={total} />;
-            case "cut-analysis":
-              return <CutAnalysisPage key={`${floor.floorId}-cuts`} floor={floor} pageNum={pn} total={total} />;
-            case "panchabhuta":
-              return <PanchabhutaPage key={`${floor.floorId}-panchabhuta`} floor={floor} pageNum={pn} total={total} />;
-            case "ai-summary":
-              return <AISummaryPage key={`${floor.floorId}-aisummary`} floor={floor} pageNum={pn} total={total} />;
-            case "consultant-summary":
-              return <ConsultantSummaryPage key={`${floor.floorId}-consultantsummary`} floor={floor} pageNum={pn} total={total} />;
-            default:
-              return null;
-          }
-        })
-      )}
+        // All visual floor plan pages (including zone-lines views)
+        if (
+          pageType === "plan-only" ||
+          pageType === "plan-with-brahma" ||
+          pageType === "plan-with-chakra" ||
+          pageType === "plan-perimeter-only" ||
+          pageType === "plan-cuts-only" ||
+          pageType === "plan-perimeter-cuts" ||
+          pageType === "plan-full" ||
+          pageType === "16zone-lines" ||
+          pageType === "8zone-lines"
+        ) {
+          return (
+            <FloorImagePage
+              key={`${floor.floorId}-${pageType}`}
+              floor={floor}
+              pageType={pageType}
+              pageNum={pageNum}
+              total={total}
+            />
+          );
+        }
+
+        switch (pageType) {
+          case "16-zone":
+            return <ZoneAnalysisPage key={`${floor.floorId}-16zone`} floor={floor} pageNum={pageNum} total={total} />;
+          case "bar-graph-16":
+            return <BarGraph16Page key={`${floor.floorId}-bargraph16`} floor={floor} pageNum={pageNum} total={total} />;
+          case "8-zone":
+            return <EightZonePage key={`${floor.floorId}-8zone`} floor={floor} pageNum={pageNum} total={total} />;
+          case "bar-graph-8":
+            return <BarGraph8Page key={`${floor.floorId}-bargraph8`} floor={floor} pageNum={pageNum} total={total} />;
+          case "cut-analysis":
+            return <CutAnalysisPage key={`${floor.floorId}-cuts`} floor={floor} pageNum={pageNum} total={total} />;
+          case "panchabhuta":
+            return <PanchabhutaPage key={`${floor.floorId}-panchabhuta`} floor={floor} pageNum={pageNum} total={total} />;
+          case "ai-summary":
+            return <AISummaryPage key={`${floor.floorId}-aisummary`} floor={floor} pageNum={pageNum} total={total} />;
+          case "consultant-summary":
+            return <ConsultantSummaryPage key={`${floor.floorId}-consultantsummary`} floor={floor} pageNum={pageNum} total={total} />;
+          default:
+            return null;
+        }
+      })}
     </Document>
   );
 }

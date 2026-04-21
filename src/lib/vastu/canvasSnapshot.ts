@@ -65,7 +65,7 @@ function clipToPerimeter(
   return true;
 }
 
-/** 16 zone boundary radial lines — gold, matching VastuCanvas SVG style. */
+/** 16 zone boundary radial lines — gold, matching the 8-zone stroke weight. */
 function drawZoneLines16(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -74,7 +74,7 @@ function drawZoneLines16(
   const R = Math.hypot(SNAP_W, SNAP_H) * 1.5;
   ctx.save();
   ctx.strokeStyle = "rgba(200,175,120,0.7)";
-  ctx.lineWidth   = 1.2;
+  ctx.lineWidth   = 2;
   ctx.setLineDash([]);
   for (const zone of VASTU_ZONES) {
     const angle = toRad(zone.startDeg - northDeg);

@@ -326,7 +326,7 @@ export default function VastuCanvas() {
                         x2={brahmaX + Math.sin(rad) * FAR}
                         y2={brahmaY - Math.cos(rad) * FAR}
                         stroke={zoneMode === "16" ? "#c8af78" : "#e8912a"}
-                        strokeWidth={zoneMode === "16" ? "1.2" : "2"}
+                        strokeWidth="2"
                         strokeOpacity={zoneMode === "16" ? "0.7" : "0.9"}
                       />
                     );

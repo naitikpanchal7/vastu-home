@@ -35,7 +35,15 @@ export const useReportStore = create<ReportStore>()(
         getReportsByProject: (projectId) =>
           get().reports.filter((r) => r.projectId === projectId),
       }),
-      { name: "vastu-reports-store" }
+      {
+        name: "vastu-reports-store",
+        partialize: (state) => ({
+          reports: state.reports.map(({ pdfDataUrl, attachments, ...report }) => ({
+            ...report,
+            attachments: attachments?.map(({ dataUrl, ...attachment }) => attachment),
+          })),
+        }),
+      }
     ),
     { name: "vastu-reports-store" }
   )

@@ -2,7 +2,7 @@
 // Full-screen report builder overlay — preview-first, per-page notes, PDF generation
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useReportStore } from "@/store/reportStore";
@@ -11,9 +11,11 @@ import { calculateZoneAreas, calculateCutAnalysis } from "@/lib/vastu/geometry";
 import { cn } from "@/lib/utils";
 import type {
   Report,
+  ReportAttachment,
   ReportFloorSelection,
   ReportPageType,
   ReportPreset,
+  ReportSupplementaryPosition,
   Floor,
 } from "@/lib/types";
 import {
@@ -50,6 +52,33 @@ function buildZoneRows(floor: Floor) {
   });
 }
 
+function makeDefaultSelection(floor: Floor) {
+  const hasCuts = floor.canvasState.cuts.length > 0;
+  const hasPerimeter = floor.canvasState.perimeterPoints.length >= 3;
+  const presetPages = REPORT_PRESET_PAGES["consultant-standard"].filter(
+    (p) => !REPORT_PAGE_META[p].requiresCuts || hasCuts
+  );
+
+  return {
+    enabled: hasPerimeter,
+    pages: hasPerimeter ? presetPages : [],
+    pageNotes: {},
+  };
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+function isSummaryPage(page: ReportPageType): boolean {
+  return page === "ai-summary" || page === "consultant-summary";
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ReportBuilderProps {
   open: boolean;
@@ -74,14 +103,19 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     canvasStore.northDeg,
   ]);
 
+  const initialReportFloorId = initialReport?.floorSelections.find((floorSelection) => floorSelection.enabled)?.floorId;
+  const initialActiveFloorId = initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
+  const initialActiveFloor = allFloors.find((floor) => floor.id === initialActiveFloorId) ?? allFloors[0];
+
   const consultantName = "Rajesh Sharma"; // TODO: from profile store in Phase 2
 
   // ── Report state ────────────────────────────────────────────────────────────
   const defaultReportName = useMemo(() => {
     if (initialReport) return initialReport.reportName;
     const d = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-    return `${canvasStore.projectName} — ${d}`;
-  }, [canvasStore.projectName, initialReport]);
+    const floorLabel = initialActiveFloor?.name ?? "Floor";
+    return `${canvasStore.projectName} — ${floorLabel} — ${d}`;
+  }, [canvasStore.projectName, initialReport, initialActiveFloor]);
 
   const [reportName, setReportName] = useState(defaultReportName);
   const [preset, setPreset] = useState<ReportPreset>(initialReport?.preset ?? "consultant-standard");
@@ -89,6 +123,9 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<ReportAttachment[]>(() => initialReport?.attachments ?? []);
+  const [attachmentPosition, setAttachmentPosition] = useState<ReportSupplementaryPosition>("after-intro");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Per-floor selection state: floorId → { enabled, pages, pageNotes }
   const [floorSelections, setFloorSelections] = useState<
@@ -106,44 +143,89 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         };
         continue;
       }
-      const hasCuts = floor.canvasState.cuts.length > 0;
-      const hasPerimeter = floor.canvasState.perimeterPoints.length >= 3;
-      const presetPages = REPORT_PRESET_PAGES["consultant-standard"].filter(
-        (p) => !REPORT_PAGE_META[p].requiresCuts || hasCuts
-      );
-      initial[floor.id] = {
-        enabled: hasPerimeter,
-        pages: hasPerimeter ? presetPages : [],
-        pageNotes: {},
-      };
+      initial[floor.id] = makeDefaultSelection(floor);
     }
     return initial;
   });
 
-  // Active floor for the settings panel
-  const [activeFloorId, setActiveFloorId] = useState<string>(allFloors[0]?.id ?? "");
+  useEffect(() => {
+    setFloorSelections((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      for (const floor of allFloors) {
+        const existing = next[floor.id];
+        if (!existing) {
+          next[floor.id] = makeDefaultSelection(floor);
+          changed = true;
+          continue;
+        }
+
+        if (!Array.isArray(existing.pages)) {
+          next[floor.id] = {
+            ...existing,
+            pages: [],
+            pageNotes: existing.pageNotes ?? {},
+          };
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [allFloors]);
+
+  useEffect(() => {
+    if (!open) return;
+    setReportName(initialReport?.reportName ?? defaultReportName);
+    setPreset(initialReport?.preset ?? "consultant-standard");
+    setAttachments(initialReport?.attachments ?? []);
+    setActiveFloorId(initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "");
+  }, [open, initialReport]);
+
+  // Keep new reports in sync with whichever floor is active on canvas.
+  // If floors are added/removed, recover to the current canvas floor or first available.
+  useEffect(() => {
+    if (!open) return;
+    if (initialReport) return;
+
+    setActiveFloorId((prev) => {
+      const preferred = canvasStore.currentFloorId;
+      if (preferred && allFloors.some((floor) => floor.id === preferred)) return preferred;
+      if (prev && allFloors.some((floor) => floor.id === prev)) return prev;
+      return allFloors[0]?.id ?? "";
+    });
+  }, [open, initialReport, canvasStore.currentFloorId, allFloors]);
+
+  // Active floor for the settings panel and report scope
+  const [activeFloorId, setActiveFloorId] = useState<string>(initialActiveFloorId);
   // Which page's notes are expanded in preview
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
+
+  const activeFloor = useMemo(
+    () => allFloors.find((floor) => floor.id === activeFloorId) ?? allFloors[0] ?? null,
+    [allFloors, activeFloorId]
+  );
+  const activeSelection = activeFloor ? floorSelections[activeFloor.id] : undefined;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   const applyPreset = useCallback((p: ReportPreset) => {
     setPreset(p);
     if (p === "custom") return;
+    if (!activeFloor) return;
     setFloorSelections((prev) => {
       const next = { ...prev };
-      for (const floor of allFloors) {
-        const hasCuts = floor.canvasState.cuts.length > 0;
-        const hasPerimeter = floor.canvasState.perimeterPoints.length >= 3;
-        if (!hasPerimeter) continue;
-        const pages = REPORT_PRESET_PAGES[p].filter(
-          (pg) => !REPORT_PAGE_META[pg].requiresCuts || hasCuts
-        );
-        next[floor.id] = { ...next[floor.id], pages };
-      }
+      const hasCuts = activeFloor.canvasState.cuts.length > 0;
+      const hasPerimeter = activeFloor.canvasState.perimeterPoints.length >= 3;
+      if (!hasPerimeter) return next;
+      const pages = REPORT_PRESET_PAGES[p].filter(
+        (pg) => !REPORT_PAGE_META[pg].requiresCuts || hasCuts
+      );
+      next[activeFloor.id] = { ...next[activeFloor.id], enabled: true, pages };
       return next;
     });
-  }, [allFloors]);
+  }, [activeFloor]);
 
   const toggleFloor = (floorId: string) => {
     setFloorSelections((prev) => ({
@@ -176,10 +258,67 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     }));
   };
 
+  const handleAttachmentUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const nextAttachments = await Promise.all(
+      Array.from(files).map(async (file) => ({
+        id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        position: attachmentPosition,
+        dataUrl: await readFileAsDataUrl(file),
+      }))
+    );
+    setAttachments((prev) => [...prev, ...nextAttachments]);
+  }, [attachmentPosition]);
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((attachment) => attachment.id !== id));
+  };
+
   // ── Validation ───────────────────────────────────────────────────────────────
-  const selectedFloors = allFloors.filter(
-    (f) => floorSelections[f.id]?.enabled && (floorSelections[f.id]?.pages.length ?? 0) > 0
-  );
+  const activePages = Array.isArray(activeSelection?.pages) ? activeSelection.pages : [];
+  const selectedFloors = activeFloor && activeSelection?.enabled && activePages.length > 0 ? [activeFloor] : [];
+
+  const reportPagePlan = useMemo(() => {
+    const pages: Array<
+      | { kind: "attachment"; id: string; name: string; position: ReportSupplementaryPosition; pageNum: number }
+      | { kind: "floor"; id: string; pageType: ReportPageType; label: string; pageNum: number }
+    > = [];
+    let pageNum = 3; // 1=cover, 2=toc
+
+    const topAttachments = attachments.filter((attachment) => attachment.position === "after-intro");
+    const bottomAttachments = attachments.filter((attachment) => attachment.position === "before-summary");
+    const contentPages = activePages.filter((page) => !isSummaryPage(page));
+    const summaryPages = activePages.filter((page) => isSummaryPage(page));
+
+    for (const attachment of topAttachments) {
+      pages.push({ kind: "attachment", id: attachment.id, name: attachment.name, position: attachment.position, pageNum });
+      pageNum++;
+    }
+
+    if (activeFloor) {
+      for (const pageType of contentPages) {
+        pages.push({ kind: "floor", id: `${activeFloor.id}-${pageType}`, pageType, label: REPORT_PAGE_META[pageType].label, pageNum });
+        pageNum++;
+      }
+    }
+
+    for (const attachment of bottomAttachments) {
+      pages.push({ kind: "attachment", id: attachment.id, name: attachment.name, position: attachment.position, pageNum });
+      pageNum++;
+    }
+
+    if (activeFloor) {
+      for (const pageType of summaryPages) {
+        pages.push({ kind: "floor", id: `${activeFloor.id}-${pageType}`, pageType, label: REPORT_PAGE_META[pageType].label, pageNum });
+        pageNum++;
+      }
+    }
+
+    return pages;
+  }, [attachments, activeFloor, activePages]);
 
   const validationError = useMemo(() => {
     if (!reportName.trim()) return "Report name is required.";
@@ -196,8 +335,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     const now = new Date().toISOString();
     const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
     const project = projectStore.projects.find((p) => p.id === projectId);
-    const floorSelectionsArr: ReportFloorSelection[] = allFloors
-      .filter((f) => floorSelections[f.id]?.enabled)
+    const floorSelectionsArr: ReportFloorSelection[] = selectedFloors
       .map((f) => ({
         floorId: f.id,
         floorName: f.name,
@@ -217,6 +355,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       reportName: reportName.trim(),
       preset,
       floorSelections: floorSelectionsArr,
+      attachments,
       status: "draft",
       createdAt: initialReport?.createdAt ?? now,
       updatedAt: now,
@@ -235,24 +374,10 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       setSaved(false);
       onClose();
     }, 900);
-  }, [validationError, canvasStore, projectStore, allFloors, floorSelections, reportName, preset, initialReport, reportStore, onClose]);
+  }, [validationError, canvasStore, projectStore, selectedFloors, floorSelections, reportName, preset, initialReport, reportStore, onClose, attachments]);
 
   // ── Computed page list for preview ───────────────────────────────────────────
-  const previewPages = useMemo(() => {
-    const pages: Array<{ key: string; floorId: string; floorName: string; pageType: ReportPageType; pageNum: number }> = [];
-    let num = 3; // 1=cover, 2=toc
-    for (const floor of allFloors) {
-      const sel = floorSelections[floor.id];
-      if (!sel?.enabled) continue;
-      for (const page of sel.pages) {
-        pages.push({ key: `${floor.id}-${page}`, floorId: floor.id, floorName: floor.name, pageType: page, pageNum: num });
-        num++;
-      }
-    }
-    return pages;
-  }, [allFloors, floorSelections]);
-
-  const totalPageCount = previewPages.length + 2; // +2 for cover + TOC
+  const totalPageCount = reportPagePlan.length + 2; // +2 for cover + TOC
 
   // ── PDF generation ──────────────────────────────────────────────────────────
   const handleGenerate = async () => {
@@ -260,58 +385,59 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     setGenerating(true);
     setError(null);
     try {
-      // Build floor PDF data — generate canvas snapshots for each floor
-      const floorPDFDataArray: FloorPDFData[] = [];
-      for (const floor of selectedFloors) {
-        const cs = floor.canvasState;
-
-        // Convert blob URL to base64 (needed for PDF image embedding)
-        const imageBase64 = floor.floorPlanImage
-          ? await blobUrlToBase64(floor.floorPlanImage)
-          : null;
-
-        // Generate all overlay snapshots (chakra-16, chakra-8, perimeter, cuts)
-        // These run in parallel — each returns a PNG data URL
-        const snapshots = await generateAllSnapshots(floor, imageBase64);
-
-        const zoneAnalysis = cs.perimeterPoints.length >= 3
-          ? calculateZoneAreas(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts, cs.scale?.pixelsPerUnit)
-          : [];
-
-        const zoneRows = buildZoneRows(floor);
-
-        const cutAnalysis = cs.perimeterPoints.length >= 3 && cs.cuts.length > 0
-          ? calculateCutAnalysis(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts)
-          : [];
-
-        const sel = floorSelections[floor.id];
-        floorPDFDataArray.push({
-          floorId: floor.id,
-          floorName: floor.name,
-          floorOrder: floor.order,
-          floorPlanImageBase64: imageBase64,
-          snapshots: {
-            planOnly:          snapshots.planOnly,
-            planBrahma:        snapshots.planBrahma,
-            planChakra:        snapshots.planChakra,
-            planPerimeter:     snapshots.planPerimeter,
-            planCutsOnly:      snapshots.planCutsOnly,
-            planPerimeterCuts: snapshots.planPerimeterCuts,
-            planFull:          snapshots.planFull,
-            zoneLines16:       snapshots.zoneLines16,
-            zoneLines8:        snapshots.zoneLines8,
-            panchabhuta:       snapshots.panchabhuta,
-          },
-          northDeg: cs.northDeg,
-          zoneAnalysis,
-          zoneRows,
-          cutAnalysis,
-          hasCuts: cs.cuts.length > 0,
-          scaleUnit: cs.scale?.unit ?? "ft",
-          selectedPages: sel?.pages ?? [],
-          pageNotes: sel?.pageNotes ?? {},
-        });
+      if (!activeFloor || !activeSelection?.enabled) {
+        throw new Error("No active floor selected for report generation.");
       }
+
+      // Build floor PDF data — generate canvas snapshots for the active floor only
+      const floorPDFDataArray: FloorPDFData[] = [];
+      const cs = activeFloor.canvasState;
+
+      // Convert blob URL to base64 (needed for PDF image embedding)
+      const imageBase64 = activeFloor.floorPlanImage
+        ? await blobUrlToBase64(activeFloor.floorPlanImage)
+        : null;
+
+      // Generate all overlay snapshots (chakra-16, chakra-8, perimeter, cuts)
+      // These run in parallel — each returns a PNG data URL
+      const snapshots = await generateAllSnapshots(activeFloor, imageBase64);
+
+      const zoneAnalysis = cs.perimeterPoints.length >= 3
+        ? calculateZoneAreas(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts, cs.scale?.pixelsPerUnit)
+        : [];
+
+      const zoneRows = buildZoneRows(activeFloor);
+
+      const cutAnalysis = cs.perimeterPoints.length >= 3 && cs.cuts.length > 0
+        ? calculateCutAnalysis(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts)
+        : [];
+
+      floorPDFDataArray.push({
+        floorId: activeFloor.id,
+        floorName: activeFloor.name,
+        floorOrder: activeFloor.order,
+        floorPlanImageBase64: imageBase64,
+        snapshots: {
+          planOnly:          snapshots.planOnly,
+          planBrahma:        snapshots.planBrahma,
+          planChakra:        snapshots.planChakra,
+          planPerimeter:     snapshots.planPerimeter,
+          planCutsOnly:      snapshots.planCutsOnly,
+          planPerimeterCuts: snapshots.planPerimeterCuts,
+          planFull:          snapshots.planFull,
+          zoneLines16:       snapshots.zoneLines16,
+          zoneLines8:        snapshots.zoneLines8,
+          panchabhuta:       snapshots.panchabhuta,
+        },
+        northDeg: cs.northDeg,
+        zoneAnalysis,
+        zoneRows,
+        cutAnalysis,
+        hasCuts: cs.cuts.length > 0,
+        scaleUnit: cs.scale?.unit ?? "ft",
+        selectedPages: activeSelection.pages,
+        pageNotes: activeSelection.pageNotes,
+      });
 
       const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
       const project = projectStore.projects.find((p) => p.id === projectId);
@@ -325,6 +451,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         date: new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         northDeg: canvasStore.northDeg,
         floors: floorPDFDataArray,
+        attachments,
       };
 
       // Generate and download
@@ -334,8 +461,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       // Save report to store
       const pdfDataUrl = await generatePDFDataUrl(docData);
       const now = new Date().toISOString();
-      const floorSelectionsArr: ReportFloorSelection[] = allFloors
-        .filter((f) => floorSelections[f.id]?.enabled)
+      const floorSelectionsArr: ReportFloorSelection[] = selectedFloors
         .map((f) => ({
           floorId: f.id,
           floorName: f.name,
@@ -355,6 +481,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         reportName: reportName.trim(),
         preset,
         floorSelections: floorSelectionsArr,
+        attachments,
         status: "downloaded",
         createdAt: initialReport?.createdAt ?? now,
         updatedAt: now,
@@ -376,8 +503,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
 
   if (!open) return null;
 
-  const activeFloor = allFloors.find((f) => f.id === activeFloorId);
-  const activeSel = floorSelections[activeFloorId];
+  const activeSel = activeFloor ? floorSelections[activeFloor.id] : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg" style={{ fontFamily: "var(--font-dm-sans)" }}>
@@ -491,7 +617,12 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
               return (
                 <button
                   key={floor.id}
-                  onClick={() => setActiveFloorId(floor.id)}
+                  onClick={() => {
+                    setActiveFloorId(floor.id);
+                    if (floor.canvasState.perimeterPoints.length >= 3 && !floorSelections[floor.id]?.enabled) {
+                      toggleFloor(floor.id);
+                    }
+                  }}
                   className={cn(
                     "flex items-center gap-[5px] px-3 py-[7px] text-[10px] font-mono flex-shrink-0 cursor-pointer border-b-2 transition-all",
                     isActive
@@ -541,7 +672,69 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         <div className="flex-1 bg-bg overflow-y-auto">
           <div className="px-6 py-4 max-w-[780px] mx-auto">
             <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1.5px] mb-4">
-              Report Preview — {totalPageCount} page{totalPageCount !== 1 ? "s" : ""}
+              Report Preview — {activeFloor ? activeFloor.name : "No floor"} — {totalPageCount} page{totalPageCount !== 1 ? "s" : ""}
+            </div>
+
+            <div className="bg-bg-3 border border-[rgba(100,70,20,0.15)] rounded-[8px] p-4 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <div className="text-[10px] text-vastu-text font-medium">Supplementary Pages</div>
+                  <div className="text-[8px] text-vastu-text-3">Insert consultant files after the intro or before the summary pages.</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={attachmentPosition}
+                    onChange={(e) => setAttachmentPosition(e.target.value as ReportSupplementaryPosition)}
+                    className="px-2 py-[5px] bg-bg-4 border border-[rgba(100,70,20,0.15)] rounded-md text-vastu-text-2 font-sans text-[10px] outline-none"
+                  >
+                    <option value="after-intro">After intro</option>
+                    <option value="before-summary">Before summary</option>
+                  </select>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-[10px] px-3 py-[5px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
+                  >
+                    Add files
+                  </button>
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf,.doc,.docx,.txt,.md,.rtf,.csv,.json,.xml,.yml,.yaml"
+                onChange={(e) => {
+                  void handleAttachmentUpload(e.target.files);
+                  e.currentTarget.value = "";
+                }}
+                className="hidden"
+              />
+
+              {attachments.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center gap-3 rounded-[6px] border border-[rgba(100,70,20,0.12)] bg-bg-2 px-3 py-2">
+                      <div className={cn("w-[8px] h-[32px] rounded-[3px]", attachment.position === "after-intro" ? "bg-gold" : "bg-saffron")} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] text-vastu-text font-medium truncate">{attachment.name}</div>
+                        <div className="text-[8px] text-vastu-text-3">
+                          {attachment.position === "after-intro" ? "After intro" : "Before summary"} · {attachment.mimeType || "file"} · {Math.round(attachment.sizeBytes / 1024)} KB
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="text-[10px] px-2 py-[4px] rounded-md border border-[rgba(100,70,20,0.15)] text-vastu-text-3 hover:text-red-400 hover:border-red-400/30 transition-colors cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[9px] text-vastu-text-3 border border-dashed border-[rgba(100,70,20,0.15)] rounded-[6px] px-3 py-4 text-center">
+                  No supplementary pages added yet.
+                </div>
+              )}
             </div>
 
             {/* Cover page card */}
@@ -555,6 +748,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                 <div className="font-serif text-[13px] text-gold-2 truncate">{reportName || "Untitled Report"}</div>
                 <div className="text-[9px] text-vastu-text-3">{canvasStore.projectName}</div>
                 <div className="text-[9px] text-vastu-text-3">{canvasStore.clientName || "—"}</div>
+                {activeFloor && <div className="text-[9px] text-vastu-text-3">{activeFloor.name} report</div>}
                 <div className="text-[8px] text-vastu-text-3 mt-1">
                   {totalPageCount} pages · N: {canvasStore.northDeg.toFixed(1)}°
                 </div>
@@ -570,40 +764,57 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
             >
               <div className="flex flex-col gap-1">
                 <p className="text-[9px] text-vastu-text-3 leading-relaxed">Auto-generated — lists all selected pages with accurate page numbers.</p>
-                <div className="text-[8px] text-vastu-text-3 mt-1">{previewPages.length} content pages listed</div>
+                <div className="text-[8px] text-vastu-text-3 mt-1">{reportPagePlan.length} content pages listed</div>
               </div>
             </PagePreviewCard>
 
             {/* Per-page cards */}
-            {previewPages.map(({ key, floorId, floorName, pageType, pageNum }) => {
-              const floor = allFloors.find((f) => f.id === floorId);
-              const sel = floorSelections[floorId];
-              const noteKey = key;
+            {reportPagePlan.map((entry) => {
+              if (entry.kind === "attachment") {
+                return (
+                  <PagePreviewCard
+                    key={entry.id}
+                    pageNum={entry.pageNum}
+                    label="Supplementary Insert"
+                    floorName=""
+                    color={entry.position === "after-intro" ? "gold" : "blue"}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="text-[10px] text-vastu-text font-medium truncate">{entry.name}</div>
+                      <div className="text-[9px] text-vastu-text-3">{entry.position === "after-intro" ? "After intro" : "Before summary"}</div>
+                    </div>
+                  </PagePreviewCard>
+                );
+              }
+
+              const floor = activeFloor ?? allFloors.find((f) => `${f.id}-${entry.pageType}` === entry.id);
+              const sel = floor ? floorSelections[floor.id] : undefined;
+              const noteKey = entry.id;
               const noteExpanded = expandedNotes === noteKey;
-              const currentNote = sel?.pageNotes[pageType] ?? "";
+              const currentNote = sel?.pageNotes[entry.pageType] ?? "";
               const hasCuts = floor?.canvasState.cuts.length ? floor.canvasState.cuts.length > 0 : false;
-              const meta = REPORT_PAGE_META[pageType];
+              const meta = REPORT_PAGE_META[entry.pageType];
 
               return (
                 <PagePreviewCard
-                  key={key}
-                  pageNum={pageNum}
+                  key={entry.id}
+                  pageNum={entry.pageNum}
                   label={meta.label}
-                  floorName={floorName}
+                  floorName={floor?.name ?? activeFloor?.name ?? ""}
                   color={meta.group === "Analysis" ? "blue" : "neutral"}
                 >
                   <div className="flex flex-col gap-2">
                     <p className="text-[9px] text-vastu-text-3 leading-relaxed">{meta.description}</p>
 
                     {/* Inline mini-preview for analysis pages */}
-                    {pageType === "16-zone" && floor && (
+                    {entry.pageType === "16-zone" && floor && (
                       <MiniZonePreview floor={floor} />
                     )}
-                    {(pageType === "bar-graph-16" || pageType === "bar-graph-8") && floor && (
+                    {(entry.pageType === "bar-graph-16" || entry.pageType === "bar-graph-8") && floor && (
                       <MiniBarPreview floor={floor} />
                     )}
-                    {(pageType === "cut-analysis" || pageType === "plan-cuts-only") && (
-                      <div className={cn("text-[8px] px-2 py-1 rounded-[3px]", hasCuts ? "bg-[rgba(200,60,40,0.1)] text-red-400" : "bg-[rgba(100,70,20,0.07)] text-vastu-text-3")}>
+                    {(entry.pageType === "cut-analysis" || entry.pageType === "plan-cuts-only") && (
+                      <div className={cn("text-[8px] px-2 py-1 rounded-[3px]", hasCuts ? "bg-[rgba(200,60,40,0.1)] text-red-400" : "bg-[rgba(100,70,20,0.07)] text-vastu-text-3")}> 
                         {hasCuts ? `${floor?.canvasState.cuts.length} cut${(floor?.canvasState.cuts.length ?? 0) > 1 ? "s" : ""} detected` : "No cuts — page will show empty state"}
                       </div>
                     )}
@@ -627,7 +838,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                     {noteExpanded && (
                       <textarea
                         value={currentNote}
-                        onChange={(e) => setPageNote(floorId, pageType, e.target.value)}
+                        onChange={(e) => setPageNote(floor?.id ?? activeFloor?.id ?? "", entry.pageType, e.target.value)}
                         placeholder="Optional page footer notes…"
                         rows={2}
                         className="w-full px-2 py-[5px] bg-bg-4 border border-[rgba(100,70,20,0.15)] rounded-[4px] text-vastu-text-2 font-sans text-[10px] outline-none resize-none focus:border-gold-3 leading-relaxed"
@@ -638,9 +849,9 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
               );
             })}
 
-            {previewPages.length === 0 && (
+            {reportPagePlan.length === 0 && (
               <div className="text-center py-12 text-vastu-text-3 text-[11px]">
-                Enable floors and select pages on the left to preview your report.
+                Enable floors, select pages on the left, or add supplementary files to preview your report.
               </div>
             )}
           </div>

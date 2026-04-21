@@ -77,7 +77,9 @@ export default function ReportsPage() {
   }, [reportStore.reports]);
 
   const totalPages = (r: Report) =>
-    1 + r.floorSelections.reduce((sum, f) => sum + (f.enabled ? f.pages.length : 0), 0);
+    1 +
+    r.floorSelections.reduce((sum, f) => sum + (f.enabled ? f.pages.length : 0), 0) +
+    (r.attachments?.length ?? 0);
 
   return (
     <AppShell>
@@ -186,6 +188,7 @@ export default function ReportsPage() {
                         <span className="font-mono">{pages} page{pages !== 1 ? "s" : ""}</span>
                         <span>·</span>
                         <span>{floors.length} floor{floors.length !== 1 ? "s" : ""}</span>
+                        {floors.length > 0 && <><span>·</span><span>{floors.map((floor) => floor.floorName).join(", ")}</span></>}
                         <span>·</span>
                         <span>N: {report.northDeg.toFixed(1)}°</span>
                       </div>
