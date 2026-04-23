@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { label: "Canvas",    icon: "◈", href: "/canvas",    section: null },
   { label: "Analysis",  icon: "◉", href: "/canvas?tab=analysis", section: "Tools" },
   { label: "Vastu AI",  icon: "◎", href: "/canvas?tab=chatbot",  section: null },
-  { label: "Reports",   icon: "◌", href: "#reports",   section: "Account" },
+  { label: "Reports",   icon: "◌", href: "/reports",  section: "Account" },
   { label: "Settings",  icon: "⚙", href: "#settings",  section: null },
 ];
 
