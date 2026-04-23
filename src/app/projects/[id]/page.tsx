@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useProjectStore } from "@/store/projectStore";
@@ -13,9 +13,13 @@ export default function ProjectCanvasPage() {
   const project = useProjectStore((s) => s.projects.find((p) => p.id === id));
   const loadCanvasState = useCanvasStore((s) => s.loadCanvasState);
   const [loaded, setLoaded] = useState(false);
+  const loadedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (project) {
+    // Only load once per project ID — floor/state changes are managed by canvasStore
+    // after initial load, so re-running this would reset the active floor to Floor 1.
+    if (project && loadedIdRef.current !== project.id) {
+      loadedIdRef.current = project.id;
       loadCanvasState(
         project.canvasState ?? {},
         project.id,
