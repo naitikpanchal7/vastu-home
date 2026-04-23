@@ -19,6 +19,7 @@ export default function CanvasWorkspace() {
   const [leftExpanded, setLeftExpanded] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
+  const [northDraft, setNorthDraft] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autoCreatedRef = useRef(false);
 
@@ -140,14 +141,32 @@ export default function CanvasWorkspace() {
 
         <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
 
-        {/* North input */}
+        {/* North input — draft state prevents immediate re-render while typing */}
         <span className="text-[10px] text-vastu-text-3 whitespace-nowrap flex-shrink-0">🧭 N:</span>
         <input
           type="number"
-          value={northDeg.toFixed(1)}
+          value={northDraft ?? northDeg.toFixed(1)}
           min={0} max={360} step={0.5}
-          onChange={(e) => setNorth(parseFloat(e.target.value) || 0)}
-          className="w-[54px] px-[6px] py-[3px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[4px] text-gold-2 font-mono text-[11px] font-semibold outline-none focus:border-gold-3 flex-shrink-0"
+          onFocus={(e) => { setNorthDraft(northDeg.toFixed(1)); e.target.select(); }}
+          onChange={(e) => setNorthDraft(e.target.value)}
+          onBlur={() => {
+            const v = parseFloat(northDraft ?? "");
+            if (!isNaN(v)) setNorth(Math.max(0, Math.min(360, v)));
+            setNorthDraft(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              const v = parseFloat(northDraft ?? "");
+              if (!isNaN(v)) setNorth(Math.max(0, Math.min(360, v)));
+              setNorthDraft(null);
+              (e.target as HTMLInputElement).blur();
+            }
+            if (e.key === "Escape") {
+              setNorthDraft(null);
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          className="w-[60px] px-[6px] py-[3px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[4px] text-gold-2 font-mono text-[11px] font-semibold outline-none focus:border-gold-3 flex-shrink-0"
         />
 
         <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
