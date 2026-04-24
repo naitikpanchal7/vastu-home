@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: "⊞", href: "/dashboard", section: "Workspace" },
-  { label: "Projects",  icon: "◫", href: "/projects",  section: null },
-  { label: "Canvas",    icon: "◈", href: "/canvas",    section: null },
-  { label: "Analysis",  icon: "◉", href: "/canvas?tab=analysis", section: "Tools" },
-  { label: "Vastu AI",  icon: "◎", href: "/canvas?tab=chatbot",  section: null },
-  { label: "Reports",   icon: "◌", href: "/reports",  section: "Account" },
-  { label: "Settings",  icon: "⚙", href: "#settings",  section: null },
+  { label: "Dashboard", icon: "⊞", href: "/dashboard", section: "Workspace", panel: null },
+  { label: "Projects",  icon: "◫", href: "/projects",  section: null,        panel: null },
+  { label: "Canvas",    icon: "◈", href: "/canvas",    section: null,        panel: null },
+  { label: "Analysis",  icon: "◉", href: null,         section: "Tools",     panel: "analysis" as const },
+  { label: "Vastu AI",  icon: "◎", href: null,         section: null,        panel: "ai" as const },
+  { label: "Reports",   icon: "◌", href: "/reports",   section: "Account",   panel: null },
+  { label: "Settings",  icon: "⚙", href: "#settings",  section: null,        panel: null },
 ];
 
 export default function Sidebar() {
@@ -20,6 +20,7 @@ export default function Sidebar() {
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState("Rajesh Sharma");
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   const saveUserName = () => {
@@ -62,10 +63,31 @@ export default function Sidebar() {
         {NAV_ITEMS.map((item) => {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href.split("?")[0]));
+          // Panel items (Analysis/AI) are never auto-active — they open a drawer
+          const isActive = item.panel
+            ? searchParams.get("panel") === item.panel
+            : item.href
+            ? pathname === item.href || (item.href !== "/" && item.href !== "#settings" && pathname.startsWith(item.href))
+            : false;
+
+          const handleClick = () => {
+            if (item.panel) {
+              // Toggle panel via URL param — canvas workspace reads this
+              const current = searchParams.get("panel");
+              const params = new URLSearchParams(searchParams.toString());
+              if (current === item.panel) {
+                params.delete("panel");
+              } else {
+                params.set("panel", item.panel);
+              }
+              router.push(`${pathname}?${params.toString()}`);
+            } else if (item.href && item.href !== "#settings") {
+              router.push(item.href);
+            }
+          };
 
           return (
-            <div key={item.href + item.label}>
+            <div key={(item.href ?? item.panel ?? "") + item.label}>
               {showSection && (
                 <div
                   className={cn(
@@ -77,7 +99,7 @@ export default function Sidebar() {
                 </div>
               )}
               <div
-                onClick={() => router.push(item.href)}
+                onClick={handleClick}
                 className={cn(
                   "flex items-center gap-[10px] px-[14px] py-2 cursor-pointer text-vastu-text-2 text-[12px] transition-all duration-[120ms] border-l-2 border-transparent whitespace-nowrap overflow-hidden",
                   "hover:text-vastu-text hover:bg-[rgba(100,70,20,0.07)]",

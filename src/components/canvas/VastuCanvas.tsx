@@ -19,12 +19,6 @@ export default function VastuCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const { store, getSVGCoords, recalcZones } = useCanvas();
   const [mousePos, setMousePos] = useState<Point | null>(null);
-  const [scaleStep, setScaleStep] = useState(0);
-  const [scalePt1, setScalePt1] = useState<Point | null>(null);
-  const [scalePt2, setScalePt2] = useState<Point | null>(null);
-  const [showScaleDlg, setShowScaleDlg] = useState(false);
-  const [scaleDistance, setScaleDistance] = useState("");
-  const [scaleUnit, setScaleUnit] = useState<"ft" | "m">("ft");
   const [showBrahmaDlg, setShowBrahmaDlg] = useState(false);
   const [showDropZone, setShowDropZone] = useState(false);
   const lastClickTime = useRef(0);
@@ -39,7 +33,7 @@ export default function VastuCanvas() {
     northDeg, brahmaX, brahmaY, chakraVisible, chakraOpacity,
     zoomLevel, panX, panY, cuts, floorPlanImage, setFloorPlanImage,
     addPerimeterPoint, closePerimeter,
-    addCut, setScale, setTool, setZoom, setPan,
+    addCut, setTool, setZoom, setPan,
     zoneMode, perimeterVisible, cutsVisible,
   } = store;
 
@@ -77,18 +71,9 @@ export default function VastuCanvas() {
         addPerimeterPoint(pt);
       } else if (currentTool === "cut") {
         setCutPts((prev) => [...prev, pt]);
-      } else if (currentTool === "scale") {
-        if (scaleStep === 0) {
-          setScalePt1(pt);
-          setScaleStep(1);
-        } else if (scaleStep === 1) {
-          setScalePt2(pt);
-          setScaleStep(2);
-          setShowScaleDlg(true);
-        }
       }
     },
-    [currentTool, perimeterComplete, scaleStep, addPerimeterPoint, getSVGCoords]
+    [currentTool, perimeterComplete, addPerimeterPoint, getSVGCoords]
   );
 
   const handleDblClick = useCallback(
@@ -124,35 +109,11 @@ export default function VastuCanvas() {
     [getSVGCoords]
   );
 
-  const confirmScale = useCallback(() => {
-    if (!scalePt1 || !scalePt2) return;
-    const d = parseFloat(scaleDistance);
-    if (!d || d <= 0) return;
-    const px = Math.hypot(scalePt2.x - scalePt1.x, scalePt2.y - scalePt1.y);
-    setScale({ pt1: scalePt1, pt2: scalePt2, realDistance: d, unit: scaleUnit, pixelsPerUnit: px / d });
-    setShowScaleDlg(false);
-    setScaleStep(0);
-    setScalePt1(null);
-    setScalePt2(null);
-    setScaleDistance("");
-    recalcZones();
-    setTool("select");
-  }, [scalePt1, scalePt2, scaleDistance, scaleUnit, setScale, recalcZones, setTool]);
-
-  const cancelScale = () => {
-    setShowScaleDlg(false);
-    setScaleStep(0);
-    setScalePt1(null);
-    setScalePt2(null);
-    setTool("select");
-  };
-
 
   const svgCursor = {
     select:    "default",
     perimeter: "crosshair",
     cut:       "crosshair",
-    scale:     "crosshair",
     brahma:    "move",
     entrance:  "crosshair",
     facing:    "crosshair",
@@ -161,7 +122,6 @@ export default function VastuCanvas() {
   const toolMsg: Record<string, string> = {
     perimeter: "⬡ Perimeter Mode — Click to place points. Double-click to close.",
     cut:       "✂ Cut Mode — Click to draw cut area. Double-click to close.",
-    scale:     "⊷ Scale Mode — Click two points, then enter real distance.",
     brahma:    "◉ Brahmasthan Mode — Drag the gold center dot.",
     entrance:  "⛩ Entrance Mode — Click on a perimeter wall to mark the entrance.",
     facing:    "⬆ Facing Mode — Click to set the facing direction.",
@@ -173,10 +133,6 @@ export default function VastuCanvas() {
   const perimeterStr = perimeterPts
     ? perimeterPts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")
     : "";
-
-  const scaleInfo = store.scale
-    ? `Scale: 1px = ${(1 / store.scale.pixelsPerUnit).toFixed(2)} ${store.scale.unit}`
-    : "Scale: not calibrated";
 
   const perimeterStatus = perimeterComplete
     ? `Perimeter: ${perimeterPoints.length} pts — closed`
@@ -415,30 +371,6 @@ export default function VastuCanvas() {
             </g>
           )}
 
-          {/* Scale calibration line */}
-          {scalePt1 && (
-            <>
-              <circle cx={scalePt1.x} cy={scalePt1.y} r="4" fill="var(--gold)" />
-              {scalePt2 && (
-                <>
-                  <line
-                    x1={scalePt1.x} y1={scalePt1.y}
-                    x2={scalePt2.x} y2={scalePt2.y}
-                    stroke="var(--gold)" strokeWidth="2" strokeDasharray="4,3"
-                  />
-                  <circle cx={scalePt2.x} cy={scalePt2.y} r="4" fill="var(--gold)" />
-                </>
-              )}
-              {!scalePt2 && mousePos && (
-                <line
-                  x1={scalePt1.x} y1={scalePt1.y}
-                  x2={mousePos.x} y2={mousePos.y}
-                  stroke="rgba(100,70,20,0.45)" strokeWidth="1.5" strokeDasharray="4,3"
-                />
-              )}
-            </>
-          )}
-
           {/* Brahmasthan dot */}
           <BrahmasthanDot svgRef={svgRef} onMove={recalcZones} />
         </svg>
@@ -450,42 +382,6 @@ export default function VastuCanvas() {
         {toolMsgText && (
           <div className="absolute top-[10px] left-1/2 -translate-x-1/2 bg-bg-2 border border-gold-3 rounded-full px-[14px] py-1 text-[10px] text-gold-2 z-[15] pointer-events-none animate-fade-in">
             {toolMsgText}
-          </div>
-        )}
-
-        {/* Scale input dialog */}
-        {showScaleDlg && (
-          <div className="absolute bottom-11 left-1/2 -translate-x-1/2 bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[8px] p-[11px_15px] min-w-[250px] z-20 animate-fade-up">
-            <h4 className="text-[12px] text-vastu-text mb-[2px]">⊷ Set Scale Reference</h4>
-            <p className="text-[9px] text-vastu-text-3 mb-[9px] leading-relaxed">
-              Enter the real-world distance between the two points you marked.
-            </p>
-            <div className="flex gap-[7px] items-center mb-[9px]">
-              <input
-                type="number"
-                value={scaleDistance}
-                onChange={(e) => setScaleDistance(e.target.value)}
-                placeholder="e.g. 22"
-                className="flex-1 px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3"
-                min={1}
-              />
-              <select
-                value={scaleUnit}
-                onChange={(e) => setScaleUnit(e.target.value as "ft" | "m")}
-                className="w-[60px] px-[6px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none"
-              >
-                <option value="ft">ft</option>
-                <option value="m">m</option>
-              </select>
-            </div>
-            <div className="flex gap-[6px]">
-              <button onClick={cancelScale} className="flex-1 text-[10px] px-[9px] py-1 bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-md hover:border-gold-3 cursor-pointer font-sans">
-                Cancel
-              </button>
-              <button onClick={confirmScale} className="flex-1 text-[10px] px-[9px] py-1 bg-gold text-[#faf7f0] rounded-md hover:bg-gold-2 cursor-pointer font-sans font-medium">
-                ✓ Set Scale
-              </button>
-            </div>
           </div>
         )}
 
@@ -576,8 +472,6 @@ export default function VastuCanvas() {
             ⊙
           </button>
         </div>
-        <div className="w-[1px] h-[13px] bg-[rgba(100,70,20,0.12)]" />
-        <span>{scaleInfo}</span>
         <div className="w-[1px] h-[13px] bg-[rgba(100,70,20,0.12)]" />
         <span>{perimeterStatus}</span>
         <div className="flex-1" />

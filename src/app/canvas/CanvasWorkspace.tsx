@@ -3,8 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import VastuCanvas from "@/components/canvas/VastuCanvas";
 import RightPanel from "@/components/panels/RightPanel";
+import AnalysisPanel from "@/components/panels/AnalysisPanel";
+import ChatPanel from "@/components/panels/ChatPanel";
 import Button from "@/components/ui/Button";
 import type { CanvasTool } from "@/store/canvasStore";
 import type { Floor, Project } from "@/lib/types";
@@ -15,8 +18,19 @@ interface ExportModalState { open: boolean }
 export default function CanvasWorkspace() {
   const store = useCanvasStore();
   const projectStore = useProjectStore();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [exportModal, setExportModal] = useState<ExportModalState>({ open: false });
+  const fullPanel = (searchParams.get("panel") as "analysis" | "ai" | null) ?? null;
   const [leftExpanded, setLeftExpanded] = useState(false);
+
+  const closePanel = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("panel");
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  };
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [northDraft, setNorthDraft] = useState<string | null>(null);
@@ -101,7 +115,6 @@ export default function CanvasWorkspace() {
     { id: "select",    icon: "⊹", title: "Select" },
     { id: "perimeter", icon: "⬡", title: "Draw Perimeter (P)" },
     { id: "cut",       icon: "✂", title: "Draw Cut (C)" },
-    { id: "scale",     icon: "⊷", title: "Set Scale (S)" },
     { id: "brahma",    icon: "◉", title: "Move Brahmasthan (B)" },
   ];
 
@@ -339,9 +352,6 @@ export default function CanvasWorkspace() {
                     ✕ Reset Cuts
                   </Button>
                 )}
-                <div className="px-[2px] pt-[6px] text-[8px] text-vastu-text-3">
-                  Scale: <span className="text-vastu-text-2">{store.scale ? `1px = ${(1 / store.scale.pixelsPerUnit).toFixed(2)} ${store.scale.unit}` : "Not set"}</span>
-                </div>
               </LpSection>
 
               {/* Layers */}
@@ -430,6 +440,67 @@ export default function CanvasWorkspace() {
 
         {/* Right panel */}
         <RightPanel onExport={() => setExportModal({ open: true })} />
+
+        {/* Full-view Analysis / AI drawer — opened via sidebar panel buttons */}
+        {fullPanel !== null && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 z-[20] bg-bg/50"
+              onClick={closePanel}
+            />
+            {/* Drawer */}
+            <div className="absolute top-0 right-0 bottom-0 z-[21] w-[500px] bg-bg-2 border-l border-[rgba(100,70,20,0.20)] flex flex-col shadow-2xl">
+              {/* Drawer header */}
+              <div className="flex items-center gap-[9px] px-[16px] py-[11px] border-b border-[rgba(100,70,20,0.15)] flex-shrink-0">
+                <div className="flex-1 min-w-0">
+                  <div className="font-serif text-[15px] text-gold-2 leading-tight truncate">
+                    {projectName || "Untitled Project"}
+                  </div>
+                  {clientName && (
+                    <div className="text-[9px] text-vastu-text-3 mt-[1px]">{clientName}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-[2px] border border-[rgba(100,70,20,0.20)] rounded-md p-[2px] flex-shrink-0">
+                  {(["analysis", "ai"] as const).map((p) => {
+                    const switchPanel = () => {
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set("panel", p);
+                      router.push(`${pathname}?${params.toString()}`);
+                    };
+                    return (
+                      <button
+                        key={p}
+                        onClick={switchPanel}
+                        className={`text-[9px] px-[9px] py-[3px] rounded-[4px] font-sans cursor-pointer transition-all border ${
+                          fullPanel === p
+                            ? "bg-[rgba(100,70,20,0.20)] border-[rgba(100,70,20,0.50)] text-gold-2"
+                            : "bg-transparent border-transparent text-vastu-text-3 hover:text-vastu-text-2"
+                        }`}
+                      >
+                        {p === "analysis" ? "⊹ Analysis" : "✦ Vastu AI"}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={closePanel}
+                  className="text-[12px] text-vastu-text-3 hover:text-gold-2 cursor-pointer bg-transparent border-none transition-colors flex-shrink-0 ml-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Drawer content */}
+              <div className={`flex-1 overflow-hidden ${fullPanel === "ai" ? "flex flex-col" : "overflow-y-auto"}`}>
+                <div className={`p-[14px] h-full ${fullPanel === "ai" ? "flex flex-col" : ""}`}>
+                  {fullPanel === "analysis" && <AnalysisPanel onExport={() => setExportModal({ open: true })} />}
+                  {fullPanel === "ai" && <ChatPanel />}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Report Builder — full-screen overlay (replaces old export modal) */}

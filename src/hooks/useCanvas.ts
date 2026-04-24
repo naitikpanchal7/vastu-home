@@ -71,8 +71,6 @@ export function useCanvas() {
 
       if (store.currentTool === "perimeter" && !store.perimeterComplete) {
         store.addPerimeterPoint(pt);
-      } else if (store.currentTool === "scale") {
-        // Scale is handled by the ScaleTool component internally
       }
     },
     [store, getSVGCoords]
