@@ -28,10 +28,19 @@
 html,
 body {
   height: 100%;
-  overflow: hidden;
   background: var(--bg);
   color: var(--vastu-text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* App shell pages lock scroll (canvas, dashboard) */
+body.app-page {
+  overflow: hidden;
+}
+
+/* Public landing page scrolls freely */
+body.public-page {
+  overflow: auto;
 }
 
 /* Scrollbar */
