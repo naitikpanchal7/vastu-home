@@ -115,7 +115,6 @@ export default function CanvasWorkspace() {
     { id: "select",    icon: "⊹", title: "Select" },
     { id: "perimeter", icon: "⬡", title: "Draw Perimeter (P)" },
     { id: "cut",       icon: "✂", title: "Draw Cut (C)" },
-    { id: "scale",     icon: "⊷", title: "Set Scale (S)" },
     { id: "brahma",    icon: "◉", title: "Move Brahmasthan (B)" },
   ];
 
@@ -353,9 +352,6 @@ export default function CanvasWorkspace() {
                     ✕ Reset Cuts
                   </Button>
                 )}
-                <div className="px-[2px] pt-[6px] text-[8px] text-vastu-text-3">
-                  Scale: <span className="text-vastu-text-2">{store.scale ? `1px = ${(1 / store.scale.pixelsPerUnit).toFixed(2)} ${store.scale.unit}` : "Not set"}</span>
-                </div>
               </LpSection>
 
               {/* Layers */}

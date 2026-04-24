@@ -10,7 +10,6 @@ export type CanvasTool =
   | "select"
   | "perimeter"
   | "cut"
-  | "scale"
   | "brahma"
   | "entrance"
   | "facing";
