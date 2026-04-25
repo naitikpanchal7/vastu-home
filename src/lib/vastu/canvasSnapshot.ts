@@ -469,17 +469,6 @@ export async function snapshotPlanWithChakraOnly(
   // Draw the chakra PNG image centered on Brahmasthan with multiply blend
   await drawChakraImage(ctx, cx, cy, cs.northDeg);
 
-  // Zone lines on top — clipped to perimeter for clean look, but perimeter NOT drawn
-  if (cs.perimeterPoints.length >= 3) {
-    ctx.save();
-    clipToPerimeter(ctx, cs.perimeterPoints);
-    drawZoneLines16(ctx, cx, cy, cs.northDeg);
-    ctx.restore();
-  } else {
-    drawZoneLines16(ctx, cx, cy, cs.northDeg);
-  }
-
-  drawZoneLabels16(ctx, cx, cy, cs.northDeg, Math.min(SNAP_W, SNAP_H) * 0.28);
   drawBrahmasthan(ctx, cx, cy);
   drawNorthIndicator(ctx, cs.northDeg);
   return canvas.toDataURL("image/png");
