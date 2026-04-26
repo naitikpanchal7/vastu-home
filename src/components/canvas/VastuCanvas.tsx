@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useCanvas } from "@/hooks/useCanvas";
 import ShaktiChakra from "./ShaktiChakra";
@@ -39,6 +39,14 @@ export default function VastuCanvas() {
 
   // ── Cut drawing state (local, not in store until complete) ──
   const [cutPts, setCutPts] = useState<Point[]>([]);
+  const [hintDismissed, setHintDismissed] = useState(false);
+
+  // Reset hint each time user enters perimeter or cut mode
+  useEffect(() => {
+    if (currentTool === "perimeter" || currentTool === "cut") {
+      setHintDismissed(false);
+    }
+  }, [currentTool]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
@@ -378,10 +386,17 @@ export default function VastuCanvas() {
         {/* Compass rose */}
         <CompassRose northDeg={northDeg} />
 
-        {/* Mode indicator */}
-        {toolMsgText && (
-          <div className="absolute top-[10px] left-1/2 -translate-x-1/2 bg-bg-2 border border-gold-3 rounded-full px-[14px] py-1 text-[10px] text-gold-2 z-[15] pointer-events-none animate-fade-in">
-            {toolMsgText}
+        {/* Mode indicator — dismissible per session */}
+        {toolMsgText && !hintDismissed && (
+          <div className="absolute top-[10px] left-1/2 -translate-x-1/2 bg-bg-2 border border-gold-3 rounded-full pl-[14px] pr-[6px] py-1 text-[10px] text-gold-2 z-[15] flex items-center gap-[8px] animate-fade-in">
+            <span>{toolMsgText}</span>
+            <button
+              onClick={() => setHintDismissed(true)}
+              className="w-[16px] h-[16px] rounded-full flex items-center justify-center text-vastu-text-3 hover:text-vastu-text hover:bg-bg-4 transition-colors cursor-pointer flex-shrink-0"
+              title="Dismiss"
+            >
+              ✕
+            </button>
           </div>
         )}
 
