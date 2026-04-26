@@ -17,7 +17,23 @@ type PanOrigin = { mx: number; my: number; px: number; py: number };
 
 export default function VastuCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
+  const innerGRef = useRef<SVGGElement>(null);
   const { store, getSVGCoords, recalcZones } = useCanvas();
+
+  // Use the inner <g> CTM so coordinate conversion accounts for pan/zoom
+  // without the SVG element itself being transformed (which clips at container edges).
+  const getCanvasCoords = useCallback((e: React.MouseEvent<SVGSVGElement>): Point => {
+    const g = innerGRef.current;
+    if (g) {
+      const ctm = g.getScreenCTM();
+      if (ctm) {
+        const pt = new DOMPoint(e.clientX, e.clientY);
+        const svgPt = pt.matrixTransform(ctm.inverse());
+        return { x: svgPt.x, y: svgPt.y };
+      }
+    }
+    return getSVGCoords(e);
+  }, [getSVGCoords]);
   const [mousePos, setMousePos] = useState<Point | null>(null);
   const [showBrahmaDlg, setShowBrahmaDlg] = useState(false);
   const [showDropZone, setShowDropZone] = useState(false);
@@ -73,7 +89,7 @@ export default function VastuCanvas() {
       if (now - lastClickTime.current < 350) return;
       lastClickTime.current = now;
 
-      const pt = getSVGCoords(e);
+      const pt = getCanvasCoords(e);
 
       if (currentTool === "perimeter" && !perimeterComplete) {
         addPerimeterPoint(pt);
@@ -81,7 +97,7 @@ export default function VastuCanvas() {
         setCutPts((prev) => [...prev, pt]);
       }
     },
-    [currentTool, perimeterComplete, addPerimeterPoint, getSVGCoords]
+    [currentTool, perimeterComplete, addPerimeterPoint, getCanvasCoords]
   );
 
   const handleDblClick = useCallback(
@@ -111,10 +127,10 @@ export default function VastuCanvas() {
         setPan(panOrigin.current.px + dx, panOrigin.current.py + dy);
         return;
       }
-      const pt = getSVGCoords(e);
+      const pt = getCanvasCoords(e);
       setMousePos(pt);
     },
-    [getSVGCoords]
+    [getCanvasCoords]
   );
 
 
@@ -169,6 +185,8 @@ export default function VastuCanvas() {
             when panels collapse. preserveAspectRatio keeps the viewBox centred.
             The floor plan image lives INSIDE the SVG so it shares the same coordinate
             space as the perimeter/cuts and scales together with them perfectly. */}
+        {/* SVG always fills the full container — NO CSS transform here.
+            Pan/zoom goes on the inner <g> so the SVG never clips at container edges. */}
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -179,8 +197,6 @@ export default function VastuCanvas() {
             width: "100%",
             height: "100%",
             cursor: isPanning ? "grabbing" : currentTool === "select" ? "grab" : svgCursor,
-            transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
-            transformOrigin: "center center",
             zIndex: 2,
           }}
           onClick={handleClick}
@@ -191,6 +207,13 @@ export default function VastuCanvas() {
           onMouseLeave={handleMouseUp}
           xmlns="http://www.w3.org/2000/svg"
         >
+          <g
+            ref={innerGRef}
+            style={{
+              transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel / 100})`,
+              transformOrigin: "center center",
+            }}
+          >
           {/* Floor plan image — inside SVG so it shares the same coordinate space
               as the perimeter/cuts and scales identically when panels resize. */}
           {floorPlanImage && (
@@ -380,7 +403,8 @@ export default function VastuCanvas() {
           )}
 
           {/* Brahmasthan dot */}
-          <BrahmasthanDot svgRef={svgRef} onMove={recalcZones} />
+          <BrahmasthanDot gRef={innerGRef} onMove={recalcZones} />
+          </g>
         </svg>
 
         {/* Compass rose */}
