@@ -451,6 +451,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         date: new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         northDeg: canvasStore.northDeg,
         floors: floorPDFDataArray,
+        totalProjectFloors: allFloors.length,
         attachments,
       };
 

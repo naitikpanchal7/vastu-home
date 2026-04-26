@@ -95,6 +95,7 @@ export interface ReportDocumentData {
   date: string;
   northDeg: number;
   floors: FloorPDFData[];
+  totalProjectFloors: number;
   attachments: ReportAttachment[];
 }
 
@@ -354,8 +355,8 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
             ["Client",    data.clientName],
             ["Address",   data.propertyAddress || "—"],
             ["North",     `${data.northDeg.toFixed(1)}° True North`],
-            ["Scope",     data.floors.length === 1 ? data.floors[0].floorName : `${data.floors.length} floors`],
-            ["Floors",    `${data.floors.length} floor${data.floors.length > 1 ? "s" : ""}`],
+            ["Scope",     data.floors[0]?.floorName ?? "Floor 1"],
+            ["Floors",    `${data.totalProjectFloors} floor${data.totalProjectFloors > 1 ? "s" : ""}`],
             ["Pages",     `${total} pages`],
           ].map(([k, v]) => (
             <View key={k} style={[styles.row, { marginBottom: 5 }]}>
