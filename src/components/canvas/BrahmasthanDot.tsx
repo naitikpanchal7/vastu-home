@@ -4,22 +4,21 @@ import { useRef, type RefObject } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 
 interface BrahmasthanDotProps {
-  svgRef: RefObject<SVGSVGElement | null>;
+  gRef: RefObject<SVGGElement | null>;
   onMove?: () => void;
 }
 
-export default function BrahmasthanDot({ svgRef, onMove }: BrahmasthanDotProps) {
+export default function BrahmasthanDot({ gRef, onMove }: BrahmasthanDotProps) {
   const { brahmaX, brahmaY, currentTool, setBrahma } = useCanvasStore();
   const dragging = useRef(false);
 
   const getSVGPt = (e: { clientX: number; clientY: number }) => {
-    if (!svgRef.current) return null;
-    const rect = svgRef.current.getBoundingClientRect();
-    const vb = svgRef.current.viewBox.baseVal;
-    return {
-      x: (e.clientX - rect.left) * (vb.width / rect.width),
-      y: (e.clientY - rect.top) * (vb.height / rect.height),
-    };
+    if (!gRef.current) return null;
+    const ctm = gRef.current.getScreenCTM();
+    if (!ctm) return null;
+    const pt = new DOMPoint(e.clientX, e.clientY);
+    const svgPt = pt.matrixTransform(ctm.inverse());
+    return { x: svgPt.x, y: svgPt.y };
   };
 
   const isDraggable = currentTool === "brahma";
