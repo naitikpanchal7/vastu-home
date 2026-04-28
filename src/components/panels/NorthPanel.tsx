@@ -6,11 +6,9 @@ import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
 
 export default function NorthPanel() {
-  const { northDeg, northMethod, applyManual, applyGPS } = useNorth();
+  const { northDeg, applyManual } = useNorth();
   const { showToast } = useToast();
   const [inputVal, setInputVal] = useState(northDeg.toFixed(1));
-  const [address, setAddress] = useState("");
-  const [method, setMethod] = useState<"manual" | "gps" | "maps">("manual");
 
   const handleApply = () => {
     const v = parseFloat(inputVal);
@@ -19,35 +17,10 @@ export default function NorthPanel() {
     showToast(`✓ True North locked at ${v.toFixed(1)}°`);
   };
 
-  const handleGPS = async () => {
-    await applyGPS();
-    showToast("📍 GPS location acquired");
-  };
-
   const deg = parseFloat(inputVal) || northDeg;
 
   return (
     <div>
-      {/* Method selector */}
-      <div className="flex gap-1 mb-[11px]">
-        {(["manual", "gps", "maps"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => {
-              setMethod(m);
-              if (m === "gps") handleGPS();
-            }}
-            className={`flex-1 py-[6px] px-[3px] text-center text-[10px] rounded-[5px] cursor-pointer font-sans transition-all duration-[130ms] border ${
-              method === m
-                ? "bg-[rgba(100,70,20,0.15)] border-gold text-gold-2"
-                : "bg-bg-3 border-[rgba(100,70,20,0.12)] text-vastu-text-3 hover:border-gold-3 hover:text-vastu-text-2"
-            }`}
-          >
-            {m.charAt(0).toUpperCase() + m.slice(1)}
-          </button>
-        ))}
-      </div>
-
       {/* Big north display */}
       <div className="text-center p-[11px] bg-bg-3 rounded-[7px] mb-[9px] border border-[rgba(100,70,20,0.20)]">
         <div className="font-serif text-[38px] font-light text-gold-2 leading-none">{northDeg.toFixed(1)}°</div>
@@ -86,27 +59,14 @@ export default function NorthPanel() {
         </svg>
       </div>
 
-      {/* Address */}
-      <div className="mb-[9px]">
-        <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Property Address</label>
-        <input
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Enter address…"
-          className="w-full px-[9px] py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-sans text-[12px] outline-none focus:border-gold-3"
-        />
-      </div>
-
       <Button variant="primary" className="w-full justify-center text-[11px]" onClick={handleApply}>
         ✓ Apply &amp; Lock North
       </Button>
 
       {/* Info box */}
       <div className="mt-[9px] p-2 bg-bg-3 rounded-[5px] border border-[rgba(100,70,20,0.12)] text-[8px] text-vastu-text-3 leading-[1.9]">
-        <strong className="text-vastu-text-2">Method:</strong> {method.charAt(0).toUpperCase() + method.slice(1)}<br />
         <strong className="text-vastu-text-2">True North:</strong> {northDeg.toFixed(1)}°<br />
-        <strong className="text-vastu-text-2">Note:</strong> Magnetic declination correction applied via NOAA.
+        <strong className="text-vastu-text-2">Note:</strong> Enter the True North degree for the property and apply.
       </div>
     </div>
   );
