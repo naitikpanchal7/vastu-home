@@ -326,8 +326,8 @@ export default function HomePage() {
   // Phase 1: no auth — go straight to dashboard
   // Phase 2: check session, redirect to /auth/login if unauthenticated
   const goDashboard = () => router.push("/dashboard");
-  const goLogin     = () => router.push("/dashboard"); // TODO Phase 2: /auth/login
-  const goSignUp    = () => router.push("/dashboard"); // TODO Phase 2: /auth/signup
+  const goLogin     = () => router.push("/auth/login");
+  const goSignUp    = () => router.push("/auth/login?mode=signup");
 
   // ── NAV ──────────────────────────────────────────────────────────────────
   const navLinks = [
