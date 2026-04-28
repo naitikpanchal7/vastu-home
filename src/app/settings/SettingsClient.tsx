@@ -16,7 +16,6 @@ interface Props {
     years_experience: number | null;
     specialization: string | null;
     firm_name: string | null;
-    report_accent_color: string;
     report_show_branding: boolean;
     logo_url: string | null;
   };
@@ -32,7 +31,6 @@ export default function SettingsClient({ profile }: Props) {
   const [yearsExp,        setYearsExp]        = useState(String(profile.years_experience ?? ""));
   const [specialization,  setSpecialization]  = useState(profile.specialization ?? "");
   const [firmName,        setFirmName]        = useState(profile.firm_name ?? "");
-  const [accentColor,     setAccentColor]     = useState(profile.report_accent_color);
   const [showBranding,    setShowBranding]    = useState(profile.report_show_branding);
   const [logoUrl,         setLogoUrl]         = useState<string | null>(profile.logo_url);
   const [logoUploading,   setLogoUploading]   = useState(false);
@@ -58,7 +56,6 @@ export default function SettingsClient({ profile }: Props) {
         years_experience:     yearsExp ? parseInt(yearsExp) : null,
         specialization:       specialization.trim() || null,
         firm_name:            firmName.trim() || null,
-        report_accent_color:  accentColor,
         report_show_branding: showBranding,
       })
       .eq("id", profile.id);
@@ -267,21 +264,6 @@ export default function SettingsClient({ profile }: Props) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-[10px] py-[6px]">
-                <div className="flex-1">
-                  <div className="text-[11px] text-vastu-text font-medium">Report accent colour</div>
-                  <div className="text-[10px] text-vastu-text-3 mt-[2px]">Used for headings and borders in PDF exports</div>
-                </div>
-                <div className="flex items-center gap-[7px]">
-                  <input
-                    type="color"
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="w-[32px] h-[32px] rounded-[6px] border border-[rgba(100,70,20,0.20)] cursor-pointer bg-transparent p-[2px]"
-                  />
-                  <span className="font-mono text-[11px] text-vastu-text-2">{accentColor}</span>
-                </div>
-              </div>
             </div>
           </Section>
 
