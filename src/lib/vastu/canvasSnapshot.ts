@@ -65,7 +65,7 @@ function clipToPerimeter(
   return true;
 }
 
-/** 16 zone boundary radial lines — gold, matching the 8-zone stroke weight. */
+/** 16 zone boundary radial lines — blue, thick, clearly visible. */
 function drawZoneLines16(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -73,8 +73,8 @@ function drawZoneLines16(
 ) {
   const R = Math.hypot(SNAP_W, SNAP_H) * 1.5;
   ctx.save();
-  ctx.strokeStyle = "rgba(200,175,120,0.7)";
-  ctx.lineWidth   = 2;
+  ctx.strokeStyle = "rgba(37,99,235,0.85)";
+  ctx.lineWidth   = 3;
   ctx.setLineDash([]);
   for (const zone of VASTU_ZONES) {
     const angle = toRad(zone.startDeg - northDeg);
@@ -108,7 +108,7 @@ function drawZoneLines8(
   ctx.restore();
 }
 
-/** Zone name labels — gold text with dark outline, matching canvas style. */
+/** Zone name labels — black text with white outline, always legible. */
 function drawZoneLabels16(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -116,7 +116,7 @@ function drawZoneLabels16(
   labelR: number
 ) {
   ctx.save();
-  ctx.font = "bold 9px monospace";
+  ctx.font = "bold 11px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const zone of VASTU_ZONES) {
@@ -124,17 +124,17 @@ function drawZoneLabels16(
     const angle  = toRad(midDeg - northDeg);
     const lx = cx + labelR * Math.cos(angle);
     const ly = cy + labelR * Math.sin(angle);
-    ctx.strokeStyle = "rgba(15,14,11,0.6)";
-    ctx.lineWidth   = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth   = 4;
     ctx.lineJoin    = "round";
     ctx.strokeText(zone.shortName, lx, ly);
-    ctx.fillStyle   = "#c8af78";
+    ctx.fillStyle   = "#111111";
     ctx.fillText(zone.shortName, lx, ly);
   }
   ctx.restore();
 }
 
-/** Zone labels at large radius — placed OUTSIDE typical perimeters. */
+/** Zone labels at large radius — placed OUTSIDE typical perimeters, always legible. */
 function drawZoneLabelsOutside16(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -142,25 +142,25 @@ function drawZoneLabelsOutside16(
 ) {
   const R = Math.min(SNAP_W, SNAP_H) * 0.44;
   ctx.save();
-  ctx.font = "bold 10px monospace";
+  ctx.font = "bold 12px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const zone of VASTU_ZONES) {
     const midDeg = (zone.startDeg + zone.endDeg) / 2;
     const angle  = toRad(midDeg - northDeg);
-    const lx = Math.max(14, Math.min(SNAP_W - 14, cx + R * Math.cos(angle)));
-    const ly = Math.max(14, Math.min(SNAP_H - 14, cy + R * Math.sin(angle)));
-    ctx.strokeStyle = "rgba(15,14,11,0.6)";
-    ctx.lineWidth   = 3;
+    const lx = Math.max(16, Math.min(SNAP_W - 16, cx + R * Math.cos(angle)));
+    const ly = Math.max(16, Math.min(SNAP_H - 16, cy + R * Math.sin(angle)));
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth   = 4;
     ctx.lineJoin    = "round";
     ctx.strokeText(zone.shortName, lx, ly);
-    ctx.fillStyle   = "#c8af78";
+    ctx.fillStyle   = "#111111";
     ctx.fillText(zone.shortName, lx, ly);
   }
   ctx.restore();
 }
 
-/** 8-direction labels at large radius — placed OUTSIDE typical perimeters. */
+/** 8-direction labels at large radius — placed OUTSIDE typical perimeters, always legible. */
 function drawZoneLabelsOutside8(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
@@ -178,18 +178,18 @@ function drawZoneLabelsOutside8(
   ];
   const R = Math.min(SNAP_W, SNAP_H) * 0.44;
   ctx.save();
-  ctx.font = "bold 12px monospace";
+  ctx.font = "bold 13px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const z of EIGHT) {
     const angle = toRad(z.centerDeg - northDeg);
     const lx = Math.max(16, Math.min(SNAP_W - 16, cx + R * Math.cos(angle)));
     const ly = Math.max(16, Math.min(SNAP_H - 16, cy + R * Math.sin(angle)));
-    ctx.strokeStyle = "rgba(15,14,11,0.6)";
-    ctx.lineWidth   = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth   = 4;
     ctx.lineJoin    = "round";
     ctx.strokeText(z.label, lx, ly);
-    ctx.fillStyle   = "#e8912a";
+    ctx.fillStyle   = "#111111";
     ctx.fillText(z.label, lx, ly);
   }
   ctx.restore();
@@ -212,18 +212,18 @@ function drawZoneLabels8(
     { label: "NW", centerDeg: 315 },
   ];
   ctx.save();
-  ctx.font = "bold 11px monospace";
+  ctx.font = "bold 12px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const z of EIGHT) {
     const angle = toRad(z.centerDeg - northDeg);
     const lx = cx + labelR * Math.cos(angle);
     const ly = cy + labelR * Math.sin(angle);
-    ctx.strokeStyle = "rgba(15,14,11,0.6)";
-    ctx.lineWidth   = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth   = 4;
     ctx.lineJoin    = "round";
     ctx.strokeText(z.label, lx, ly);
-    ctx.fillStyle   = "#e8912a";
+    ctx.fillStyle   = "#111111";
     ctx.fillText(z.label, lx, ly);
   }
   ctx.restore();
