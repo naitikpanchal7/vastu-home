@@ -315,87 +315,112 @@ function drawCuts(
   }
 }
 
-/** Compass rose + degree label (bottom-right corner). */
+/**
+ * Compass rose — top-right corner, pixel-faithful replica of NorthArrow.tsx.
+ * Light cream background, N/S/E/W labels, cross-hairs + diagonals, two arrow
+ * polygons. The whole rose rotates by -northDeg so N always points to true north.
+ */
 function drawNorthIndicator(
   ctx: CanvasRenderingContext2D,
   northDeg: number
 ) {
-  const x = SNAP_W - 38;
-  const y = SNAP_H - 38;
-  const r = 22;
+  // Centre matches the canvas div: top:14px right:14px width:72px → centre at (SNAP_W-50, 50)
+  const cx = SNAP_W - 50;
+  const cy = 50;
+  const r  = 32;
 
-  // Dark pill background
+  ctx.save();
+
+  // Cream circle background
   ctx.beginPath();
-  ctx.arc(x, y, r, 0, 2 * Math.PI);
-  ctx.fillStyle   = "rgba(15,14,11,0.78)";
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.fillStyle = "rgba(248,244,238,0.96)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(200,175,120,0.75)";
-  ctx.lineWidth   = 1.2;
+  ctx.strokeStyle = "rgba(100,70,20,0.28)";
+  ctx.lineWidth   = 1;
   ctx.stroke();
 
-  // Arrow tip points toward true north on the screen
-  const arrowAngle = toRad(northDeg);
-  const tipX  = x + (r - 6) * Math.cos(arrowAngle);
-  const tipY  = y + (r - 6) * Math.sin(arrowAngle);
-  const tailX = x - (r - 8) * Math.cos(arrowAngle);
-  const tailY = y - (r - 8) * Math.sin(arrowAngle);
+  // Rotate everything by -northDeg around the centre (same as SVG transform)
+  ctx.translate(cx, cy);
+  ctx.rotate((-northDeg * Math.PI) / 180);
 
-  ctx.beginPath();
-  ctx.moveTo(tailX, tailY);
-  ctx.lineTo(tipX, tipY);
-  ctx.strokeStyle = "#c8af78";
-  ctx.lineWidth   = 2;
-  ctx.stroke();
+  // Cross-hairs N-S and E-W
+  ctx.strokeStyle = "rgba(100,70,20,0.20)";
+  ctx.lineWidth   = 0.5;
+  ctx.beginPath(); ctx.moveTo(0, -29); ctx.lineTo(0, 29); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-29, 0); ctx.lineTo(29, 0); ctx.stroke();
 
-  // Arrowhead
-  const perp = arrowAngle + Math.PI / 2;
+  // Diagonal cross-hairs
+  ctx.strokeStyle = "rgba(100,70,20,0.14)";
+  ctx.lineWidth   = 0.4;
+  ctx.beginPath(); ctx.moveTo(-22, -22); ctx.lineTo(22, 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(22, -22); ctx.lineTo(-22, 22); ctx.stroke();
+
+  // North arrow polygon — gold, pointing up
   ctx.beginPath();
-  ctx.moveTo(tipX, tipY);
-  ctx.lineTo(
-    tipX - 5 * Math.cos(arrowAngle) + 4 * Math.cos(perp),
-    tipY - 5 * Math.sin(arrowAngle) + 4 * Math.sin(perp)
-  );
-  ctx.lineTo(
-    tipX - 5 * Math.cos(arrowAngle) - 4 * Math.cos(perp),
-    tipY - 5 * Math.sin(arrowAngle) - 4 * Math.sin(perp)
-  );
+  ctx.moveTo(0, -28);
+  ctx.lineTo(-3.5, -14);
+  ctx.lineTo(3.5, -14);
   ctx.closePath();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle   = "#c8af78";
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // South arrow polygon — muted
+  ctx.beginPath();
+  ctx.moveTo(0, 28);
+  ctx.lineTo(-3.5, 14);
+  ctx.lineTo(3.5, 14);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(112,96,80,0.5)";
+  ctx.fill();
+
+  // Centre dot — gold
+  ctx.beginPath();
+  ctx.arc(0, 0, 3, 0, 2 * Math.PI);
   ctx.fillStyle = "#c8af78";
   ctx.fill();
 
-  // "N" + degree labels
-  ctx.fillStyle    = "#e8d4a0";
-  ctx.font         = "bold 8px sans-serif";
+  // N / S / E / W labels (rotate with the rose, same as SVG)
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("N", x, y - 4);
-  ctx.font      = "6px monospace";
-  ctx.fillStyle = "rgba(200,175,120,0.75)";
-  ctx.fillText(`${northDeg.toFixed(1)}°`, x, y + 6);
+
+  ctx.font      = "bold 8px monospace";
+  ctx.fillStyle = "#c8af78";
+  ctx.fillText("N", 0, -34.5);
+
+  ctx.font      = "7px monospace";
+  ctx.fillStyle = "rgba(112,96,80,0.8)";
+  ctx.fillText("S", 0,   34);
+  ctx.fillText("E", 32,   3);
+  ctx.fillText("W", -32,  3);
+
+  ctx.restore();
 }
 
 // ── Panchabhuta element definitions ───────────────────────────────────────────
 
 // Maps zone shortName → Panchabhuta element
 const ZONE_ELEMENT_MAP: Record<string, "fire" | "earth" | "water" | "air" | "space"> = {
-  // Fire — SE quadrant
-  ESE: "fire", SE: "fire", SSE: "fire",
-  // Earth — SW quadrant
-  S: "earth", SSW: "earth", SW: "earth", WSW: "earth",
-  // Water — N and W
-  N: "water", NNE: "water", W: "water",
-  // Air — E, NW quadrant
-  ENE: "air", E: "air", WNW: "air", NW: "air", NNW: "air",
-  // Space — NE corner (most sattvic)
-  NE: "space",
+  // Water — NNW, N, NNE, NE
+  NNW: "water", N: "water", NNE: "water", NE: "water",
+  // Air — ENE, E, ESE
+  ENE: "air", E: "air", ESE: "air",
+  // Fire — SE, SSE, S
+  SE: "fire", SSE: "fire", S: "fire",
+  // Earth — SSW, SW
+  SSW: "earth", SW: "earth",
+  // Space — WSW, W, WNW, NW
+  WSW: "space", W: "space", WNW: "space", NW: "space",
 };
 
 export const PANCHABHUTA = {
-  fire:  { label: "Fire (Agni)",    color: "#e84020", english: "Fire"  },
-  earth: { label: "Earth (Prithvi)",color: "#9a6010", english: "Earth" },
-  water: { label: "Water (Jal)",    color: "#1860c0", english: "Water" },
-  air:   { label: "Air (Vayu)",     color: "#38a850", english: "Air"   },
-  space: { label: "Space (Akasha)", color: "#7040b8", english: "Space" },
+  fire:  { label: "Fire (Agni)",    color: "#dc2626", english: "Fire"  },
+  earth: { label: "Earth (Prithvi)",color: "#ca8a04", english: "Earth" },
+  water: { label: "Water (Jal)",    color: "#1d4ed8", english: "Water" },
+  air:   { label: "Air (Vayu)",     color: "#16a34a", english: "Air"   },
+  space: { label: "Space (Akasha)", color: "#64748b", english: "Space" },
 } as const;
 
 // ── Canvas factory ────────────────────────────────────────────────────────────
@@ -678,9 +703,17 @@ export async function snapshotPanchabhuta(
     ctx.fill();
   }
 
-  // Thin white zone boundary lines on top of fills
-  ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  // Zone boundary lines — dark with white core for clear visibility on any fill
+  ctx.strokeStyle = "rgba(0,0,0,0.55)";
+  ctx.lineWidth   = 2;
+  for (const zone of VASTU_ZONES) {
+    const angle = toRad(zone.startDeg - northDeg);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
   ctx.lineWidth   = 0.8;
   for (const zone of VASTU_ZONES) {
     const angle = toRad(zone.startDeg - northDeg);
@@ -689,27 +722,27 @@ export async function snapshotPanchabhuta(
     ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
     ctx.stroke();
   }
-  ctx.globalAlpha = 1;
   ctx.restore();
 
-  // Perimeter + labels
+  // Perimeter
   if (cs.perimeterPoints.length >= 3) drawPerimeter(ctx, cs.perimeterPoints);
 
+  // Zone labels — black with white outline, same style as 16-zone view
   const labelR = Math.min(SNAP_W, SNAP_H) * 0.28;
   ctx.save();
-  ctx.font         = "bold 9px sans-serif";
+  ctx.font         = "bold 11px monospace";
   ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
   for (const zone of VASTU_ZONES) {
-    const elem  = ZONE_ELEMENT_MAP[zone.shortName];
-    const color = elem ? PANCHABHUTA[elem].color : "#888888";
     const midDeg = (zone.startDeg + zone.endDeg) / 2;
     const angle  = toRad(midDeg - northDeg);
     const lx = cx + labelR * Math.cos(angle);
     const ly = cy + labelR * Math.sin(angle);
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillText(zone.shortName, lx + 1, ly + 1);
-    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "rgba(255,255,255,0.95)";
+    ctx.lineWidth   = 4;
+    ctx.lineJoin    = "round";
+    ctx.strokeText(zone.shortName, lx, ly);
+    ctx.fillStyle   = "#111111";
     ctx.fillText(zone.shortName, lx, ly);
   }
   ctx.restore();
