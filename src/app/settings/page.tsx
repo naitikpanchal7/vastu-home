@@ -8,11 +8,27 @@ export default async function SettingsPage() {
 
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("id, full_name, email, phone, city, years_experience, specialization, firm_name, report_accent_color, report_show_branding")
     .eq("id", user.id)
     .single();
+
+  // Profile missing (trigger didn't run on signup) — create it now
+  if (!profile) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("profiles").upsert({
+      id: user.id,
+      email: user.email ?? "",
+      full_name: user.user_metadata?.full_name ?? "",
+    });
+    const { data: fresh } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, phone, city, years_experience, specialization, firm_name, report_accent_color, report_show_branding")
+      .eq("id", user.id)
+      .single();
+    profile = fresh;
+  }
 
   if (!profile) redirect("/auth/login");
 
