@@ -92,6 +92,7 @@ export interface ReportDocumentData {
   clientName: string;
   propertyAddress: string;
   consultantName: string;
+  consultantLogoBase64?: string | null;
   date: string;
   northDeg: number;
   floors: FloorPDFData[];
@@ -379,12 +380,21 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
           </View>
         </View>
 
-        {/* Branding placeholder */}
-        <View style={{ borderWidth: 1, borderColor: C.border, borderStyle: "dashed", borderRadius: 4, padding: 14, alignItems: "center" }}>
-          <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}>
-            [Consultant Logo — Upload in Settings]
-          </Text>
-        </View>
+        {/* Consultant logo */}
+        {data.consultantLogoBase64 ? (
+          <View style={{ alignItems: "flex-start" }}>
+            <Image
+              src={data.consultantLogoBase64}
+              style={{ maxWidth: 160, maxHeight: 60, objectFit: "contain" }}
+            />
+          </View>
+        ) : (
+          <View style={{ borderWidth: 1, borderColor: C.border, borderStyle: "dashed", borderRadius: 4, padding: 14, alignItems: "center" }}>
+            <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}>
+              Upload your company logo in Settings → Report Branding
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Gold footer bar */}

@@ -444,12 +444,16 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
       const project = projectStore.projects.find((p) => p.id === projectId);
 
+      // logo_url is stored as a base64 data URL — pass directly, no fetch needed
+      const consultantLogoBase64 = profile?.logo_url ?? null;
+
       const docData: ReportDocumentData = {
         reportName: reportName.trim(),
         projectName: canvasStore.projectName,
         clientName: canvasStore.clientName,
         propertyAddress: project?.propertyAddress ?? "",
         consultantName,
+        consultantLogoBase64,
         date: new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         northDeg: canvasStore.northDeg,
         floors: floorPDFDataArray,

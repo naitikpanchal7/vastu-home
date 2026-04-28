@@ -10,7 +10,7 @@ export default async function SettingsPage() {
 
   let { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, email, phone, city, years_experience, specialization, firm_name, report_accent_color, report_show_branding")
+    .select("id, full_name, email, phone, city, years_experience, specialization, firm_name, report_accent_color, report_show_branding, logo_url")
     .eq("id", user.id)
     .single();
 
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
     });
     const { data: fresh } = await supabase
       .from("profiles")
-      .select("id, full_name, email, phone, city, years_experience, specialization, firm_name, report_accent_color, report_show_branding")
+      .select("id, full_name, email, phone, city, years_experience, specialization, firm_name, report_accent_color, report_show_branding, logo_url")
       .eq("id", user.id)
       .single();
     profile = fresh;
