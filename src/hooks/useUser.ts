@@ -10,7 +10,6 @@ interface Profile {
   firm_name: string | null;
   logo_url: string | null;
   avatar_url: string | null;
-  report_accent_color: string;
   report_show_branding: boolean;
   onboarding_completed: boolean;
 }

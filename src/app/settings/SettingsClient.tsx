@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AppShell from "@/components/layout/AppShell";
@@ -16,8 +16,8 @@ interface Props {
     years_experience: number | null;
     specialization: string | null;
     firm_name: string | null;
-    report_accent_color: string;
     report_show_branding: boolean;
+    logo_url: string | null;
   };
 }
 
@@ -31,8 +31,11 @@ export default function SettingsClient({ profile }: Props) {
   const [yearsExp,        setYearsExp]        = useState(String(profile.years_experience ?? ""));
   const [specialization,  setSpecialization]  = useState(profile.specialization ?? "");
   const [firmName,        setFirmName]        = useState(profile.firm_name ?? "");
-  const [accentColor,     setAccentColor]     = useState(profile.report_accent_color);
   const [showBranding,    setShowBranding]    = useState(profile.report_show_branding);
+  const [logoUrl,         setLogoUrl]         = useState<string | null>(profile.logo_url);
+  const [logoUploading,   setLogoUploading]   = useState(false);
+  const [logoError,       setLogoError]       = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
@@ -53,7 +56,6 @@ export default function SettingsClient({ profile }: Props) {
         years_experience:     yearsExp ? parseInt(yearsExp) : null,
         specialization:       specialization.trim() || null,
         firm_name:            firmName.trim() || null,
-        report_accent_color:  accentColor,
         report_show_branding: showBranding,
       })
       .eq("id", profile.id);
@@ -72,6 +74,63 @@ export default function SettingsClient({ profile }: Props) {
     await supabase.auth.signOut();
     router.push("/auth/login");
     router.refresh();
+  }
+
+  async function handleLogoUpload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Please upload an image file (PNG, JPG, SVG, WebP).");
+      return;
+    }
+    if (file.size > 1 * 1024 * 1024) {
+      setLogoError("Logo must be under 1 MB.");
+      return;
+    }
+    setLogoError(null);
+    setLogoUploading(true);
+
+    try {
+      // Convert to base64 data URL and store directly in profiles — no storage bucket needed
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateErr } = await (supabase as any)
+        .from("profiles")
+        .update({ logo_url: dataUrl })
+        .eq("id", profile.id);
+
+      if (updateErr) throw updateErr;
+
+      setLogoUrl(dataUrl);
+      router.refresh();
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : "Logo upload failed.");
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  async function handleLogoRemove() {
+    setLogoUploading(true);
+    setLogoError(null);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updateErr } = await (supabase as any)
+        .from("profiles")
+        .update({ logo_url: null })
+        .eq("id", profile.id);
+      if (updateErr) throw updateErr;
+      setLogoUrl(null);
+      router.refresh();
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : "Failed to remove logo.");
+    } finally {
+      setLogoUploading(false);
+    }
   }
 
   return (
@@ -129,6 +188,69 @@ export default function SettingsClient({ profile }: Props) {
           {/* Report Branding */}
           <Section title="Report Branding" icon="◌">
             <div className="flex flex-col gap-[9px]">
+
+              {/* Company Logo */}
+              <div className="py-[6px]">
+                <div className="text-[11px] text-vastu-text font-medium mb-[2px]">Company Logo</div>
+                <div className="text-[10px] text-vastu-text-3 mb-[10px]">Appears on the cover page of PDF reports. PNG, JPG or SVG, max 2 MB.</div>
+
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleLogoUpload(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+
+                {logoError && (
+                  <div className="text-[10px] text-[#b43218] mb-[8px]">{logoError}</div>
+                )}
+
+                {logoUrl ? (
+                  <div className="flex items-center gap-[12px]">
+                    <div className="w-[80px] h-[44px] rounded-[6px] border border-[rgba(100,70,20,0.20)] bg-bg-2 flex items-center justify-center overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={logoUrl}
+                        alt="Company logo"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex gap-[7px]">
+                      <button
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={logoUploading}
+                        className="px-3 py-[5px] bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-2 font-sans text-[11px] rounded-md hover:border-gold-3 hover:text-vastu-text transition-colors disabled:opacity-50"
+                      >
+                        {logoUploading ? "Uploading…" : "Replace"}
+                      </button>
+                      <button
+                        onClick={() => void handleLogoRemove()}
+                        disabled={logoUploading}
+                        className="px-3 py-[5px] bg-transparent border border-[rgba(100,70,20,0.20)] text-[#b43218] font-sans text-[11px] rounded-md hover:border-[rgba(180,50,30,0.4)] transition-colors disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={logoUploading}
+                    className="flex items-center gap-[8px] px-3 py-[8px] border border-dashed border-[rgba(100,70,20,0.25)] rounded-[7px] text-vastu-text-3 hover:border-gold-3 hover:text-vastu-text-2 transition-colors text-[11px] font-sans disabled:opacity-50 w-full"
+                  >
+                    <span className="text-[14px]">↑</span>
+                    {logoUploading ? "Uploading…" : "Upload company logo"}
+                  </button>
+                )}
+              </div>
+
+              <div className="h-px bg-[rgba(100,70,20,0.10)]" />
+
               <div className="flex items-center justify-between py-[6px]">
                 <div>
                   <div className="text-[11px] text-vastu-text font-medium">Show vastu@home branding</div>
@@ -142,21 +264,6 @@ export default function SettingsClient({ profile }: Props) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-[10px] py-[6px]">
-                <div className="flex-1">
-                  <div className="text-[11px] text-vastu-text font-medium">Report accent colour</div>
-                  <div className="text-[10px] text-vastu-text-3 mt-[2px]">Used for headings and borders in PDF exports</div>
-                </div>
-                <div className="flex items-center gap-[7px]">
-                  <input
-                    type="color"
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="w-[32px] h-[32px] rounded-[6px] border border-[rgba(100,70,20,0.20)] cursor-pointer bg-transparent p-[2px]"
-                  />
-                  <span className="font-mono text-[11px] text-vastu-text-2">{accentColor}</span>
-                </div>
-              </div>
             </div>
           </Section>
 

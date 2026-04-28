@@ -92,6 +92,7 @@ export interface ReportDocumentData {
   clientName: string;
   propertyAddress: string;
   consultantName: string;
+  consultantLogoBase64?: string | null;
   date: string;
   northDeg: number;
   floors: FloorPDFData[];
@@ -379,12 +380,21 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
           </View>
         </View>
 
-        {/* Branding placeholder */}
-        <View style={{ borderWidth: 1, borderColor: C.border, borderStyle: "dashed", borderRadius: 4, padding: 14, alignItems: "center" }}>
-          <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}>
-            [Consultant Logo — Upload in Settings]
-          </Text>
-        </View>
+        {/* Consultant logo */}
+        {data.consultantLogoBase64 ? (
+          <View style={{ alignItems: "flex-start" }}>
+            <Image
+              src={data.consultantLogoBase64}
+              style={{ maxWidth: 160, maxHeight: 60, objectFit: "contain" }}
+            />
+          </View>
+        ) : (
+          <View style={{ borderWidth: 1, borderColor: C.border, borderStyle: "dashed", borderRadius: 4, padding: 14, alignItems: "center" }}>
+            <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}>
+              Upload your company logo in Settings → Report Branding
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Gold footer bar */}
@@ -910,39 +920,39 @@ function CutAnalysisPage({ floor, pageNum, total }: { floor: FloorPDFData; pageN
 // ── Panchabhuta (5 Elements) page ─────────────────────────────────────────────
 const PANCHABHUTA_DEF = [
   {
-    key: "fire"  as const,
-    label: "Fire",
-    sanskrit: "अग्नि",
-    color: "#e84020",
-    zones: ["ESE", "SE", "SSE"],
-  },
-  {
-    key: "earth" as const,
-    label: "Earth",
-    sanskrit: "पृथ्वी",
-    color: "#9a6010",
-    zones: ["S", "SSW", "SW", "WSW"],
-  },
-  {
     key: "water" as const,
     label: "Water",
     sanskrit: "जल",
-    color: "#1860c0",
-    zones: ["N", "NNE", "W"],
+    color: "#1d4ed8",
+    zones: ["NNW", "N", "NNE", "NE"],
   },
   {
     key: "air"   as const,
     label: "Air",
     sanskrit: "वायु",
-    color: "#38a850",
-    zones: ["ENE", "E", "WNW", "NW", "NNW"],
+    color: "#16a34a",
+    zones: ["ENE", "E", "ESE"],
+  },
+  {
+    key: "fire"  as const,
+    label: "Fire",
+    sanskrit: "अग्नि",
+    color: "#dc2626",
+    zones: ["SE", "SSE", "S"],
+  },
+  {
+    key: "earth" as const,
+    label: "Earth",
+    sanskrit: "पृथ्वी",
+    color: "#ca8a04",
+    zones: ["SSW", "SW"],
   },
   {
     key: "space" as const,
     label: "Space",
     sanskrit: "आकाश",
-    color: "#7040b8",
-    zones: ["NE"],
+    color: "#64748b",
+    zones: ["WSW", "W", "WNW", "NW"],
   },
 ] as const;
 
@@ -957,7 +967,7 @@ function PanchabhutaPage({ floor, pageNum, total }: { floor: FloorPDFData; pageN
         <FloorPageHeader pageType="panchabhuta" floorName={floor.floorName} northDeg={floor.northDeg} pageNum={pageNum} total={total} />
 
         <Text style={[styles.body, { color: C.text3, marginBottom: 10 }]}> 
-          Color key for the Panchabhuta zones. Red = Fire (Agni).
+          Five-element zone mapping — Water (N), Air (E), Fire (SE–S), Earth (SW), Space (W).
         </Text>
 
         <View style={[styles.row, { flexWrap: "wrap", gap: 8, marginBottom: 10 }]}> 

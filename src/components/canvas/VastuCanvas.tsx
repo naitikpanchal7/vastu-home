@@ -261,7 +261,7 @@ export default function VastuCanvas() {
           {/* Zone division lines — radiating from Brahmasthan, clipped to perimeter */}
           {zoneMode !== "off" && perimeterComplete && perimeterPts && (() => {
             const FAR = 2000;
-            const LABEL_R = zoneMode === "8" ? 110 : 90;
+            const LABEL_R = zoneMode === "8" ? 115 : 105;
 
             // 8-zone compass: N NE E SE S SW W NW at 45° intervals
             const EIGHT_ZONES = [
@@ -312,16 +312,16 @@ export default function VastuCanvas() {
                         x1={brahmaX} y1={brahmaY}
                         x2={brahmaX + Math.sin(rad) * FAR}
                         y2={brahmaY - Math.cos(rad) * FAR}
-                        stroke={zoneMode === "16" ? "#c8af78" : "#e8912a"}
-                        strokeWidth="2"
-                        strokeOpacity={zoneMode === "16" ? "0.7" : "0.9"}
+                        stroke={zoneMode === "16" ? "#2563eb" : "#e8912a"}
+                        strokeWidth={zoneMode === "16" ? "3" : "2"}
+                        strokeOpacity={zoneMode === "16" ? "0.85" : "0.9"}
                       />
                     );
                   })}
                 </g>
 
-                {/* Labels clipped to perimeter */}
-                <g clipPath="url(#zone-perimeter-clip)">
+                {/* Labels — NOT clipped so they are always visible */}
+                <g>
                   {zones.map((z) => {
                     const screenAngle = ((z.labelAngle - northDeg) % 360 + 360) % 360;
                     const rad = (screenAngle * Math.PI) / 180;
@@ -333,12 +333,12 @@ export default function VastuCanvas() {
                         x={lx} y={ly}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fill={zoneMode === "16" ? "#c8af78" : "#e8912a"}
-                        fontSize={zoneMode === "16" ? "8" : "10"}
+                        fill="#111111"
+                        fontSize={zoneMode === "16" ? "10" : "11"}
                         fontFamily="var(--font-dm-mono), monospace"
-                        fontWeight="700"
-                        stroke="rgba(15,14,11,0.6)"
-                        strokeWidth="3"
+                        fontWeight="800"
+                        stroke="rgba(255,255,255,0.95)"
+                        strokeWidth="4"
                         paintOrder="stroke"
                       >
                         {z.shortName}

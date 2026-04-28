@@ -6,6 +6,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useReportStore } from "@/store/reportStore";
+import { useUser } from "@/hooks/useUser";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
 import { calculateZoneAreas, calculateCutAnalysis } from "@/lib/vastu/geometry";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
+  const { profile } = useUser();
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -107,7 +109,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const initialActiveFloorId = initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
   const initialActiveFloor = allFloors.find((floor) => floor.id === initialActiveFloorId) ?? allFloors[0];
 
-  const consultantName = "Rajesh Sharma"; // TODO: from profile store in Phase 2
+  const consultantName = profile?.full_name || profile?.email || "Consultant";
 
   // ── Report state ────────────────────────────────────────────────────────────
   const defaultReportName = useMemo(() => {
@@ -442,12 +444,16 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
       const project = projectStore.projects.find((p) => p.id === projectId);
 
+      // logo_url is stored as a base64 data URL — pass directly, no fetch needed
+      const consultantLogoBase64 = profile?.logo_url ?? null;
+
       const docData: ReportDocumentData = {
         reportName: reportName.trim(),
         projectName: canvasStore.projectName,
         clientName: canvasStore.clientName,
         propertyAddress: project?.propertyAddress ?? "",
         consultantName,
+        consultantLogoBase64,
         date: new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
         northDeg: canvasStore.northDeg,
         floors: floorPDFDataArray,
