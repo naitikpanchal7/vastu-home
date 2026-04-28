@@ -6,6 +6,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useReportStore } from "@/store/reportStore";
+import { useUser } from "@/hooks/useUser";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
 import { calculateZoneAreas, calculateCutAnalysis } from "@/lib/vastu/geometry";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
+  const { profile } = useUser();
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -107,7 +109,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const initialActiveFloorId = initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
   const initialActiveFloor = allFloors.find((floor) => floor.id === initialActiveFloorId) ?? allFloors[0];
 
-  const consultantName = "Rajesh Sharma"; // TODO: from profile store in Phase 2
+  const consultantName = profile?.full_name || profile?.email || "Consultant";
 
   // ── Report state ────────────────────────────────────────────────────────────
   const defaultReportName = useMemo(() => {
