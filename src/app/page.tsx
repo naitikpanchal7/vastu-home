@@ -409,7 +409,7 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section id="hero" style={{ paddingTop: "120px", paddingBottom: "80px", paddingLeft: "24px", paddingRight: "24px", background: `linear-gradient(180deg, rgba(154,120,32,0.04) 0%, transparent 60%)`, textAlign: "center" }}>
         <div style={{ maxWidth: "820px", margin: "0 auto" }}>
-          <Pill>Professional Vastu Platform · Phase 1 Beta</Pill>
+          <Pill>Professional Vastu Platform · For Consultants</Pill>
 
           <h1 style={{ fontFamily: "var(--font-cormorant)", fontSize: "clamp(40px, 6vw, 62px)", lineHeight: 1.08, color: T.text, marginTop: "24px", marginBottom: "18px", letterSpacing: "-0.5px" }}>
             Classical Vastu analysis,{" "}
@@ -422,8 +422,8 @@ export default function HomePage() {
           </p>
 
           <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap", marginBottom: "60px" }}>
-            <PrimaryBtn onClick={goSignUp} large>Start free — no account needed →</PrimaryBtn>
-            <GhostBtn onClick={goDashboard} teal>Open Dashboard</GhostBtn>
+            <PrimaryBtn onClick={goSignUp} large>Get started free →</PrimaryBtn>
+            <GhostBtn onClick={goLogin} teal>Log In</GhostBtn>
           </div>
 
           {/* Hero visual */}
@@ -643,12 +643,11 @@ export default function HomePage() {
             Start your first analysis today
           </h2>
           <p style={{ fontSize: "14px", color: T.text2, lineHeight: 1.7, marginBottom: "36px" }}>
-            No account required for Phase 1. Open the dashboard and upload a floor
-            plan in under two minutes.
+            Create a free account and upload your first floor plan in under two minutes.
           </p>
           <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
             <PrimaryBtn onClick={goSignUp} large>Get started free →</PrimaryBtn>
-            <GhostBtn onClick={goDashboard} teal>Open Dashboard</GhostBtn>
+            <GhostBtn onClick={goLogin} teal>Log In</GhostBtn>
           </div>
         </div>
       </Section>

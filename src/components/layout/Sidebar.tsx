@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/hooks/useUser";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: "⊞", href: "/dashboard", section: "Workspace", panel: null },
@@ -11,22 +13,27 @@ const NAV_ITEMS = [
   { label: "Analysis",  icon: "◉", href: null,         section: "Tools",     panel: "analysis" as const },
   { label: "Vastu AI",  icon: "◎", href: null,         section: null,        panel: "ai" as const },
   { label: "Reports",   icon: "◌", href: "/reports",   section: "Account",   panel: null },
-  { label: "Settings",  icon: "⚙", href: "#settings",  section: null,        panel: null },
+  { label: "Settings",  icon: "⚙", href: "/settings",  section: null,        panel: null },
 ];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [userName, setUserName] = useState("Rajesh Sharma");
-  const [editing, setEditing] = useState(false);
-  const [editVal, setEditVal] = useState("Rajesh Sharma");
-  const pathname = usePathname();
+  const pathname    = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router      = useRouter();
+  const { user, profile, subscription, loading } = useUser();
 
-  const saveUserName = () => {
-    setUserName(editVal.trim() || userName);
-    setEditing(false);
-  };
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Consultant";
+  const planLabel   = subscription?.plan
+    ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) + " Plan"
+    : "Starter Plan";
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+    router.refresh();
+  }
 
   let lastSection = "";
 
@@ -119,31 +126,27 @@ export default function Sidebar() {
       {/* User chip */}
       <div className="p-[9px] border-t border-[rgba(100,70,20,0.12)] flex-shrink-0 overflow-hidden">
         <div
-          className="flex items-center gap-2 px-2 py-[7px] bg-bg-3 rounded-[7px] cursor-pointer overflow-hidden"
-          onClick={() => { setEditing(true); setEditVal(userName); }}
+          className="flex items-center gap-2 px-2 py-[7px] bg-bg-3 rounded-[7px] cursor-pointer overflow-hidden hover:bg-bg-4 transition-colors duration-150"
+          onClick={() => router.push("/settings")}
         >
           <div className="w-[27px] h-[27px] bg-gradient-to-br from-gold-3 to-saffron rounded-full flex items-center justify-center font-serif text-[13px] font-semibold text-[#faf7f0] flex-shrink-0">
-            {userName.charAt(0).toUpperCase()}
+            {loading ? "…" : displayName.charAt(0).toUpperCase()}
           </div>
           <div className={cn("overflow-hidden transition-[opacity] duration-150 flex-1 min-w-0", collapsed && "opacity-0 w-0")}>
-            {editing ? (
-              <input
-                autoFocus
-                value={editVal}
-                onChange={(e) => setEditVal(e.target.value)}
-                onBlur={saveUserName}
-                onKeyDown={(e) => e.key === "Enter" && saveUserName()}
-                onClick={(e) => e.stopPropagation()}
-                className="text-[11px] text-vastu-text font-medium bg-transparent border-none border-b border-gold-3 outline-none font-sans w-full p-0"
-              />
-            ) : (
-              <div className="text-[11px] text-vastu-text font-medium flex items-center gap-1 whitespace-nowrap">
-                <span>{userName}</span>
-                <span className="text-[9px] text-vastu-text-3 opacity-50">✏</span>
-              </div>
-            )}
-            <div className="text-[9px] text-gold-3 whitespace-nowrap">Professional Plan</div>
+            <div className="text-[11px] text-vastu-text font-medium whitespace-nowrap truncate">
+              {loading ? "Loading…" : displayName}
+            </div>
+            <div className="text-[9px] text-gold-3 whitespace-nowrap">{planLabel}</div>
           </div>
+          {!collapsed && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleSignOut(); }}
+              title="Sign out"
+              className="text-[10px] text-vastu-text-3 hover:text-gold-2 transition-colors ml-auto flex-shrink-0 px-1"
+            >
+              ⏻
+            </button>
+          )}
         </div>
       </div>
     </nav>
