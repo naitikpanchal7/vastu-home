@@ -4,9 +4,17 @@ import { useState } from "react";
 import AnalysisPanel from "./AnalysisPanel";
 import NorthPanel from "./NorthPanel";
 import ChatPanel from "./ChatPanel";
+import SummaryPanel from "./SummaryPanel";
 import { cn } from "@/lib/utils";
 
-type Tab = "analysis" | "north" | "chatbot";
+type Tab = "analysis" | "north" | "chatbot" | "summary";
+
+const TAB_LABELS: Record<Tab, string> = {
+  analysis: "Analysis",
+  north: "North",
+  chatbot: "Vastu AI",
+  summary: "Summary",
+};
 
 interface RightPanelProps {
   onExport: () => void;
@@ -15,6 +23,9 @@ interface RightPanelProps {
 export default function RightPanel({ onExport }: RightPanelProps) {
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
+
+  const isSummary = activeTab === "summary";
+  const panelWidth = isSummary ? 520 : 290;
 
   return (
     <>
@@ -30,12 +41,13 @@ export default function RightPanel({ onExport }: RightPanelProps) {
 
       {open && (
         <div
-          className="w-[290px] bg-bg-2 border-l border-[rgba(100,70,20,0.20)] flex flex-col flex-shrink-0 overflow-hidden z-[5]"
+          className="bg-bg-2 border-l border-[rgba(100,70,20,0.20)] flex flex-col flex-shrink-0 overflow-hidden z-[5] transition-[width] duration-200 ease-in-out"
+          style={{ width: panelWidth }}
         >
           {/* Tab header */}
           <div className="flex items-center h-9 border-b border-[rgba(100,70,20,0.12)] flex-shrink-0 px-[10px]">
             <div className="flex flex-1">
-              {(["analysis", "north", "chatbot"] as Tab[]).map((tab) => (
+              {(["analysis", "north", "chatbot", "summary"] as Tab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -47,7 +59,7 @@ export default function RightPanel({ onExport }: RightPanelProps) {
                   )}
                   style={{ borderBottom: activeTab === tab ? "2px solid var(--gold)" : "2px solid transparent" }}
                 >
-                  {tab === "analysis" ? "Analysis" : tab === "north" ? "North" : "Vastu AI"}
+                  {TAB_LABELS[tab]}
                 </button>
               ))}
             </div>
@@ -61,10 +73,11 @@ export default function RightPanel({ onExport }: RightPanelProps) {
 
           {/* Pane content */}
           <div className={cn("flex-1 overflow-hidden", activeTab === "chatbot" ? "flex flex-col" : "overflow-y-auto")}>
-            <div className={cn("p-[11px] h-full", activeTab === "chatbot" && "flex flex-col")}>
+            <div className={cn("p-[11px] h-full", activeTab === "chatbot" && "flex flex-col", activeTab === "summary" && "p-4")}>
               {activeTab === "analysis" && <AnalysisPanel onExport={onExport} />}
               {activeTab === "north"    && <NorthPanel />}
-              {activeTab === "chatbot" && <ChatPanel />}
+              {activeTab === "chatbot"  && <ChatPanel />}
+              {activeTab === "summary"  && <SummaryPanel />}
             </div>
           </div>
         </div>

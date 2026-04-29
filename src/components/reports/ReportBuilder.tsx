@@ -441,6 +441,8 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         scaleUnit: cs.scale?.unit ?? "ft",
         selectedPages: activeSelection.pages,
         pageNotes: activeSelection.pageNotes,
+        consultantSummary: activeFloor.consultantSummary ?? "",
+        consultantActions: activeFloor.consultantActions ?? "",
       });
 
       const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
@@ -1301,7 +1303,7 @@ function FloorPageContent({ pageType, floor, snapshotUrl }: { pageType: ReportPa
   if (pageType === "16-zone" || pageType === "8-zone") return <ZoneTableContent pageType={pageType} floor={floor} />;
   if (pageType === "bar-graph-16" || pageType === "bar-graph-8") return <BarGraphContent pageType={pageType} floor={floor} />;
   if (pageType === "cut-analysis") return <CutAnalysisContent floor={floor} />;
-  if (pageType === "ai-summary" || pageType === "consultant-summary") return <SummaryContent pageType={pageType} />;
+  if (pageType === "ai-summary" || pageType === "consultant-summary") return <SummaryContent pageType={pageType} floor={floor} />;
   const meta = REPORT_PAGE_META[pageType];
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -1499,20 +1501,69 @@ function CutAnalysisContent({ floor }: { floor: Floor | null }) {
 }
 
 // ── Summary thumbnail ─────────────────────────────────────────────────────────
-function SummaryContent({ pageType }: { pageType: "ai-summary" | "consultant-summary" }) {
+function SummaryContent({ pageType, floor }: { pageType: "ai-summary" | "consultant-summary"; floor: Floor | null }) {
   const meta = REPORT_PAGE_META[pageType];
   const isAI = pageType === "ai-summary";
+
+  const summaryText = (!isAI && floor?.consultantSummary?.trim()) || "";
+  const actionLines = (!isAI && floor?.consultantActions)
+    ? floor.consultantActions.split("\n").map((l) => l.trim()).filter(Boolean)
+    : [];
+  const hasContent = summaryText.length > 0 || actionLines.length > 0;
+
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>{meta.label}</div>
       <div style={{ height: 0.5, background: PDF.border, marginBottom: 5 }} />
-      {Array.from({ length: isAI ? 8 : 5 }).map((_, i) => (
-        <div key={i} style={{ height: 3.5, background: i === 0 ? "rgba(184,146,42,0.18)" : PDF.bg2, borderRadius: 1, marginBottom: 3, width: i % 3 === 2 ? "68%" : "100%" }} />
-      ))}
+
+      {/* Recommendations section */}
+      <div style={{ fontSize: 4, color: PDF.gold, fontFamily: "sans-serif", marginBottom: 2, letterSpacing: 0.5, textTransform: "uppercase" }}>
+        Consultant Recommendations
+      </div>
+      {summaryText ? (
+        <div style={{ fontSize: 4, color: PDF.text, fontFamily: "sans-serif", lineHeight: 1.6, marginBottom: 6, overflow: "hidden", maxHeight: 28 }}>
+          {summaryText}
+        </div>
+      ) : (
+        Array.from({ length: isAI ? 8 : 4 }).map((_, i) => (
+          <div key={i} style={{ height: 3, background: i === 0 ? "rgba(184,146,42,0.18)" : PDF.bg2, borderRadius: 1, marginBottom: 2.5, width: i % 3 === 2 ? "68%" : "100%" }} />
+        ))
+      )}
+
+      {/* Recommended actions section */}
       {!isAI && (
-        <div style={{ marginTop: 8, padding: "5px 6px", border: `0.5px solid ${PDF.border}`, borderRadius: 2 }}>
-          <div style={{ height: 3.5, background: PDF.bg2, borderRadius: 1, marginBottom: 3 }} />
-          <div style={{ height: 3.5, background: PDF.bg2, borderRadius: 1, width: "60%" }} />
+        <div style={{ marginTop: 4, padding: "4px 5px", border: `0.5px solid ${PDF.border}`, borderRadius: 2 }}>
+          <div style={{ fontSize: 4, color: PDF.gold, fontFamily: "sans-serif", marginBottom: 3, letterSpacing: 0.5, textTransform: "uppercase" }}>
+            Recommended Actions
+          </div>
+          {actionLines.length > 0 ? (
+            actionLines.slice(0, 4).map((line, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 3, marginBottom: 2.5 }}>
+                <div style={{ width: 3, height: 3, background: PDF.gold, borderRadius: "50%", flexShrink: 0, marginTop: 1 }} />
+                <div style={{ fontSize: 4, color: PDF.text, fontFamily: "sans-serif", lineHeight: 1.4, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", maxWidth: "90%" }}>
+                  {line}
+                </div>
+              </div>
+            ))
+          ) : (
+            [1, 2, 3].map((n) => (
+              <div key={n} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2.5 }}>
+                <div style={{ width: 3, height: 3, background: PDF.gold, borderRadius: "50%", flexShrink: 0 }} />
+                <div style={{ flex: 1, height: 2, background: PDF.bg2, borderRadius: 1 }} />
+              </div>
+            ))
+          )}
+          {actionLines.length > 4 && (
+            <div style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", marginTop: 1 }}>
+              +{actionLines.length - 4} more
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isAI && !hasContent && (
+        <div style={{ marginTop: 4, fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", fontStyle: "italic" }}>
+          Write in the Summary panel →
         </div>
       )}
     </div>

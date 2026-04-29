@@ -41,6 +41,8 @@ function makeFloor(name: string, order: number, base?: Partial<CanvasState>): Fl
     canvasState: { ...BLANK_CANVAS_STATE, ...base },
     floorPlanImage: null,
     notes: "",
+    consultantSummary: "",
+    consultantActions: "",
   };
 }
 
@@ -139,6 +141,12 @@ interface CanvasStore {
   notes: string;
   setNotes: (n: string) => void;
 
+  // Consultant summary (per floor)
+  consultantSummary: string;
+  consultantActions: string;
+  setConsultantSummary: (s: string) => void;
+  setConsultantActions: (s: string) => void;
+
   // Undo stack
   undoStack: UndoAction[];
   pushUndo: (action: UndoAction) => void;
@@ -196,6 +204,8 @@ export const useCanvasStore = create<CanvasStore>()(
       zoneAnalysis: [],
       floorPlanImage: null,
       notes: "",
+      consultantSummary: "",
+      consultantActions: "",
       undoStack: [],
 
       // Floor defaults
@@ -213,6 +223,8 @@ export const useCanvasStore = create<CanvasStore>()(
                 canvasState: s.getCanvasState(),
                 floorPlanImage: s.floorPlanImage,
                 notes: s.notes,
+                consultantSummary: s.consultantSummary,
+                consultantActions: s.consultantActions,
                 zoomLevel: s.zoomLevel,
                 panX: s.panX,
                 panY: s.panY,
@@ -228,7 +240,7 @@ export const useCanvasStore = create<CanvasStore>()(
         // Pack current floor state (including zoom/pan) before switching
         const packedFloors = s.floors.map((f) =>
           f.id === s.currentFloorId
-            ? { ...f, canvasState: s.getCanvasState(), floorPlanImage: s.floorPlanImage, notes: s.notes, zoomLevel: s.zoomLevel, panX: s.panX, panY: s.panY }
+            ? { ...f, canvasState: s.getCanvasState(), floorPlanImage: s.floorPlanImage, notes: s.notes, consultantSummary: s.consultantSummary, consultantActions: s.consultantActions, zoomLevel: s.zoomLevel, panX: s.panX, panY: s.panY }
             : f
         );
 
@@ -251,6 +263,8 @@ export const useCanvasStore = create<CanvasStore>()(
           facingDirection: null,
           floorPlanImage: null,
           notes: "",
+          consultantSummary: "",
+          consultantActions: "",
           zoomLevel: 100,
           panX: 0,
           panY: 0,
@@ -266,7 +280,7 @@ export const useCanvasStore = create<CanvasStore>()(
         // Pack current floor state including zoom/pan
         const packedFloors = s.floors.map((f) =>
           f.id === s.currentFloorId
-            ? { ...f, canvasState: s.getCanvasState(), floorPlanImage: s.floorPlanImage, notes: s.notes, zoomLevel: s.zoomLevel, panX: s.panX, panY: s.panY }
+            ? { ...f, canvasState: s.getCanvasState(), floorPlanImage: s.floorPlanImage, notes: s.notes, consultantSummary: s.consultantSummary, consultantActions: s.consultantActions, zoomLevel: s.zoomLevel, panX: s.panX, panY: s.panY }
             : f
         );
 
@@ -286,6 +300,8 @@ export const useCanvasStore = create<CanvasStore>()(
           facingDirection: target.canvasState.facingDirection ?? null,
           floorPlanImage: target.floorPlanImage ?? null,
           notes: target.notes ?? "",
+          consultantSummary: target.consultantSummary ?? "",
+          consultantActions: target.consultantActions ?? "",
           zoomLevel: target.zoomLevel ?? 100,
           panX: target.panX ?? 0,
           panY: target.panY ?? 0,
@@ -319,6 +335,8 @@ export const useCanvasStore = create<CanvasStore>()(
             facingDirection: next.canvasState.facingDirection ?? null,
             floorPlanImage: next.floorPlanImage ?? null,
             notes: next.notes ?? "",
+            consultantSummary: next.consultantSummary ?? "",
+            consultantActions: next.consultantActions ?? "",
             zoomLevel: next.zoomLevel ?? 100,
             panX: next.panX ?? 0,
             panY: next.panY ?? 0,
@@ -477,6 +495,8 @@ export const useCanvasStore = create<CanvasStore>()(
       setFloorPlanImage: (src) => set({ floorPlanImage: src }),
 
       setNotes: (n) => set({ notes: n }),
+      setConsultantSummary: (s) => set({ consultantSummary: s }),
+      setConsultantActions: (s) => set({ consultantActions: s }),
 
       // ── Undo ──────────────────────────────────────────────────────────────
 
@@ -510,6 +530,8 @@ export const useCanvasStore = create<CanvasStore>()(
               canvasState: { ...BLANK_CANVAS_STATE, ...state } as CanvasState,
               floorPlanImage: null,
               notes: "",
+              consultantSummary: "",
+              consultantActions: "",
             },
           ];
         }
@@ -536,6 +558,8 @@ export const useCanvasStore = create<CanvasStore>()(
           scale: cs.scale ?? null,
           floorPlanImage: first.floorPlanImage ?? null,
           notes: first.notes ?? "",
+          consultantSummary: first.consultantSummary ?? "",
+          consultantActions: first.consultantActions ?? "",
           zoomLevel: first.zoomLevel ?? 100,
           panX: first.panX ?? 0,
           panY: first.panY ?? 0,

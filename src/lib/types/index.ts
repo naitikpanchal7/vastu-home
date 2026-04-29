@@ -48,6 +48,8 @@ export interface Floor {
   canvasState: CanvasState;
   floorPlanImage?: string | null;
   notes?: string;
+  consultantSummary?: string;
+  consultantActions?: string;
   // Per-floor view state — each floor remembers its own zoom and pan position
   zoomLevel?: number;
   panX?: number;
