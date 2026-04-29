@@ -26,6 +26,7 @@ import {
 import type { FloorPDFData, ReportDocumentData } from "./ReportDocument";
 import { blobUrlToBase64, generateAndDownloadPDF, generatePDFDataUrl } from "./ReportDocument";
 import { generateAllSnapshots } from "@/lib/vastu/canvasSnapshot";
+import type { FloorSnapshots } from "@/lib/vastu/canvasSnapshot";
 
 // ── Status colors / helpers ────────────────────────────────────────────────────
 const PAGE_GROUP_ORDER = ["Floor Plan", "Analysis", "Summary"];
@@ -203,6 +204,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const [activeFloorId, setActiveFloorId] = useState<string>(initialActiveFloorId);
   // Which page's notes are expanded in preview
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<"visual" | "list">("visual");
 
   const activeFloor = useMemo(
     () => allFloors.find((floor) => floor.id === activeFloorId) ?? allFloors[0] ?? null,
@@ -678,10 +680,31 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         {/* ── RIGHT: Preview panel ── */}
         <div className="flex-1 bg-bg overflow-y-auto">
           <div className="px-6 py-4 max-w-[780px] mx-auto">
-            <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1.5px] mb-4">
-              Report Preview — {activeFloor ? activeFloor.name : "No floor"} — {totalPageCount} page{totalPageCount !== 1 ? "s" : ""}
+
+            {/* Header: title + visual/list toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1.5px]">
+                Report Preview — {activeFloor ? activeFloor.name : "No floor"} — {totalPageCount} page{totalPageCount !== 1 ? "s" : ""}
+              </div>
+              <div className="flex gap-[2px] bg-bg-3 rounded-[5px] p-[3px] border border-[rgba(100,70,20,0.15)]">
+                {(["visual", "list"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setPreviewMode(mode)}
+                    className={cn(
+                      "text-[8px] px-[10px] py-[3px] rounded-[3px] transition-all cursor-pointer font-sans",
+                      previewMode === mode
+                        ? "bg-[rgba(100,70,20,0.2)] text-gold-2"
+                        : "text-vastu-text-3 hover:text-vastu-text-2"
+                    )}
+                  >
+                    {mode === "visual" ? "⊡ Visual" : "≡ List"}
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* Supplementary pages — shown in both modes */}
             <div className="bg-bg-3 border border-[rgba(100,70,20,0.15)] rounded-[8px] p-4 mb-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
@@ -716,7 +739,6 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                 }}
                 className="hidden"
               />
-
               {attachments.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   {attachments.map((attachment) => (
@@ -744,122 +766,107 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
               )}
             </div>
 
-            {/* Cover page card */}
-            <PagePreviewCard
-              pageNum={1}
-              label="Cover Page"
-              floorName=""
-              color="gold"
-            >
-              <div className="flex flex-col gap-1">
-                <div className="font-serif text-[13px] text-gold-2 truncate">{reportName || "Untitled Report"}</div>
-                <div className="text-[9px] text-vastu-text-3">{canvasStore.projectName}</div>
-                <div className="text-[9px] text-vastu-text-3">{canvasStore.clientName || "—"}</div>
-                {activeFloor && <div className="text-[9px] text-vastu-text-3">{activeFloor.name} report</div>}
-                <div className="text-[8px] text-vastu-text-3 mt-1">
-                  {totalPageCount} pages · N: {canvasStore.northDeg.toFixed(1)}°
+            {previewMode === "visual" ? (
+              /* ── Visual mode: A4 page thumbnails ── */
+              reportPagePlan.length === 0 && activePages.length === 0 ? (
+                <div className="text-center py-12 text-vastu-text-3 text-[11px]">
+                  Enable floors and select pages on the left to preview your report.
                 </div>
-              </div>
-            </PagePreviewCard>
-
-            {/* Table of Contents card (always page 2) */}
-            <PagePreviewCard
-              pageNum={2}
-              label="Table of Contents"
-              floorName=""
-              color="gold"
-            >
-              <div className="flex flex-col gap-1">
-                <p className="text-[9px] text-vastu-text-3 leading-relaxed">Auto-generated — lists all selected pages with accurate page numbers.</p>
-                <div className="text-[8px] text-vastu-text-3 mt-1">{reportPagePlan.length} content pages listed</div>
-              </div>
-            </PagePreviewCard>
-
-            {/* Per-page cards */}
-            {reportPagePlan.map((entry) => {
-              if (entry.kind === "attachment") {
-                return (
-                  <PagePreviewCard
-                    key={entry.id}
-                    pageNum={entry.pageNum}
-                    label="Supplementary Insert"
-                    floorName=""
-                    color={entry.position === "after-intro" ? "gold" : "blue"}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="text-[10px] text-vastu-text font-medium truncate">{entry.name}</div>
-                      <div className="text-[9px] text-vastu-text-3">{entry.position === "after-intro" ? "After intro" : "Before summary"}</div>
+              ) : (
+                <VisualPageGrid
+                  reportName={reportName}
+                  projectName={canvasStore.projectName}
+                  clientName={canvasStore.clientName}
+                  consultantName={consultantName}
+                  northDeg={canvasStore.northDeg}
+                  totalPageCount={totalPageCount}
+                  reportPagePlan={reportPagePlan}
+                  activeFloor={activeFloor}
+                />
+              )
+            ) : (
+              /* ── List mode: page metadata cards ── */
+              <>
+                <PagePreviewCard pageNum={1} label="Cover Page" floorName="" color="gold">
+                  <div className="flex flex-col gap-1">
+                    <div className="font-serif text-[13px] text-gold-2 truncate">{reportName || "Untitled Report"}</div>
+                    <div className="text-[9px] text-vastu-text-3">{canvasStore.projectName}</div>
+                    <div className="text-[9px] text-vastu-text-3">{canvasStore.clientName || "—"}</div>
+                    {activeFloor && <div className="text-[9px] text-vastu-text-3">{activeFloor.name} report</div>}
+                    <div className="text-[8px] text-vastu-text-3 mt-1">
+                      {totalPageCount} pages · N: {canvasStore.northDeg.toFixed(1)}°
                     </div>
-                  </PagePreviewCard>
-                );
-              }
-
-              const floor = activeFloor ?? allFloors.find((f) => `${f.id}-${entry.pageType}` === entry.id);
-              const sel = floor ? floorSelections[floor.id] : undefined;
-              const noteKey = entry.id;
-              const noteExpanded = expandedNotes === noteKey;
-              const currentNote = sel?.pageNotes[entry.pageType] ?? "";
-              const hasCuts = floor?.canvasState.cuts.length ? floor.canvasState.cuts.length > 0 : false;
-              const meta = REPORT_PAGE_META[entry.pageType];
-
-              return (
-                <PagePreviewCard
-                  key={entry.id}
-                  pageNum={entry.pageNum}
-                  label={meta.label}
-                  floorName={floor?.name ?? activeFloor?.name ?? ""}
-                  color={meta.group === "Analysis" ? "blue" : "neutral"}
-                >
-                  <div className="flex flex-col gap-2">
-                    <p className="text-[9px] text-vastu-text-3 leading-relaxed">{meta.description}</p>
-
-                    {/* Inline mini-preview for analysis pages */}
-                    {entry.pageType === "16-zone" && floor && (
-                      <MiniZonePreview floor={floor} />
-                    )}
-                    {(entry.pageType === "bar-graph-16" || entry.pageType === "bar-graph-8") && floor && (
-                      <MiniBarPreview floor={floor} />
-                    )}
-                    {(entry.pageType === "cut-analysis" || entry.pageType === "plan-cuts-only") && (
-                      <div className={cn("text-[8px] px-2 py-1 rounded-[3px]", hasCuts ? "bg-[rgba(200,60,40,0.1)] text-red-400" : "bg-[rgba(100,70,20,0.07)] text-vastu-text-3")}> 
-                        {hasCuts ? `${floor?.canvasState.cuts.length} cut${(floor?.canvasState.cuts.length ?? 0) > 1 ? "s" : ""} detected` : "No cuts — page will show empty state"}
-                      </div>
-                    )}
-
-                    {/* Notes toggle */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        onClick={() => setExpandedNotes(noteExpanded ? null : noteKey)}
-                        className="text-[8px] text-vastu-text-3 hover:text-gold-2 cursor-pointer bg-transparent border-none flex items-center gap-1 transition-colors"
-                      >
-                        <span>{noteExpanded ? "▾" : "▸"}</span>
-                        {currentNote ? "Edit notes" : "Add notes for this page"}
-                      </button>
-                      {currentNote && (
-                        <span className="text-[7px] px-[5px] py-[1px] rounded-full bg-[rgba(100,70,20,0.15)] text-gold-3">
-                          has notes
-                        </span>
-                      )}
-                    </div>
-
-                    {noteExpanded && (
-                      <textarea
-                        value={currentNote}
-                        onChange={(e) => setPageNote(floor?.id ?? activeFloor?.id ?? "", entry.pageType, e.target.value)}
-                        placeholder="Optional page footer notes…"
-                        rows={2}
-                        className="w-full px-2 py-[5px] bg-bg-4 border border-[rgba(100,70,20,0.15)] rounded-[4px] text-vastu-text-2 font-sans text-[10px] outline-none resize-none focus:border-gold-3 leading-relaxed"
-                      />
-                    )}
                   </div>
                 </PagePreviewCard>
-              );
-            })}
 
-            {reportPagePlan.length === 0 && (
-              <div className="text-center py-12 text-vastu-text-3 text-[11px]">
-                Enable floors, select pages on the left, or add supplementary files to preview your report.
-              </div>
+                <PagePreviewCard pageNum={2} label="Table of Contents" floorName="" color="gold">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[9px] text-vastu-text-3 leading-relaxed">Auto-generated — lists all selected pages with accurate page numbers.</p>
+                    <div className="text-[8px] text-vastu-text-3 mt-1">{reportPagePlan.length} content pages listed</div>
+                  </div>
+                </PagePreviewCard>
+
+                {reportPagePlan.map((entry) => {
+                  if (entry.kind === "attachment") {
+                    return (
+                      <PagePreviewCard key={entry.id} pageNum={entry.pageNum} label="Supplementary Insert" floorName="" color={entry.position === "after-intro" ? "gold" : "blue"}>
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[10px] text-vastu-text font-medium truncate">{entry.name}</div>
+                          <div className="text-[9px] text-vastu-text-3">{entry.position === "after-intro" ? "After intro" : "Before summary"}</div>
+                        </div>
+                      </PagePreviewCard>
+                    );
+                  }
+                  const floor = activeFloor ?? allFloors.find((f) => `${f.id}-${entry.pageType}` === entry.id);
+                  const sel = floor ? floorSelections[floor.id] : undefined;
+                  const noteKey = entry.id;
+                  const noteExpanded = expandedNotes === noteKey;
+                  const currentNote = sel?.pageNotes[entry.pageType] ?? "";
+                  const hasCuts = floor?.canvasState.cuts.length ? floor.canvasState.cuts.length > 0 : false;
+                  const meta = REPORT_PAGE_META[entry.pageType];
+                  return (
+                    <PagePreviewCard key={entry.id} pageNum={entry.pageNum} label={meta.label} floorName={floor?.name ?? activeFloor?.name ?? ""} color={meta.group === "Analysis" ? "blue" : "neutral"}>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-[9px] text-vastu-text-3 leading-relaxed">{meta.description}</p>
+                        {entry.pageType === "16-zone" && floor && <MiniZonePreview floor={floor} />}
+                        {(entry.pageType === "bar-graph-16" || entry.pageType === "bar-graph-8") && floor && <MiniBarPreview floor={floor} />}
+                        {(entry.pageType === "cut-analysis" || entry.pageType === "plan-cuts-only") && (
+                          <div className={cn("text-[8px] px-2 py-1 rounded-[3px]", hasCuts ? "bg-[rgba(200,60,40,0.1)] text-red-400" : "bg-[rgba(100,70,20,0.07)] text-vastu-text-3")}>
+                            {hasCuts ? `${floor?.canvasState.cuts.length} cut${(floor?.canvasState.cuts.length ?? 0) > 1 ? "s" : ""} detected` : "No cuts — page will show empty state"}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <button
+                            onClick={() => setExpandedNotes(noteExpanded ? null : noteKey)}
+                            className="text-[8px] text-vastu-text-3 hover:text-gold-2 cursor-pointer bg-transparent border-none flex items-center gap-1 transition-colors"
+                          >
+                            <span>{noteExpanded ? "▾" : "▸"}</span>
+                            {currentNote ? "Edit notes" : "Add notes for this page"}
+                          </button>
+                          {currentNote && (
+                            <span className="text-[7px] px-[5px] py-[1px] rounded-full bg-[rgba(100,70,20,0.15)] text-gold-3">has notes</span>
+                          )}
+                        </div>
+                        {noteExpanded && (
+                          <textarea
+                            value={currentNote}
+                            onChange={(e) => setPageNote(floor?.id ?? activeFloor?.id ?? "", entry.pageType, e.target.value)}
+                            placeholder="Optional page footer notes…"
+                            rows={2}
+                            className="w-full px-2 py-[5px] bg-bg-4 border border-[rgba(100,70,20,0.15)] rounded-[4px] text-vastu-text-2 font-sans text-[10px] outline-none resize-none focus:border-gold-3 leading-relaxed"
+                          />
+                        )}
+                      </div>
+                    </PagePreviewCard>
+                  );
+                })}
+
+                {reportPagePlan.length === 0 && (
+                  <div className="text-center py-12 text-vastu-text-3 text-[11px]">
+                    Enable floors, select pages on the left, or add supplementary files to preview your report.
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1064,6 +1071,407 @@ function MiniBarPreview({ floor }: { floor: Floor }) {
       <span className="text-amber-400">{warn} warning</span>
       {crit > 0 && <span className="text-red-400">{crit} critical</span>}
       <span className="text-vastu-text-3">· ideal 6.25% per zone</span>
+    </div>
+  );
+}
+
+// ── PDF colour palette (matches ReportDocument.tsx) ───────────────────────────
+const PDF = {
+  bg:     "#fdfaf5",
+  bg2:    "#f5f0e8",
+  gold:   "#b8922a",
+  gDark:  "#8a6a1a",
+  text:   "#1a1410",
+  text2:  "#4a3a28",
+  text3:  "#8a7a60",
+  border: "#d4bc88",
+  red:    "#e05050",
+  amber:  "#c8a028",
+} as const;
+
+// ── Visual page grid ──────────────────────────────────────────────────────────
+type PagePlanEntry =
+  | { kind: "attachment"; id: string; name: string; position: ReportSupplementaryPosition; pageNum: number }
+  | { kind: "floor"; id: string; pageType: ReportPageType; label: string; pageNum: number };
+
+// Maps ReportPageType → the correct FloorSnapshots key
+const SNAPSHOT_KEY_MAP: Partial<Record<ReportPageType, keyof FloorSnapshots>> = {
+  "plan-only":          "planOnly",
+  "plan-with-brahma":   "planBrahma",
+  "plan-with-chakra":   "planChakra",
+  "plan-perimeter-only":"planPerimeter",
+  "plan-cuts-only":     "planCutsOnly",
+  "plan-perimeter-cuts":"planPerimeterCuts",
+  "plan-full":          "planFull",
+  "16zone-lines":       "zoneLines16",
+  "8zone-lines":        "zoneLines8",
+  "panchabhuta":        "panchabhuta",
+};
+
+function VisualPageGrid({
+  reportName, projectName, clientName, consultantName, northDeg,
+  totalPageCount, reportPagePlan, activeFloor,
+}: {
+  reportName: string;
+  projectName: string;
+  clientName: string;
+  consultantName: string;
+  northDeg: number;
+  totalPageCount: number;
+  reportPagePlan: PagePlanEntry[];
+  activeFloor: Floor | null;
+}) {
+  const [snapshots, setSnapshots] = useState<FloorSnapshots | null>(null);
+  const [snapsLoading, setSnapsLoading] = useState(false);
+
+  // Generate real canvas snapshots whenever the active floor changes
+  useEffect(() => {
+    if (!activeFloor) { setSnapshots(null); return; }
+    let cancelled = false;
+    setSnapsLoading(true);
+    setSnapshots(null);
+
+    (async () => {
+      const imageBase64 = activeFloor.floorPlanImage
+        ? await blobUrlToBase64(activeFloor.floorPlanImage).catch(() => null)
+        : null;
+      const snaps = await generateAllSnapshots(activeFloor, imageBase64);
+      if (!cancelled) { setSnapshots(snaps); setSnapsLoading(false); }
+    })().catch(() => setSnapsLoading(false));
+
+    return () => { cancelled = true; };
+  }, [activeFloor]);
+
+  return (
+    <div>
+      {snapsLoading && (
+        <div className="flex items-center gap-2 mb-4 text-[9px] text-vastu-text-3 font-mono">
+          <span className="animate-spin inline-block">⟳</span>
+          Rendering canvas snapshots…
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-5">
+        {/* Cover */}
+        <PageThumbnailShell pageNum={1} label="Cover Page">
+          <CoverPageContent
+            reportName={reportName} projectName={projectName}
+            clientName={clientName} consultantName={consultantName}
+            northDeg={northDeg} totalPageCount={totalPageCount}
+          />
+        </PageThumbnailShell>
+
+        {/* TOC */}
+        <PageThumbnailShell pageNum={2} label="Table of Contents">
+          <TOCPageContent reportPagePlan={reportPagePlan} />
+        </PageThumbnailShell>
+
+        {/* Content pages */}
+        {reportPagePlan.map((entry) => {
+          if (entry.kind === "attachment") {
+            return (
+              <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={entry.name}>
+                <AttachmentPageContent name={entry.name} />
+              </PageThumbnailShell>
+            );
+          }
+          const snapKey = SNAPSHOT_KEY_MAP[entry.pageType];
+          const snapshotUrl = snapKey && snapshots ? snapshots[snapKey] : null;
+          return (
+            <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={REPORT_PAGE_META[entry.pageType].label}>
+              <FloorPageContent pageType={entry.pageType} floor={activeFloor} snapshotUrl={snapshotUrl ?? null} />
+            </PageThumbnailShell>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── A4-proportioned thumbnail shell ──────────────────────────────────────────
+function PageThumbnailShell({ pageNum, label, children }: { pageNum: number; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {/* A4 aspect ratio (210:297 ≈ 1:1.414) */}
+      <div style={{ position: "relative", paddingTop: "141.4%" }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: PDF.bg, border: `1px solid ${PDF.border}`,
+          borderRadius: 4, overflow: "hidden",
+          display: "flex", flexDirection: "column",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+        }}>
+          {/* Gold top bar */}
+          <div style={{ height: 4, background: PDF.gold, flexShrink: 0 }} />
+          {/* Content area */}
+          <div style={{ flex: 1, padding: "8px 9px 18px", overflow: "hidden", position: "relative" }}>
+            {children}
+          </div>
+          {/* Footer */}
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, height: 16,
+            borderTop: `0.5px solid ${PDF.border}`,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "0 9px", background: PDF.bg,
+          }}>
+            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>vastu@home</span>
+            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "monospace" }}>{pageNum}</span>
+          </div>
+        </div>
+      </div>
+      {/* Label below */}
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[8px] px-[5px] py-[1px] rounded-[3px]"
+          style={{ background: "rgba(184,146,42,0.13)", color: "#c8af78", border: "1px solid rgba(184,146,42,0.22)" }}>
+          {pageNum}
+        </span>
+        <span className="text-[9px] text-vastu-text-2 truncate">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Cover page content ────────────────────────────────────────────────────────
+function CoverPageContent({ reportName, projectName, clientName, consultantName, northDeg, totalPageCount }: {
+  reportName: string; projectName: string; clientName: string;
+  consultantName: string; northDeg: number; totalPageCount: number;
+}) {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Logo placeholder */}
+      <div style={{ width: 22, height: 14, background: PDF.bg2, border: `1px solid ${PDF.border}`, borderRadius: 2, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "sans-serif" }}>LOGO</span>
+      </div>
+      <div style={{ height: 1.5, background: PDF.gold, marginBottom: 5 }} />
+      <div style={{ fontSize: 4.5, color: PDF.text3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4, fontFamily: "sans-serif" }}>
+        Vastu Analysis Report
+      </div>
+      <div style={{ fontSize: 9, color: PDF.gDark, fontFamily: "serif", fontWeight: "bold", lineHeight: 1.2, marginBottom: 3 }}>
+        {reportName || "Untitled Report"}
+      </div>
+      <div style={{ height: 0.5, background: PDF.border, margin: "4px 0" }} />
+      <div style={{ fontSize: 5.5, color: PDF.text2, fontFamily: "sans-serif", lineHeight: 1.9 }}>
+        <div>{projectName}</div>
+        <div style={{ color: PDF.text3 }}>{clientName || "—"}</div>
+        <div style={{ color: PDF.text3 }}>{consultantName}</div>
+      </div>
+      <div style={{ flex: 1 }} />
+      <div style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "monospace" }}>
+        N: {northDeg.toFixed(1)}° · {totalPageCount} pages
+      </div>
+    </div>
+  );
+}
+
+// ── TOC content ───────────────────────────────────────────────────────────────
+function TOCPageContent({ reportPagePlan }: { reportPagePlan: PagePlanEntry[] }) {
+  const entries = [
+    { label: "Cover Page", pageNum: 1 },
+    { label: "Table of Contents", pageNum: 2 },
+    ...reportPagePlan.slice(0, 10).map((e) => ({
+      label: e.kind === "attachment" ? (e.name ?? "Supplementary") : REPORT_PAGE_META[e.pageType].label,
+      pageNum: e.pageNum,
+    })),
+  ];
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5.5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 4 }}>
+        Table of Contents
+      </div>
+      <div style={{ height: 1, background: PDF.gold, marginBottom: 5 }} />
+      {entries.map((e, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3.5 }}>
+          <span style={{ fontSize: 5, color: PDF.text2, fontFamily: "sans-serif", flex: 1, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", paddingRight: 4 }}>
+            {e.label}
+          </span>
+          <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "monospace", flexShrink: 0 }}>{e.pageNum}</span>
+        </div>
+      ))}
+      {reportPagePlan.length > 10 && (
+        <div style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "sans-serif", marginTop: 2 }}>+{reportPagePlan.length - 10} more…</div>
+      )}
+    </div>
+  );
+}
+
+// ── Floor page dispatcher ─────────────────────────────────────────────────────
+const PLAN_PAGES = new Set(["plan-only","plan-with-brahma","plan-with-chakra","plan-perimeter-only","plan-cuts-only","plan-perimeter-cuts","plan-full","16zone-lines","8zone-lines","panchabhuta"]);
+
+function FloorPageContent({ pageType, floor, snapshotUrl }: { pageType: ReportPageType; floor: Floor | null; snapshotUrl: string | null }) {
+  if (PLAN_PAGES.has(pageType)) return <PlanPageContent pageType={pageType} floor={floor} snapshotUrl={snapshotUrl} />;
+  if (pageType === "16-zone" || pageType === "8-zone") return <ZoneTableContent pageType={pageType} floor={floor} />;
+  if (pageType === "bar-graph-16" || pageType === "bar-graph-8") return <BarGraphContent pageType={pageType} floor={floor} />;
+  if (pageType === "cut-analysis") return <CutAnalysisContent floor={floor} />;
+  if (pageType === "ai-summary" || pageType === "consultant-summary") return <SummaryContent pageType={pageType} />;
+  const meta = REPORT_PAGE_META[pageType];
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>{meta.label}</div>
+      <div style={{ height: 0.5, background: PDF.border, marginBottom: 4 }} />
+      <div style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>{meta.description}</div>
+    </div>
+  );
+}
+
+// ── Plan page thumbnail — shows the real rendered canvas snapshot ─────────────
+function PlanPageContent({ pageType, floor, snapshotUrl }: { pageType: ReportPageType; floor: Floor | null; snapshotUrl: string | null }) {
+  const meta = REPORT_PAGE_META[pageType];
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>{meta.label}</div>
+      <div style={{ height: 0.5, background: PDF.border, marginBottom: 4 }} />
+      {/* Canvas snapshot image — fills the available space */}
+      <div style={{ flex: 1, background: PDF.bg2, border: `1px solid ${PDF.border}`, borderRadius: 2, overflow: "hidden", marginBottom: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {snapshotUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={snapshotUrl} alt={meta.label} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+        ) : (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 14, color: PDF.border, lineHeight: 1 }}>⟳</div>
+            <div style={{ fontSize: 4.5, color: PDF.text3, marginTop: 2, fontFamily: "sans-serif" }}>
+              {floor?.canvasState.perimeterPoints.length ?? 0 >= 3 ? "Rendering…" : "No perimeter"}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "sans-serif" }}>{meta.description}</div>
+    </div>
+  );
+}
+
+// ── Zone table thumbnail ──────────────────────────────────────────────────────
+function ZoneTableContent({ pageType, floor }: { pageType: "16-zone" | "8-zone"; floor: Floor | null }) {
+  const meta = REPORT_PAGE_META[pageType];
+  const count = pageType === "16-zone" ? 16 : 8;
+  const allRows = useMemo(() => (floor ? buildZoneRows(floor) : []), [floor]);
+  const rows = count === 8 ? allRows.filter((_, i) => i % 2 === 0) : allRows;
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>{meta.label}</div>
+      <div style={{ height: 0.5, background: PDF.border, marginBottom: 4 }} />
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2, paddingBottom: 2, borderBottom: `0.5px solid ${PDF.border}` }}>
+        <span style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", letterSpacing: 0.5 }}>ZONE</span>
+        <span style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", letterSpacing: 0.5 }}>%</span>
+      </div>
+      {rows.length > 0 ? rows.slice(0, 10).map(({ zone, pct, status }) => (
+        <div key={zone.shortName} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
+          <div style={{ width: 4, height: 4, borderRadius: 1, background: zone.color, flexShrink: 0 }} />
+          <span style={{ fontSize: 4, color: PDF.text2, fontFamily: "monospace", flexShrink: 0, width: 13 }}>{zone.shortName}</span>
+          <div style={{ flex: 1, height: 3, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.min((pct / 12.5) * 100, 100)}%`, background: status === "good" ? zone.color : status === "critical" ? PDF.red : PDF.amber, borderRadius: 1 }} />
+          </div>
+          <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", flexShrink: 0, width: 14, textAlign: "right" }}>{pct.toFixed(1)}%</span>
+        </div>
+      )) : Array.from({ length: Math.min(count, 10) }).map((_, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
+          <div style={{ width: 4, height: 4, borderRadius: 1, background: `hsl(${i * (360 / count)},40%,55%)`, flexShrink: 0 }} />
+          <div style={{ width: 13, height: 3, background: PDF.bg2, borderRadius: 1 }} />
+          <div style={{ flex: 1, height: 3, background: PDF.bg2, borderRadius: 1 }}>
+            <div style={{ height: "100%", width: `${50 + Math.sin(i) * 30}%`, background: PDF.border, borderRadius: 1 }} />
+          </div>
+        </div>
+      ))}
+      {rows.length > 10 && <div style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", marginTop: 2 }}>+{rows.length - 10} more zones</div>}
+    </div>
+  );
+}
+
+// ── Bar graph thumbnail ───────────────────────────────────────────────────────
+function BarGraphContent({ pageType, floor }: { pageType: "bar-graph-16" | "bar-graph-8"; floor: Floor | null }) {
+  const meta = REPORT_PAGE_META[pageType];
+  const count = pageType === "bar-graph-16" ? 16 : 8;
+  const allRows = useMemo(() => (floor ? buildZoneRows(floor) : []), [floor]);
+  const rows = count === 8 ? allRows.filter((_, i) => i % 2 === 0) : allRows;
+  const maxPct = Math.max(...rows.map((r) => r.pct), 10);
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>{meta.label}</div>
+      <div style={{ height: 0.5, background: PDF.border, marginBottom: 3 }} />
+      <div style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", marginBottom: 3 }}>Ideal: 6.25% per zone</div>
+      {/* Ideal reference line */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
+        {rows.length > 0 ? rows.slice(0, count).map(({ zone, pct, status }) => (
+          <div key={zone.shortName} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 11, textAlign: "right", flexShrink: 0 }}>{zone.shortName}</span>
+            <div style={{ flex: 1, height: 3.5, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: status === "good" ? zone.color : status === "critical" ? PDF.red : PDF.amber, borderRadius: 1, opacity: 0.85 }} />
+            </div>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 14, textAlign: "right", flexShrink: 0 }}>{pct.toFixed(1)}%</span>
+          </div>
+        )) : Array.from({ length: count }).map((_, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <div style={{ width: 11, height: 3.5, background: PDF.bg2, borderRadius: 1 }} />
+            <div style={{ flex: 1, height: 3.5, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${40 + Math.abs(Math.sin(i * 1.5)) * 50}%`, background: PDF.border, borderRadius: 1, opacity: 0.5 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Cut analysis thumbnail ────────────────────────────────────────────────────
+function CutAnalysisContent({ floor }: { floor: Floor | null }) {
+  const cutCount = floor?.canvasState.cuts.length ?? 0;
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>Cut Analysis</div>
+      <div style={{ height: 0.5, background: PDF.border, marginBottom: 4 }} />
+      {cutCount > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {Array.from({ length: Math.min(cutCount, 5) }).map((_, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 4px", background: "rgba(224,80,80,0.07)", borderRadius: 2, border: "0.5px solid rgba(224,80,80,0.2)" }}>
+              <div style={{ width: 6, height: 6, background: PDF.red, borderRadius: 1, flexShrink: 0, opacity: 0.7 }} />
+              <div>
+                <div style={{ width: 32, height: 3, background: "rgba(224,80,80,0.2)", borderRadius: 1, marginBottom: 1.5 }} />
+                <div style={{ width: 22, height: 2.5, background: PDF.bg2, borderRadius: 1 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
+          <div style={{ fontSize: 16, color: PDF.border }}>○</div>
+          <div style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "sans-serif" }}>No cuts marked</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Summary thumbnail ─────────────────────────────────────────────────────────
+function SummaryContent({ pageType }: { pageType: "ai-summary" | "consultant-summary" }) {
+  const meta = REPORT_PAGE_META[pageType];
+  const isAI = pageType === "ai-summary";
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>{meta.label}</div>
+      <div style={{ height: 0.5, background: PDF.border, marginBottom: 5 }} />
+      {Array.from({ length: isAI ? 8 : 5 }).map((_, i) => (
+        <div key={i} style={{ height: 3.5, background: i === 0 ? "rgba(184,146,42,0.18)" : PDF.bg2, borderRadius: 1, marginBottom: 3, width: i % 3 === 2 ? "68%" : "100%" }} />
+      ))}
+      {!isAI && (
+        <div style={{ marginTop: 8, padding: "5px 6px", border: `0.5px solid ${PDF.border}`, borderRadius: 2 }}>
+          <div style={{ height: 3.5, background: PDF.bg2, borderRadius: 1, marginBottom: 3 }} />
+          <div style={{ height: 3.5, background: PDF.bg2, borderRadius: 1, width: "60%" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Attachment thumbnail ──────────────────────────────────────────────────────
+function AttachmentPageContent({ name }: { name: string }) {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ fontSize: 20, color: PDF.border, marginBottom: 5, lineHeight: 1 }}>⎗</div>
+      <div style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif", textAlign: "center", maxWidth: "80%", wordBreak: "break-word" }}>{name}</div>
+      <div style={{ marginTop: 5, padding: "2px 6px", background: `${PDF.gold}22`, borderRadius: 2, border: `0.5px solid ${PDF.gold}44` }}>
+        <span style={{ fontSize: 4, color: PDF.gold, fontFamily: "sans-serif" }}>Supplementary</span>
+      </div>
     </div>
   );
 }
