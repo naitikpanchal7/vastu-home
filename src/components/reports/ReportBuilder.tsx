@@ -1413,30 +1413,86 @@ function BarGraphContent({ pageType, floor }: { pageType: "bar-graph-16" | "bar-
   );
 }
 
-// ── Cut analysis thumbnail ────────────────────────────────────────────────────
+// ── Cut analysis thumbnail — real data from calculateCutAnalysis ──────────────
 function CutAnalysisContent({ floor }: { floor: Floor | null }) {
-  const cutCount = floor?.canvasState.cuts.length ?? 0;
+  const cuts = useMemo(() => {
+    const cs = floor?.canvasState;
+    if (!cs || cs.perimeterPoints.length < 3 || cs.cuts.length === 0) return [];
+    return calculateCutAnalysis(
+      cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg,
+      VASTU_ZONES, cs.cuts
+    );
+  }, [floor]);
+
+  const SEV_COLOR = { mild: "#c8a028", moderate: "#e87820", severe: PDF.red } as const;
+  const mild     = cuts.filter(c => c.severity === "mild").length;
+  const moderate = cuts.filter(c => c.severity === "moderate").length;
+  const severe   = cuts.filter(c => c.severity === "severe").length;
+
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ fontSize: 5, color: PDF.gold, letterSpacing: 1, textTransform: "uppercase", fontFamily: "sans-serif", marginBottom: 3 }}>Cut Analysis</div>
-      <div style={{ height: 0.5, background: PDF.border, marginBottom: 4 }} />
-      {cutCount > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {Array.from({ length: Math.min(cutCount, 5) }).map((_, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 4px", background: "rgba(224,80,80,0.07)", borderRadius: 2, border: "0.5px solid rgba(224,80,80,0.2)" }}>
-              <div style={{ width: 6, height: 6, background: PDF.red, borderRadius: 1, flexShrink: 0, opacity: 0.7 }} />
-              <div>
-                <div style={{ width: 32, height: 3, background: "rgba(224,80,80,0.2)", borderRadius: 1, marginBottom: 1.5 }} />
-                <div style={{ width: 22, height: 2.5, background: PDF.bg2, borderRadius: 1 }} />
-              </div>
-            </div>
-          ))}
+      <div style={{ height: 0.5, background: PDF.gold, marginBottom: 4 }} />
+
+      {cuts.length === 0 ? (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
+          <div style={{ fontSize: 14, color: PDF.border }}>○</div>
+          <div style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "sans-serif" }}>No cuts present</div>
         </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 3 }}>
-          <div style={{ fontSize: 16, color: PDF.border }}>○</div>
-          <div style={{ fontSize: 4.5, color: PDF.text3, fontFamily: "sans-serif" }}>No cuts marked</div>
-        </div>
+        <>
+          {/* Summary stat chips */}
+          <div style={{ display: "flex", gap: 3, marginBottom: 5 }}>
+            {([
+              ["Total", cuts.length, PDF.gold],
+              ["Mild", mild, SEV_COLOR.mild],
+              ["Mod.", moderate, SEV_COLOR.moderate],
+              ["Sev.", severe, SEV_COLOR.severe],
+            ] as const).map(([label, val, color]) => (
+              <div key={label} style={{ flex: 1, background: PDF.bg2, border: `0.5px solid ${PDF.border}`, borderRadius: 2, padding: "2px 0", textAlign: "center" }}>
+                <div style={{ fontSize: 7, color: color as string, fontFamily: "monospace", fontWeight: "bold", lineHeight: 1 }}>{val}</div>
+                <div style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", marginTop: 1 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table header */}
+          <div style={{ display: "flex", gap: 2, paddingBottom: 2, marginBottom: 2, borderBottom: `0.5px solid ${PDF.border}` }}>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", width: 22, flexShrink: 0 }}>Cut</span>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", width: 14, flexShrink: 0 }}>Zone</span>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", flex: 1, textAlign: "right" }}>%Floor</span>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif", width: 22, textAlign: "right", flexShrink: 0 }}>Sev.</span>
+          </div>
+
+          {/* Cut rows */}
+          <div style={{ flex: 1, overflowY: "hidden" }}>
+            {cuts.map((cut) => {
+              const sc = SEV_COLOR[cut.severity];
+              return (
+                <div key={cut.id} style={{ display: "flex", alignItems: "center", gap: 2, marginBottom: 2.5, paddingBottom: 2, borderBottom: `0.5px solid ${PDF.bg2}` }}>
+                  <span style={{ fontSize: 4, color: PDF.text2, fontFamily: "monospace", width: 22, flexShrink: 0, overflow: "hidden", whiteSpace: "nowrap" }}>{cut.label}</span>
+                  <div style={{ width: 14, flexShrink: 0, background: PDF.bg2, borderRadius: 1, padding: "1px 2px" }}>
+                    <span style={{ fontSize: 3.5, color: PDF.gold, fontFamily: "monospace" }}>{cut.primaryZone}</span>
+                  </div>
+                  <span style={{ fontSize: 4, color: sc, fontFamily: "monospace", flex: 1, textAlign: "right", fontWeight: "bold" }}>{cut.pctOfFloor.toFixed(1)}%</span>
+                  <div style={{ width: 22, flexShrink: 0, background: sc + "22", borderRadius: 1, padding: "1px 2px", textAlign: "center" }}>
+                    <span style={{ fontSize: 3.5, color: sc, fontFamily: "sans-serif", textTransform: "uppercase", fontWeight: "bold" }}>{cut.severity}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Severity legend */}
+          <div style={{ display: "flex", gap: 5, marginTop: 3, paddingTop: 3, borderTop: `0.5px solid ${PDF.border}` }}>
+            {(["mild", "moderate", "severe"] as const).map((s) => (
+              <div key={s} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <div style={{ width: 4, height: 4, background: SEV_COLOR[s], borderRadius: 1 }} />
+                <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "sans-serif" }}>{s}</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
