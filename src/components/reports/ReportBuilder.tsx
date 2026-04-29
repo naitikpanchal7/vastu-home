@@ -350,7 +350,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       }));
 
     const report: Report = {
-      id: initialReport?.id ?? `report-${Date.now()}`,
+      id: initialReport?.id ?? crypto.randomUUID(),
       projectId,
       projectName: canvasStore.projectName,
       clientName: canvasStore.clientName,
@@ -370,6 +370,23 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       reportStore.updateReport(initialReport.id, report);
     } else {
       reportStore.addReport(report);
+    }
+
+    // Persist to DB if real project
+    if (projectId && !projectId.startsWith("proj-")) {
+      const isNew = !initialReport;
+      fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
+        method: isNew ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id:              report.id,
+          projectId:       report.projectId,
+          reportName:      report.reportName,
+          preset:          report.preset,
+          floorSelections: report.floorSelections,
+          status:          report.status,
+        }),
+      }).catch(() => {});
     }
 
     setSaving(false);
@@ -483,7 +500,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         }));
 
       const report: Report = {
-        id: initialReport?.id ?? `report-${Date.now()}`,
+        id: initialReport?.id ?? crypto.randomUUID(),
         projectId,
         projectName: canvasStore.projectName,
         clientName: canvasStore.clientName,
@@ -502,6 +519,23 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         reportStore.updateReport(initialReport.id, report);
       } else {
         reportStore.addReport(report);
+      }
+
+      // Persist to DB if real project
+      if (projectId && !projectId.startsWith("proj-")) {
+        const isNew = !initialReport;
+        fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
+          method: isNew ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id:              report.id,
+            projectId:       report.projectId,
+            reportName:      report.reportName,
+            preset:          report.preset,
+            floorSelections: report.floorSelections,
+            status:          "downloaded",
+          }),
+        }).catch(() => {});
       }
 
     } catch (err) {

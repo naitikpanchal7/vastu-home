@@ -60,6 +60,7 @@ interface CanvasStore {
   switchFloor: (id: string) => void;
   deleteFloor: (id: string) => void;
   renameFloor: (id: string, name: string) => void;
+  replaceFloorId: (oldId: string, newId: string) => void;
   /** Returns all floors with the current floor's live state baked in. Use this before saving to projectStore. */
   getProjectFloors: () => Floor[];
 
@@ -352,6 +353,22 @@ export const useCanvasStore = create<CanvasStore>()(
         set((s) => ({
           floors: s.floors.map((f) => (f.id === id ? { ...f, name } : f)),
         }));
+      },
+
+      replaceFloorId: (oldId: string, newId: string) => {
+        set((s) => {
+          // If newId already exists in the store, the local floor is a stale duplicate — drop it
+          if (s.floors.some((f) => f.id === newId)) {
+            return {
+              floors: s.floors.filter((f) => f.id !== oldId),
+              currentFloorId: s.currentFloorId === oldId ? newId : s.currentFloorId,
+            };
+          }
+          return {
+            floors: s.floors.map((f) => (f.id === oldId ? { ...f, id: newId } : f)),
+            currentFloorId: s.currentFloorId === oldId ? newId : s.currentFloorId,
+          };
+        });
       },
 
       // ── Project metadata ───────────────────────────────────────────────────

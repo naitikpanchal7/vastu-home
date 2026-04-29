@@ -31,9 +31,9 @@ export default function DashboardPage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
     if (!npName.trim() || !npClient.trim()) return;
-    const project = createProject({
+    const project = await createProject({
       name: npName,
       clientName: npClient,
       clientContact: npContact || undefined,

@@ -65,6 +65,9 @@ export default function ReportsPage() {
   const handleDelete = (id: string) => {
     reportStore.deleteReport(id);
     setDeleteConfirm(null);
+    if (!id.startsWith("report-")) {
+      fetch(`/api/reports/${id}`, { method: "DELETE" }).catch(() => {});
+    }
   };
 
   // Count by status

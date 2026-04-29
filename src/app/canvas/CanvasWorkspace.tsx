@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -10,14 +10,16 @@ import AnalysisPanel from "@/components/panels/AnalysisPanel";
 import ChatPanel from "@/components/panels/ChatPanel";
 import Button from "@/components/ui/Button";
 import type { CanvasTool } from "@/store/canvasStore";
-import type { Floor, Project } from "@/lib/types";
+import type { Floor, Project, Report } from "@/lib/types";
 import ReportBuilder from "@/components/reports/ReportBuilder";
+import { useReportStore } from "@/store/reportStore";
 
 interface ExportModalState { open: boolean }
 
 export default function CanvasWorkspace() {
   const store = useCanvasStore();
   const projectStore = useProjectStore();
+  const reportStore = useReportStore();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -36,6 +38,30 @@ export default function CanvasWorkspace() {
   const [northDraft, setNorthDraft] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autoCreatedRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // True when projectId is a real DB UUID (not a local `proj-xxx` ID)
+  const isDbProject = useCallback(
+    (pid: string | null) => !!pid && !pid.startsWith("proj-"),
+    []
+  );
+
+  // Upload a File to storage and update the floor's image URL in the store
+  const uploadFloorImage = useCallback(
+    async (file: File, pid: string, floorId: string) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        const res = await fetch(`/api/projects/${pid}/floors/${floorId}/image`, {
+          method: "POST",
+          body: formData,
+        });
+        const { data } = await res.json();
+        if (data?.url) store.setFloorPlanImage(data.url);
+      } catch { /* keep blob URL on error */ }
+    },
+    [store]
+  );
 
   const {
     currentTool, northDeg, projectName, clientName, projectId,
@@ -46,36 +72,169 @@ export default function CanvasWorkspace() {
     floors, currentFloorId, addFloor, switchFloor, deleteFloor, renameFloor,
     zoneMode, setZoneMode,
     perimeterVisible, cutsVisible, togglePerimeterVisible, toggleCutsVisible,
+    consultantSummary, consultantActions,
+    brahmaX, brahmaY, zoomLevel, panX, panY,
   } = store;
 
-  // Persist floors to projectStore whenever floors change
-  const persistFloors = () => {
+  // Sync floors to projectStore in-memory (for report builder etc.)
+  const persistFloors = useCallback(() => {
     const pid = store.projectId;
-    if (pid) {
-      projectStore.updateProject(pid, { floors: store.getProjectFloors() });
-    }
-  };
+    if (pid) projectStore.updateProject(pid, { floors: store.getProjectFloors() });
+  }, [store, projectStore]);
 
-  // Auto-create project in projectStore when user starts drawing (first perimeter point)
+  // Auto-create project when user starts drawing (first perimeter point)
   useEffect(() => {
     if (perimeterPoints.length === 1 && !projectId && !autoCreatedRef.current) {
       autoCreatedRef.current = true;
-      const now = new Date().toISOString();
-      const id = `proj-${Date.now()}`;
-      const project: Project = {
-        id,
-        consultantId: "local",
-        name: projectName || "Untitled Project",
-        clientName: clientName || "",
-        propertyType: "Residential",
-        status: "draft",
-        createdAt: now,
-        updatedAt: now,
-      };
-      projectStore.addProject(project);
-      store.setProjectId(id);
+      const name = projectName || "Untitled Project";
+
+      // Try creating in DB first; fall back to local on failure
+      fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, clientName: clientName || "", propertyType: "Residential" }),
+      })
+        .then((r) => r.json())
+        .then(({ data }) => {
+          if (data?.id) {
+            const project: Project = {
+              id: data.id,
+              consultantId: data.consultant_id ?? "local",
+              name: data.name,
+              clientName: data.client_name ?? "",
+              propertyType: "Residential",
+              status: "draft",
+              createdAt: data.created_at ?? new Date().toISOString(),
+              updatedAt: data.updated_at ?? new Date().toISOString(),
+            };
+            projectStore.addProject(project);
+            store.setProjectId(data.id);
+            // Replace local floor ID with real DB UUID so auto-save hits correct endpoint
+            if (data.floors?.[0]) {
+              const dbFloor = data.floors[0];
+              const localId = store.currentFloorId;
+              store.replaceFloorId(localId, dbFloor.id);
+            }
+          }
+        })
+        .catch(() => {
+          // Offline fallback — local only
+          const now = new Date().toISOString();
+          const id = `proj-${Date.now()}`;
+          projectStore.addProject({ id, consultantId: "local", name, clientName: clientName || "", propertyType: "Residential", status: "draft", createdAt: now, updatedAt: now });
+          store.setProjectId(id);
+        });
     }
   }, [perimeterPoints.length, projectId, projectName, clientName, projectStore, store]);
+
+  // ── Load reports from DB when a real project is opened ───────────────────
+  useEffect(() => {
+    if (!isDbProject(projectId)) return;
+    fetch(`/api/reports?projectId=${projectId}`)
+      .then((r) => r.json())
+      .then(({ data }) => {
+        if (!Array.isArray(data)) return;
+        const existingIds = new Set(reportStore.reports.map((r) => r.id));
+        data.forEach((row: Record<string, unknown>) => {
+          if (existingIds.has(row.id as string)) return;
+          const report: Report = {
+            id:              row.id as string,
+            projectId:       row.project_id as string,
+            projectName:     store.projectName,
+            clientName:      store.clientName,
+            propertyAddress: "",
+            northDeg:        store.northDeg,
+            reportName:      row.report_name as string,
+            preset:          row.preset as Report["preset"],
+            floorSelections: (row.floor_selections as Report["floorSelections"]) ?? [],
+            status:          row.status as Report["status"],
+            createdAt:       row.created_at as string,
+            updatedAt:       row.updated_at as string,
+          };
+          reportStore.addReport(report);
+        });
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // ── Reconcile stale local floor IDs with DB UUIDs on load ────────────────
+  // Handles the case where Zustand persist restored local `floor-xxx` IDs for a DB project
+  useEffect(() => {
+    if (!isDbProject(projectId)) return;
+    const hasLocalIds = store.floors.some((f) => f.id.startsWith("floor-"));
+    if (!hasLocalIds) return;
+
+    fetch(`/api/projects/${projectId}/floors`)
+      .then((r) => r.json())
+      .then(async ({ data }: { data?: Array<{ id: string; order: number; name: string }> }) => {
+        if (!Array.isArray(data)) return;
+        const liveFloors = useCanvasStore.getState().floors;
+        const existingDbIds = new Set(liveFloors.filter((f) => !f.id.startsWith("floor-")).map((f) => f.id));
+        for (const local of liveFloors.filter((f) => f.id.startsWith("floor-"))) {
+          const match = data.find((d) => d.order === local.order && !existingDbIds.has(d.id));
+          if (match) {
+            // DB already has a floor at this order — just swap the ID
+            existingDbIds.add(match.id); // prevent duplicate mapping
+            useCanvasStore.getState().replaceFloorId(local.id, match.id);
+          } else if (!data.find((d) => d.order === local.order)) {
+            // Orphan local floor (no DB row at this order) — create it
+            try {
+              const res = await fetch(`/api/projects/${projectId}/floors`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: local.name, order: local.order, canvasState: local.canvasState }),
+              });
+              const { data: created } = await res.json();
+              if (created?.id) useCanvasStore.getState().replaceFloorId(local.id, created.id);
+            } catch { /* stay local */ }
+          } else {
+            // A DB floor exists at this order but its ID is already in the store — drop the stale local duplicate
+            useCanvasStore.getState().deleteFloor(local.id);
+          }
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // ── Auto-save canvas state to DB (debounced 2 s) ──────────────────────────
+  useEffect(() => {
+    const pid = store.projectId;
+    const fid = store.currentFloorId;
+    if (!isDbProject(pid)) return;
+    if (fid.startsWith("floor-")) return; // skip until reconciliation replaces with real UUID
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      const packed = store.getProjectFloors().find((f) => f.id === fid);
+      if (!packed) return;
+      try {
+        await fetch(`/api/projects/${pid}/floors/${fid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            canvasState:       packed.canvasState,
+            notes:             packed.notes,
+            consultantSummary: packed.consultantSummary,
+            consultantActions: packed.consultantActions,
+            zoomLevel:         packed.zoomLevel,
+            panX:              packed.panX,
+            panY:              packed.panY,
+          }),
+        });
+        // Also keep projectStore in sync
+        persistFloors();
+      } catch { /* silent — next save will retry */ }
+    }, 2000);
+
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    perimeterPoints, cuts, brahmaX, brahmaY, northDeg, notes,
+    consultantSummary, consultantActions, zoomLevel, panX, panY,
+    currentFloorId, projectId,
+  ]);
 
   const startEditingName = () => {
     setNameValue(projectName || "Untitled Project");
@@ -88,24 +247,12 @@ export default function CanvasWorkspace() {
     store.setProjectName(trimmed);
     if (projectId) {
       projectStore.updateProject(projectId, { name: trimmed });
-    } else {
-      // Create project now if not yet created
-      if (!autoCreatedRef.current) {
-        autoCreatedRef.current = true;
-        const now = new Date().toISOString();
-        const id = `proj-${Date.now()}`;
-        const project: Project = {
-          id,
-          consultantId: "local",
-          name: trimmed,
-          clientName: clientName || "",
-          propertyType: "Residential",
-          status: "draft",
-          createdAt: now,
-          updatedAt: now,
-        };
-        projectStore.addProject(project);
-        store.setProjectId(id);
+      if (isDbProject(projectId)) {
+        fetch(`/api/projects/${projectId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: trimmed }),
+        }).catch(() => {});
       }
     }
     setEditingName(false);
@@ -215,7 +362,10 @@ export default function CanvasWorkspace() {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
+              // Show immediately via blob URL; upload to storage if DB project
               setFloorPlanImage(URL.createObjectURL(file));
+              const pid = store.projectId;
+              if (isDbProject(pid)) uploadFloorImage(file, pid!, currentFloorId);
               e.target.value = "";
             }}
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
@@ -284,9 +434,51 @@ export default function CanvasWorkspace() {
         floors={floors}
         currentFloorId={currentFloorId}
         onSwitch={(id) => { switchFloor(id); persistFloors(); }}
-        onAdd={() => { addFloor(); persistFloors(); }}
-        onDelete={(id) => { deleteFloor(id); persistFloors(); }}
-        onRename={(id, name) => { renameFloor(id, name); persistFloors(); }}
+        onAdd={async () => {
+          addFloor();
+          persistFloors();
+          // Create floor in DB and replace local ID with real UUID
+          // Use getState() to read live Zustand state — closure snapshot is stale after addFloor()
+          const pid = store.projectId;
+          if (isDbProject(pid)) {
+            const liveFloors = useCanvasStore.getState().floors;
+            const newFloor = liveFloors[liveFloors.length - 1];
+            if (newFloor) {
+              const localId = newFloor.id;
+              try {
+                const res = await fetch(`/api/projects/${pid}/floors`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: newFloor.name, order: newFloor.order, canvasState: {} }),
+                });
+                const { data } = await res.json();
+                if (data?.id) store.replaceFloorId(localId, data.id);
+              } catch { /* offline — local ID stays */ }
+            }
+          }
+        }}
+        onDelete={(id) => {
+          deleteFloor(id);
+          persistFloors();
+          // Delete floor in DB
+          const pid = store.projectId;
+          if (isDbProject(pid)) {
+            fetch(`/api/projects/${pid}/floors/${id}`, { method: "DELETE" }).catch(() => {});
+          }
+        }}
+        onRename={(id, name) => {
+          renameFloor(id, name);
+          persistFloors();
+          // Persist name change to DB
+          const pid = store.projectId;
+          if (isDbProject(pid)) {
+            fetch(`/api/projects/${pid}/floors/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name }),
+            }).catch(() => {});
+          }
+        }}
       />
 
       {/* Workspace */}

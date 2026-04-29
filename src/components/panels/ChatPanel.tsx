@@ -77,6 +77,21 @@ export default function ChatPanel() {
         cite: data.cite,
       };
       setMessages((prev) => [...prev, aiMsg]);
+
+      // Persist both turns to DB
+      const pid = store.projectId;
+      if (pid && !pid.startsWith("proj-")) {
+        fetch(`/api/projects/${pid}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              { role: "user",      content: text.trim(),                    cite: null },
+              { role: "assistant", content: data.content ?? "", cite: data.cite ?? null },
+            ],
+          }),
+        }).catch(() => {});
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
