@@ -84,6 +84,8 @@ export interface FloorPDFData {
   scaleUnit: string;
   selectedPages: ReportPageType[];
   pageNotes: Partial<Record<ReportPageType, string>>;
+  consultantSummary?: string;
+  consultantActions?: string;
 }
 
 export interface ReportDocumentData {
@@ -1072,38 +1074,56 @@ function AISummaryPage({ floor, pageNum, total }: { floor: FloorPDFData; pageNum
   );
 }
 
-// ── Consultant Summary placeholder ────────────────────────────────────────────
+// ── Consultant Summary ────────────────────────────────────────────────────────
 function ConsultantSummaryPage({ floor, pageNum, total }: { floor: FloorPDFData; pageNum: number; total: number }) {
   const notes = floor.pageNotes["consultant-summary"];
+  const summaryText = floor.consultantSummary?.trim() ?? "";
+  const actionLines = (floor.consultantActions ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.goldBar} />
       <View style={{ flex: 1, paddingTop: 10 }}>
         <FloorPageHeader pageType="consultant-summary" floorName={floor.floorName} northDeg={floor.northDeg} pageNum={pageNum} total={total} />
 
+        {/* Recommendations card */}
         <View style={[styles.card, { padding: 20, marginBottom: 16 }]}>
           <Text style={[styles.sectionTitle, { marginBottom: 8 }]}>Consultant Recommendations</Text>
           <Text style={[styles.body, { color: C.text3, marginBottom: 12 }]}>
             {floor.floorName} — Prepared by Consultant
           </Text>
-          <View style={{ borderWidth: 1, borderColor: C.border, borderStyle: "dashed", borderRadius: 4, padding: 24, alignItems: "center" }}>
-            <Text style={[styles.small, { color: C.text3, textAlign: "center", marginBottom: 4 }]}>
-              Consultant notes and remedies
-            </Text>
-            <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}>
-              Add your personalized recommendations, remedy suggestions, and client-specific guidance here.
-            </Text>
-          </View>
+          {summaryText ? (
+            <Text style={[styles.body, { lineHeight: 1.7 }]}>{summaryText}</Text>
+          ) : (
+            <View style={{ borderWidth: 1, borderColor: C.border, borderStyle: "dashed", borderRadius: 4, padding: 24, alignItems: "center" }}>
+              <Text style={[styles.small, { color: C.text3, textAlign: "center" }]}>
+                No consultant recommendations added. Write your summary in the Summary panel on the canvas.
+              </Text>
+            </View>
+          )}
         </View>
 
+        {/* Recommended actions card */}
         <View style={styles.card}>
-          <Text style={[styles.sectionTitle, { marginBottom: 8 }]}>Recommended Actions</Text>
-          {[1, 2, 3, 4].map((n) => (
-            <View key={n} style={[styles.row, { marginBottom: 10, alignItems: "flex-start", gap: 8 }]}>
-              <View style={{ width: 5, height: 5, backgroundColor: C.gold, borderRadius: 2.5, marginTop: 5 }} />
-              <View style={{ flex: 1, height: 1, backgroundColor: C.border, marginTop: 7 }} />
-            </View>
-          ))}
+          <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Recommended Actions</Text>
+          {actionLines.length > 0 ? (
+            actionLines.map((line, i) => (
+              <View key={i} style={[styles.row, { marginBottom: 10, alignItems: "flex-start", gap: 8 }]}>
+                <View style={{ width: 5, height: 5, backgroundColor: C.gold, borderRadius: 2.5, marginTop: 5, flexShrink: 0 }} />
+                <Text style={[styles.body, { flex: 1, lineHeight: 1.6 }]}>{line}</Text>
+              </View>
+            ))
+          ) : (
+            [1, 2, 3, 4].map((n) => (
+              <View key={n} style={[styles.row, { marginBottom: 10, alignItems: "flex-start", gap: 8 }]}>
+                <View style={{ width: 5, height: 5, backgroundColor: C.gold, borderRadius: 2.5, marginTop: 5 }} />
+                <View style={{ flex: 1, height: 1, backgroundColor: C.border, marginTop: 7 }} />
+              </View>
+            ))
+          )}
         </View>
 
         {notes && (
