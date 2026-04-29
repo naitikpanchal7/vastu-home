@@ -109,13 +109,11 @@ export default function CanvasWorkspace() {
             };
             projectStore.addProject(project);
             store.setProjectId(data.id);
-            // Update the auto-created floor's ID in the store
+            // Replace local floor ID with real DB UUID so auto-save hits correct endpoint
             if (data.floors?.[0]) {
               const dbFloor = data.floors[0];
-              store.floors[0] && store.floors.length === 1 &&
-                store.renameFloor(store.floors[0].id, dbFloor.name);
-              // Replace local floor ID with DB floor ID via switchFloor trick
-              store.setProjectId(data.id);
+              const localId = store.currentFloorId;
+              store.replaceFloorId(localId, dbFloor.id);
             }
           }
         })
@@ -160,11 +158,52 @@ export default function CanvasWorkspace() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  // ── Reconcile stale local floor IDs with DB UUIDs on load ────────────────
+  // Handles the case where Zustand persist restored local `floor-xxx` IDs for a DB project
+  useEffect(() => {
+    if (!isDbProject(projectId)) return;
+    const hasLocalIds = store.floors.some((f) => f.id.startsWith("floor-"));
+    if (!hasLocalIds) return;
+
+    fetch(`/api/projects/${projectId}/floors`)
+      .then((r) => r.json())
+      .then(async ({ data }: { data?: Array<{ id: string; order: number; name: string }> }) => {
+        if (!Array.isArray(data)) return;
+        const liveFloors = useCanvasStore.getState().floors;
+        const existingDbIds = new Set(liveFloors.filter((f) => !f.id.startsWith("floor-")).map((f) => f.id));
+        for (const local of liveFloors.filter((f) => f.id.startsWith("floor-"))) {
+          const match = data.find((d) => d.order === local.order && !existingDbIds.has(d.id));
+          if (match) {
+            // DB already has a floor at this order — just swap the ID
+            existingDbIds.add(match.id); // prevent duplicate mapping
+            useCanvasStore.getState().replaceFloorId(local.id, match.id);
+          } else if (!data.find((d) => d.order === local.order)) {
+            // Orphan local floor (no DB row at this order) — create it
+            try {
+              const res = await fetch(`/api/projects/${projectId}/floors`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: local.name, order: local.order, canvasState: local.canvasState }),
+              });
+              const { data: created } = await res.json();
+              if (created?.id) useCanvasStore.getState().replaceFloorId(local.id, created.id);
+            } catch { /* stay local */ }
+          } else {
+            // A DB floor exists at this order but its ID is already in the store — drop the stale local duplicate
+            useCanvasStore.getState().deleteFloor(local.id);
+          }
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
   // ── Auto-save canvas state to DB (debounced 2 s) ──────────────────────────
   useEffect(() => {
     const pid = store.projectId;
     const fid = store.currentFloorId;
     if (!isDbProject(pid)) return;
+    if (fid.startsWith("floor-")) return; // skip until reconciliation replaces with real UUID
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
@@ -395,20 +434,26 @@ export default function CanvasWorkspace() {
         floors={floors}
         currentFloorId={currentFloorId}
         onSwitch={(id) => { switchFloor(id); persistFloors(); }}
-        onAdd={() => {
+        onAdd={async () => {
           addFloor();
           persistFloors();
-          // Create floor in DB
+          // Create floor in DB and replace local ID with real UUID
+          // Use getState() to read live Zustand state — closure snapshot is stale after addFloor()
           const pid = store.projectId;
           if (isDbProject(pid)) {
-            const nextOrder = store.floors.length; // after addFloor, new floor is last
-            const newFloor = store.floors[store.floors.length - 1];
+            const liveFloors = useCanvasStore.getState().floors;
+            const newFloor = liveFloors[liveFloors.length - 1];
             if (newFloor) {
-              fetch(`/api/projects/${pid}/floors`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newFloor.name, order: nextOrder, canvasState: {} }),
-              }).catch(() => {});
+              const localId = newFloor.id;
+              try {
+                const res = await fetch(`/api/projects/${pid}/floors`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: newFloor.name, order: newFloor.order, canvasState: {} }),
+                });
+                const { data } = await res.json();
+                if (data?.id) store.replaceFloorId(localId, data.id);
+              } catch { /* offline — local ID stays */ }
             }
           }
         }}
