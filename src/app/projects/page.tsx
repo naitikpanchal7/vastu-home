@@ -30,9 +30,9 @@ export default function ProjectsPage() {
   const [npArea, setNpArea]       = useState("");
   const [npNotes, setNpNotes]     = useState("");
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!npName.trim() || !npClient.trim()) return;
-    const project = createProject({
+    const project = await createProject({
       name: npName, clientName: npClient, clientContact: npContact || undefined,
       propertyAddress: npAddress || undefined, propertyType: npType,
       areaSqFt: npArea ? parseFloat(npArea) : undefined, notes: npNotes || undefined,

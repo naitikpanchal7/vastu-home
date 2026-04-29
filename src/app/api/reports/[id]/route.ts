@@ -1,22 +1,82 @@
 // src/app/api/reports/[id]/route.ts
-// Phase 1: stub routes — actual report data lives in Zustand + localStorage.
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import type { Report } from "@/lib/types";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// GET /api/reports/:id
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
-  // TODO Phase 2: fetch from Supabase
-  return NextResponse.json({ data: null, status: "ok", id, note: "Phase 1: reports stored client-side" });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("reports")
+    .select("*")
+    .eq("id", id)
+    .eq("consultant_id", user.id)
+    .is("deleted_at", null)
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+
+  return NextResponse.json({ data, status: "ok" });
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// PATCH /api/reports/:id — update report (floor selections, status, name)
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
-  const body = await req.json();
-  // TODO Phase 2: update in Supabase
-  return NextResponse.json({ data: { id, ...body }, status: "ok" });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json() as Partial<Report>;
+
+  const update: Record<string, unknown> = {};
+  if (body.reportName      !== undefined) update.report_name      = body.reportName;
+  if (body.preset          !== undefined) update.preset           = body.preset;
+  if (body.floorSelections !== undefined) update.floor_selections = body.floorSelections;
+  if (body.status          !== undefined) update.status           = body.status;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("reports")
+    .update(update)
+    .eq("id", id)
+    .eq("consultant_id", user.id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ data, status: "ok" });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// DELETE /api/reports/:id — soft delete
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
-  // TODO Phase 2: delete from Supabase
-  return NextResponse.json({ data: { id }, status: "ok" });
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("reports")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("consultant_id", user.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ status: "ok" });
 }
