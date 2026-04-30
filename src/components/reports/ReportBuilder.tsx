@@ -126,7 +126,14 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<ReportAttachment[]>(() => initialReport?.attachments ?? []);
+  const [floorAttachments, setFloorAttachments] = useState<Record<string, ReportAttachment[]>>(() => {
+    const initial: Record<string, ReportAttachment[]> = {};
+    for (const floor of allFloors) {
+      const savedSel = initialReport?.floorSelections.find((s) => s.floorId === floor.id);
+      initial[floor.id] = savedSel?.attachments ?? [];
+    }
+    return initial;
+  });
   const [attachmentPosition, setAttachmentPosition] = useState<ReportSupplementaryPosition>("after-intro");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -150,6 +157,17 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     }
     return initial;
   });
+
+  useEffect(() => {
+    setFloorAttachments((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const floor of allFloors) {
+        if (!next[floor.id]) { next[floor.id] = []; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [allFloors]);
 
   useEffect(() => {
     setFloorSelections((prev) => {
@@ -182,8 +200,16 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     if (!open) return;
     setReportName(initialReport?.reportName ?? defaultReportName);
     setPreset(initialReport?.preset ?? "consultant-standard");
-    setAttachments(initialReport?.attachments ?? []);
-    setActiveFloorId(initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "");
+    const restoredFloorId = initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
+    setFloorAttachments(() => {
+      const next: Record<string, ReportAttachment[]> = {};
+      for (const floor of allFloors) {
+        const savedSel = initialReport?.floorSelections.find((s) => s.floorId === floor.id);
+        next[floor.id] = savedSel?.attachments ?? [];
+      }
+      return next;
+    });
+    setActiveFloorId(restoredFloorId);
   }, [open, initialReport]);
 
   // Keep new reports in sync with whichever floor is active on canvas.
@@ -263,7 +289,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   };
 
   const handleAttachmentUpload = useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !activeFloorId) return;
     const nextAttachments = await Promise.all(
       Array.from(files).map(async (file) => ({
         id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -274,12 +300,22 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         dataUrl: await readFileAsDataUrl(file),
       }))
     );
-    setAttachments((prev) => [...prev, ...nextAttachments]);
-  }, [attachmentPosition]);
+    setFloorAttachments((prev) => ({
+      ...prev,
+      [activeFloorId]: [...(prev[activeFloorId] ?? []), ...nextAttachments],
+    }));
+  }, [attachmentPosition, activeFloorId]);
 
   const removeAttachment = (id: string) => {
-    setAttachments((prev) => prev.filter((attachment) => attachment.id !== id));
+    if (!activeFloorId) return;
+    setFloorAttachments((prev) => ({
+      ...prev,
+      [activeFloorId]: (prev[activeFloorId] ?? []).filter((a) => a.id !== id),
+    }));
   };
+
+  // Active floor's supplementary attachments (fresh per floor)
+  const attachments = activeFloorId ? (floorAttachments[activeFloorId] ?? []) : [];
 
   // ── Validation ───────────────────────────────────────────────────────────────
   const activePages = Array.isArray(activeSelection?.pages) ? activeSelection.pages : [];
@@ -347,6 +383,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         enabled: true,
         pages: floorSelections[f.id]?.pages ?? [],
         pageNotes: floorSelections[f.id]?.pageNotes ?? {},
+        attachments: floorAttachments[f.id] ?? [],
       }));
 
     const report: Report = {
@@ -359,7 +396,6 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       reportName: reportName.trim(),
       preset,
       floorSelections: floorSelectionsArr,
-      attachments,
       status: "draft",
       createdAt: initialReport?.createdAt ?? now,
       updatedAt: now,
@@ -497,6 +533,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
           enabled: true,
           pages: floorSelections[f.id]?.pages ?? [],
           pageNotes: floorSelections[f.id]?.pageNotes ?? {},
+          attachments: floorAttachments[f.id] ?? [],
         }));
 
       const report: Report = {
@@ -509,7 +546,6 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         reportName: reportName.trim(),
         preset,
         floorSelections: floorSelectionsArr,
-        attachments,
         status: "downloaded",
         createdAt: initialReport?.createdAt ?? now,
         updatedAt: now,
