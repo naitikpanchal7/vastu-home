@@ -55,10 +55,7 @@ export default function DashboardPage() {
         title="Dashboard"
         subtitle={`${greeting}`}
         actions={
-          <>
-            <Button variant="ghost" size="sm">📥 Import</Button>
-            <Button variant="primary" size="sm" onClick={() => setShowNewProject(true)}>＋ New Project</Button>
-          </>
+          <Button variant="primary" size="sm" onClick={() => setShowNewProject(true)}>＋ New Project</Button>
         }
       />
 
@@ -103,7 +100,7 @@ export default function DashboardPage() {
                   { icon: "＋", label: "New Project",    action: () => setShowNewProject(true) },
                   { icon: "↑",  label: "Upload Plan",    action: () => router.push("/canvas") },
                   { icon: "⊙",  label: "Open Canvas",    action: () => router.push("/canvas") },
-                  { icon: "⎙",  label: "Export Report",  action: () => {} },
+                  { icon: "⎙",  label: "Export Report",  action: () => router.push("/reports") },
                 ].map((qa) => (
                   <button
                     key={qa.label}

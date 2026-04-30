@@ -231,6 +231,7 @@ export interface ReportFloorSelection {
   enabled: boolean;
   pages: ReportPageType[];
   pageNotes: Partial<Record<ReportPageType, string>>;
+  attachments?: ReportAttachment[];
 }
 
 export type ReportSupplementaryPosition = "after-intro" | "before-summary";

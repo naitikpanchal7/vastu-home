@@ -12,6 +12,16 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Verify project ownership
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: project } = await (supabase as any)
+    .from("projects")
+    .select("id")
+    .eq("id", id)
+    .eq("consultant_id", user.id)
+    .single();
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("chat_messages")
@@ -34,6 +44,16 @@ export async function POST(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Verify project ownership
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: project } = await (supabase as any)
+    .from("projects")
+    .select("id")
+    .eq("id", id)
+    .eq("consultant_id", user.id)
+    .single();
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
   const messages: Array<{ role: string; content: string; cite?: string | null }> = body.messages ?? [];

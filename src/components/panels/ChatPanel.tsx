@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
+import { calculateZoneAreas } from "@/lib/vastu/geometry";
+import { VASTU_ZONES } from "@/lib/vastu/zones";
 import type { ChatMessage } from "@/lib/types";
 
 const QUICK_CHIPS = [
@@ -28,17 +30,50 @@ export default function ChatPanel() {
   const [loading, setLoading] = useState(false);
   const historyRef = useRef<HTMLDivElement>(null);
 
+  // Load chat history from DB when a real project is open
+  useEffect(() => {
+    const pid = store.projectId;
+    if (!pid || pid.startsWith("proj-")) return;
+
+    fetch(`/api/projects/${pid}/chat`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((json) => {
+        if (!json?.data?.length) return;
+        const loaded: ChatMessage[] = json.data.map((row: { id: string; role: string; content: string; cite?: string | null; created_at: string }) => ({
+          id: row.id,
+          role: row.role as "user" | "assistant",
+          content: row.content,
+          timestamp: row.created_at,
+          cite: row.cite ?? undefined,
+        }));
+        setMessages([
+          {
+            id: "init",
+            role: "assistant",
+            content: "Namaste! I'm your Vastu advisor. Draw your floor plan perimeter first, then I can give you accurate zone analysis. What would you like to know?",
+            timestamp: new Date().toISOString(),
+            cite: "Vishwakarma Prakash",
+          },
+          ...loaded,
+        ]);
+      })
+      .catch(() => {});
+  }, [store.projectId]);
+
   useEffect(() => {
     if (historyRef.current) {
       historyRef.current.scrollTop = historyRef.current.scrollHeight;
     }
   }, [messages, loading]);
 
-  const buildContext = () => {
-    const zones = store.zoneAnalysis;
-    return zones.length > 0
-      ? `Current zone analysis: ${zones.map((z) => `${z.zoneName}=${z.pctOfTotal.toFixed(1)}%`).join(", ")}. Cuts: ${store.cuts.length}. North: ${store.northDeg.toFixed(1)}°.`
-      : `North: ${store.northDeg.toFixed(1)}°. Floor plan not yet drawn.`;
+  // Compute fresh zone analysis from live canvas state
+  const getFreshZoneAnalysis = () => {
+    const { perimeterPoints, brahmaX, brahmaY, northDeg, cuts, scale } = store;
+    if (perimeterPoints.length < 3) return [];
+    return calculateZoneAreas(
+      perimeterPoints, brahmaX, brahmaY, northDeg,
+      VASTU_ZONES, cuts, scale?.pixelsPerUnit
+    );
   };
 
   const sendMessage = async (text: string) => {
@@ -57,12 +92,18 @@ export default function ChatPanel() {
 
     try {
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
+      const zoneAnalysis = getFreshZoneAnalysis();
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...history, { role: "user", content: text.trim() }],
-          context: buildContext(),
+          northDeg: store.northDeg,
+          projectName: store.projectName,
+          zoneAnalysis,
+          cutsCount: store.cuts.length,
+          areaSqFt: undefined,
         }),
       });
 
@@ -86,7 +127,7 @@ export default function ChatPanel() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: [
-              { role: "user",      content: text.trim(),                    cite: null },
+              { role: "user",      content: text.trim(), cite: null },
               { role: "assistant", content: data.content ?? "", cite: data.cite ?? null },
             ],
           }),

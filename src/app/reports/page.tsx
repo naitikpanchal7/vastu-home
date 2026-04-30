@@ -81,8 +81,10 @@ export default function ReportsPage() {
 
   const totalPages = (r: Report) =>
     1 +
-    r.floorSelections.reduce((sum, f) => sum + (f.enabled ? f.pages.length : 0), 0) +
-    (r.attachments?.length ?? 0);
+    r.floorSelections.reduce(
+      (sum, f) => sum + (f.enabled ? f.pages.length : 0) + (f.attachments?.length ?? 0),
+      0
+    );
 
   return (
     <AppShell>
