@@ -11,12 +11,14 @@ import CollapsibleCard from "@/components/ui/CollapsibleCard";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useProjects } from "@/hooks/useProjects";
+import { useReports } from "@/hooks/useReports";
 import { useRouter } from "next/navigation";
 import type { PropertyType } from "@/lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { projects, createProject } = useProjects();
+  const { reportCount } = useReports();
   const [showNewProject, setShowNewProject] = useState(false);
 
   // New project form state
@@ -71,29 +73,21 @@ export default function DashboardPage() {
           <ActivityFeed />
 
           <div className="flex flex-col gap-3">
-            {/* Subscription card */}
+            {/* Subscription card — tier/limits wired in Phase 2 */}
             <CollapsibleCard title={<>◌ Subscription</>}>
-              <div className="font-serif text-[17px] text-gold-2 mb-[2px]">Professional</div>
-              <div className="text-[9px] text-vastu-text-3 mb-[10px]">Renews May 1, 2026</div>
+              <div className="font-serif text-[17px] text-gold-2 mb-[2px]">— {/* TODO Phase 2: fetch plan */}</div>
+              <div className="text-[9px] text-vastu-text-3 mb-[10px]">Subscription tiers coming soon</div>
               <div className="mb-[9px]">
                 <div className="flex justify-between text-[9px] text-vastu-text-2 mb-[3px]">
                   <span>Projects</span>
-                  <span className="font-mono">{projects.length}/30</span>
+                  <span className="font-mono">{projects.length}</span>
                 </div>
-                <div className="h-[3px] bg-bg-4 rounded-[2px] overflow-hidden">
-                  <div
-                    className="h-full rounded-[2px]"
-                    style={{
-                      width: `${Math.min((projects.length / 30) * 100, 100)}%`,
-                      background: "linear-gradient(90deg, var(--gold-3), var(--saffron))",
-                    }}
-                  />
-                </div>
+                <div className="h-[3px] bg-bg-4 rounded-[2px]" />
               </div>
               <div className="mb-[9px]">
                 <div className="flex justify-between text-[9px] text-vastu-text-2 mb-[3px]">
                   <span>Reports</span>
-                  <span className="font-mono">0/∞</span>
+                  <span className="font-mono">{reportCount}</span>
                 </div>
                 <div className="h-[3px] bg-bg-4 rounded-[2px]" />
               </div>
