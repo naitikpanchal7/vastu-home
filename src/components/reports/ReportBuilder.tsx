@@ -55,8 +55,8 @@ function buildZoneRows(floor: Floor) {
 }
 
 function makeDefaultSelection(floor: Floor) {
-  const hasCuts = floor.canvasState.cuts.length > 0;
-  const hasPerimeter = floor.canvasState.perimeterPoints.length >= 3;
+  const hasCuts = (floor.canvasState?.cuts?.length ?? 0) > 0;
+  const hasPerimeter = (floor.canvasState?.perimeterPoints?.length ?? 0) >= 3;
   const presetPages = REPORT_PRESET_PAGES["consultant-standard"].filter(
     (p) => !REPORT_PAGE_META[p].requiresCuts || hasCuts
   );
