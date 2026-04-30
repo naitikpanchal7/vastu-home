@@ -14,8 +14,8 @@ const STATUS_STYLES: Record<ProjectStatus, string> = {
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   draft:  "Draft",
-  active: "Active",
-  done:   "Done",
+  active: "In Analysis",
+  done:   "Complete",
 };
 
 export default function Badge({ status, className }: BadgeProps) {

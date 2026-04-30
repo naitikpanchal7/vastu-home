@@ -55,10 +55,7 @@ export default function DashboardPage() {
         title="Dashboard"
         subtitle={`${greeting}`}
         actions={
-          <>
-            <Button variant="ghost" size="sm">📥 Import</Button>
-            <Button variant="primary" size="sm" onClick={() => setShowNewProject(true)}>＋ New Project</Button>
-          </>
+          <Button variant="primary" size="sm" onClick={() => setShowNewProject(true)}>＋ New Project</Button>
         }
       />
 

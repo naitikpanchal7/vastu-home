@@ -8,12 +8,12 @@ export default function StatsBar() {
   const { reportCount } = useReports();
 
   const total   = projects.length;
-  const active  = projects.filter((p) => p.status === "active").length;
+  const drafts  = projects.filter((p) => p.status === "draft").length;
   const clients = new Set(projects.map((p) => p.clientName)).size;
 
   const stats = [
     { label: "Total Projects", value: total,        sub: total > 0 ? "↑ Growing" : "Get started" },
-    { label: "Active",         value: active,        sub: "In analysis" },
+    { label: "Drafts",         value: drafts,        sub: "In progress" },
     { label: "Clients",        value: clients,       sub: "Managed" },
     { label: "Reports",        value: reportCount,   sub: "Generated" },
   ];

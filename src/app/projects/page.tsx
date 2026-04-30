@@ -11,10 +11,8 @@ import { useProjects } from "@/hooks/useProjects";
 import type { ProjectStatus, PropertyType } from "@/lib/types";
 
 const FILTERS: { label: string; value: "all" | ProjectStatus }[] = [
-  { label: "All",         value: "all" },
-  { label: "Draft",       value: "draft" },
-  { label: "In Analysis", value: "active" },
-  { label: "Done",        value: "done" },
+  { label: "All",   value: "all" },
+  { label: "Draft", value: "draft" },
 ];
 
 export default function ProjectsPage() {
