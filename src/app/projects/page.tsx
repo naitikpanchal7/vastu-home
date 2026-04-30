@@ -22,6 +22,7 @@ export default function ProjectsPage() {
   const { filteredProjects, searchQuery, statusFilter, setSearchQuery, setStatusFilter, createProject, toggleStatus, deleteProject } = useProjects();
 
   const [showNewProject, setShowNewProject] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [npName, setNpName]       = useState("");
   const [npClient, setNpClient]   = useState("");
   const [npContact, setNpContact] = useState("");
@@ -96,11 +97,19 @@ export default function ProjectsPage() {
               <div
                 key={p.id}
                 onClick={() => router.push(`/projects/${p.id}`)}
-                className="bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[8px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_4px_16px_rgba(100,70,20,0.12)]"
+                className="bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[8px] overflow-hidden cursor-pointer transition-all duration-150 hover:border-gold-3 hover:-translate-y-[2px] hover:shadow-[0_4px_16px_rgba(100,70,20,0.12)] relative group"
               >
                 <div className="h-[90px] bg-bg-2 flex items-center justify-center border-b border-[rgba(100,70,20,0.12)]">
                   <span className="text-[36px] opacity-20">🏠</span>
                 </div>
+                {/* Delete button — appears on hover */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(p.id); }}
+                  title="Delete project"
+                  className="absolute top-[7px] right-[7px] w-[22px] h-[22px] rounded-[5px] bg-bg border border-[rgba(200,80,80,0.25)] text-[9px] text-red-400 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-150 hover:bg-red-950/40 hover:border-red-500/50 z-10"
+                >
+                  ✕
+                </button>
                 <div className="px-3 py-[10px]">
                   <div className="text-[11px] font-medium text-vastu-text mb-[2px] truncate">{p.name}</div>
                   <div className="text-[9px] text-vastu-text-3 mb-[6px] truncate">{p.clientName}</div>
@@ -121,6 +130,33 @@ export default function ProjectsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Delete Project"
+        subtitle="This action cannot be undone. The project and all its floors will be permanently deleted."
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+            <button
+              onClick={() => { if (confirmDeleteId) { deleteProject(confirmDeleteId); setConfirmDeleteId(null); } }}
+              className="px-3 py-[5px] rounded-md bg-red-900/40 border border-red-700/40 text-red-300 font-sans font-medium text-[11px] hover:bg-red-900/60 hover:border-red-600/60 transition-colors"
+            >
+              Delete Project
+            </button>
+          </>
+        }
+      >
+        <p className="text-[12px] text-vastu-text-2">
+          Are you sure you want to delete{" "}
+          <span className="text-vastu-text font-medium">
+            {filteredProjects.find((p) => p.id === confirmDeleteId)?.name ?? "this project"}
+          </span>
+          ?
+        </p>
+      </Modal>
 
       {/* New Project Modal */}
       <Modal

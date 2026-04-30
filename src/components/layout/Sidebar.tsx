@@ -4,7 +4,6 @@ import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
-import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: "⊞", href: "/dashboard", section: "Workspace", panel: null },
@@ -27,13 +26,6 @@ export default function Sidebar() {
   const planLabel   = subscription?.plan
     ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) + " Plan"
     : "Starter Plan";
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-    router.refresh();
-  }
 
   let lastSection = "";
 
@@ -138,15 +130,6 @@ export default function Sidebar() {
             </div>
             <div className="text-[9px] text-gold-3 whitespace-nowrap">{planLabel}</div>
           </div>
-          {!collapsed && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleSignOut(); }}
-              title="Sign out"
-              className="text-[10px] text-vastu-text-3 hover:text-gold-2 transition-colors ml-auto flex-shrink-0 px-1"
-            >
-              ⏻
-            </button>
-          )}
         </div>
       </div>
     </nav>
