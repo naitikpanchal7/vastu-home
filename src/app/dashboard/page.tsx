@@ -100,7 +100,7 @@ export default function DashboardPage() {
                   { icon: "＋", label: "New Project",    action: () => setShowNewProject(true) },
                   { icon: "↑",  label: "Upload Plan",    action: () => router.push("/canvas") },
                   { icon: "⊙",  label: "Open Canvas",    action: () => router.push("/canvas") },
-                  { icon: "⎙",  label: "Export Report",  action: () => {} },
+                  { icon: "⎙",  label: "Export Report",  action: () => router.push("/reports") },
                 ].map((qa) => (
                   <button
                     key={qa.label}
