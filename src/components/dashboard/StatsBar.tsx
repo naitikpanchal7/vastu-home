@@ -1,20 +1,21 @@
 "use client";
 
 import { useProjectStore } from "@/store/projectStore";
+import { useReports } from "@/hooks/useReports";
 
 export default function StatsBar() {
   const projects = useProjectStore((s) => s.projects);
+  const { reportCount } = useReports();
 
   const total   = projects.length;
   const active  = projects.filter((p) => p.status === "active").length;
   const clients = new Set(projects.map((p) => p.clientName)).size;
-  const done    = projects.filter((p) => p.status === "done").length;
 
   const stats = [
-    { label: "Total Projects", value: total,   sub: total > 0 ? "↑ Growing" : "Get started" },
-    { label: "Active",         value: active,   sub: "In analysis" },
-    { label: "Clients",        value: clients,  sub: "Managed" },
-    { label: "Reports",        value: done,     sub: "Completed" },
+    { label: "Total Projects", value: total,        sub: total > 0 ? "↑ Growing" : "Get started" },
+    { label: "Active",         value: active,        sub: "In analysis" },
+    { label: "Clients",        value: clients,       sub: "Managed" },
+    { label: "Reports",        value: reportCount,   sub: "Generated" },
   ];
 
   return (

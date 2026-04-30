@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useProjectStore } from "@/store/projectStore";
-import type { Project, ProjectStatus, PropertyType } from "@/lib/types";
+import type { Project, ProjectStatus, PropertyType, Floor } from "@/lib/types";
 
 // Map DB snake_case row → TS Project
 function dbRowToProject(row: Record<string, unknown>): Project {
+  const rawFloors = row.floors as Array<Record<string, unknown>> | undefined;
   return {
     id:              row.id as string,
     consultantId:    row.consultant_id as string,
@@ -21,6 +22,12 @@ function dbRowToProject(row: Record<string, unknown>): Project {
     createdAt:       row.created_at as string,
     updatedAt:       row.updated_at as string,
     lastOpenedAt:    row.last_opened_at as string | undefined,
+    floors:          rawFloors?.map((f) => ({
+      id:         f.id as string,
+      name:       f.name as string,
+      order:      f.order as number,
+      canvasState: (f.canvas_state ?? undefined) as Floor["canvasState"],
+    })) ?? [],
   };
 }
 

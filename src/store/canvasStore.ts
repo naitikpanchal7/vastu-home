@@ -554,7 +554,7 @@ export const useCanvasStore = create<CanvasStore>()(
         }
 
         const first = floorsToLoad[0];
-        const cs = first.canvasState;
+        const cs = first.canvasState ?? BLANK_CANVAS_STATE;
 
         set({
           projectId,
