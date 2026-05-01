@@ -42,29 +42,21 @@ const T = {
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const FEATURES = [
-  { icon: "◎", title: "Shakti Chakra", desc: "Authentic 16-zone overlay from True North, computed per Vishwakarma Prakash. Never estimated, always exact." },
+  { icon: "◎", title: "Shakti Chakra", desc: "Authentic 16-zone overlay from True North. Never estimated, always exact." },
   { icon: "⬡", title: "Perimeter & Cuts", desc: "Draw any polygon floor plan. Cuts are flagged per zone with mild / moderate / severe scoring." },
   { icon: "⊙", title: "Brahmasthan", desc: "Geometric centroid via polygon math — not screen center, not a guess." },
   { icon: "☷", title: "Zone Percentages", desc: "Sutherland-Hodgman clipping gives exact sq-ft per zone. Ideal is 6.25% each." },
-  { icon: "↑", title: "True North", desc: "NOAA magnetic declination API built in. Manual override always available." },
-  { icon: "✦", title: "Vastu AI Advisor", desc: "Multi-turn AI grounded in classical texts — cites Vishwakarma Prakash, Mayamatam, Brihat Samhita." },
+  { icon: "↑", title: "True North", desc: "Enter your True North bearing and the Shakti Chakra aligns instantly to your site's orientation." },
+  { icon: "✦", title: "Vastu AI Advisor", desc: "Multi-turn AI advisor grounded in Vastu principles — analyzes zones, cuts, and Brahmasthan in context." },
 ];
 
 const BENEFITS = [
   { n: "01", title: "Replace manual overlays", desc: "No more acetate sheets, protractors, and hand-drawn chakras. The full overlay renders in seconds on any floor plan." },
   { n: "02", title: "Defensible exact numbers", desc: "Zone percentages come from polygon clipping math — same answer every run, shareable with clients." },
-  { n: "03", title: "Grounded in classical texts", desc: "Every recommendation traces to a source layer in Vishwakarma Prakash, Mayamatam, or Brihat Samhita." },
-  { n: "04", title: "Built for practice scale", desc: "Client profiles, project management, and PDF export — so your workflow scales without extra admin." },
+  { n: "03", title: "Project history at a glance", desc: "All your projects, notes, and zone analyses in one dashboard. Open any past analysis and pick up exactly where you left off." },
+  { n: "04", title: "Built for practice scale", desc: "Project management and organized reports — so your workflow scales without extra admin." },
 ];
 
-const ROADMAP: Record<string, string[]> = {
-  "Auth & Accounts":   ["Sign In", "Sign Up", "Google OAuth", "Profile Settings"],
-  "Storage & Sync":    ["Save to Cloud", "Auto-backup", "Version History", "Import / Export"],
-  "Team & Clients":    ["Team Workspace", "Client Profiles", "Shared Reports", "Role Permissions"],
-  "Reports & Export":  ["PDF Report", "PDF History", "Share Report Link", "Watermark Branding"],
-  "AI & Analysis":     ["AI Assistant", "OCR Upload", "Cut Auto-detect", "AI Remedies"],
-  "Advanced Tools":    ["GPS North", "Multi-floor Projects", "Entrance Optimizer", "Scale Calibration"],
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -173,71 +165,6 @@ function GhostBtn({ children, onClick, teal }: { children: React.ReactNode; onCl
   );
 }
 
-// ─── Coming Soon Modal ────────────────────────────────────────────────────────
-
-function ComingSoonModal({ feature, onClose }: { feature: string; onClose: () => void }) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        background: "rgba(28,23,16,0.45)",
-        backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "24px",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: T.bg, borderRadius: "16px",
-          border: `1px solid ${T.border}`,
-          padding: "40px 36px", maxWidth: "360px", width: "100%",
-          textAlign: "center",
-          boxShadow: "0 24px 64px rgba(28,23,16,0.18)",
-        }}
-      >
-        <div style={{ fontSize: "32px", marginBottom: "12px" }}>◌</div>
-        <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "24px", color: T.text, marginBottom: "8px" }}>
-          Coming soon
-        </div>
-        <div style={{ fontFamily: "var(--font-dm-sans)", fontSize: "13px", color: T.text2, lineHeight: 1.6, marginBottom: "24px" }}>
-          <strong style={{ color: T.text }}>{feature}</strong> is on the roadmap for Phase 2.
-          We&apos;ll send you an update when it&apos;s ready.
-        </div>
-        <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: T.tealBg, color: T.teal, border: `1px solid ${T.tealBd}`,
-              borderRadius: "8px", padding: "8px 20px", fontSize: "12px", fontWeight: 500,
-              cursor: "pointer", fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            Notify me
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent", color: T.text3, border: `1px solid ${T.border}`,
-              borderRadius: "8px", padding: "8px 20px", fontSize: "12px",
-              cursor: "pointer", fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            Got it
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Chakra Preview SVG ───────────────────────────────────────────────────────
 
 function ChakraPreview() {
@@ -301,9 +228,8 @@ function ChakraPreview() {
 
 export default function HomePage() {
   const router = useRouter();
-  const [scrolled, setScrolled]         = useState(false);
-  const [mobileOpen, setMobileOpen]     = useState(false);
-  const [comingSoon, setComingSoon]     = useState<string | null>(null);
+  const [scrolled, setScrolled]     = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Body class for scrolling
   useEffect(() => {
@@ -323,11 +249,8 @@ export default function HomePage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Phase 1: no auth — go straight to dashboard
-  // Phase 2: check session, redirect to /auth/login if unauthenticated
-  const goDashboard = () => router.push("/dashboard");
-  const goLogin     = () => router.push("/auth/login");
-  const goSignUp    = () => router.push("/auth/login?mode=signup");
+  const goLogin  = () => router.push("/auth/login");
+  const goSignUp = () => router.push("/auth/login?mode=signup");
 
   // ── NAV ──────────────────────────────────────────────────────────────────
   const navLinks = [
@@ -367,11 +290,6 @@ export default function HomePage() {
 
           {/* Auth buttons */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }} className="hidden md:flex">
-            <button onClick={goDashboard}
-              style={{ background: "none", border: `1px solid ${T.border}`, color: T.text2, padding: "6px 14px", borderRadius: "7px", fontSize: "12px", fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = T.teal; (e.currentTarget as HTMLElement).style.color = T.teal; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = T.border; (e.currentTarget as HTMLElement).style.color = T.text2; }}
-            >Dashboard</button>
             <button onClick={goLogin}
               style={{ background: T.tealBg, border: `1px solid ${T.tealBd}`, color: T.teal, padding: "6px 14px", borderRadius: "7px", fontSize: "12px", fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = T.teal; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
@@ -398,7 +316,6 @@ export default function HomePage() {
               <button key={l.label} onClick={l.action} style={{ background: "none", border: "none", fontSize: "14px", color: T.text2, cursor: "pointer", textAlign: "left" }}>{l.label}</button>
             ))}
             <div style={{ display: "flex", gap: "8px", paddingTop: "8px" }}>
-              <button onClick={goDashboard} style={{ flex: 1, padding: "8px", borderRadius: "7px", border: `1px solid ${T.border}`, background: "none", color: T.text2, fontSize: "12px", cursor: "pointer" }}>Dashboard</button>
               <button onClick={goLogin} style={{ flex: 1, padding: "8px", borderRadius: "7px", border: `1px solid ${T.tealBd}`, background: T.tealBg, color: T.teal, fontSize: "12px", cursor: "pointer" }}>Log In</button>
               <button onClick={goSignUp} style={{ flex: 1, padding: "8px", borderRadius: "7px", border: "none", background: T.gold, color: "#fffaf0", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>Sign Up</button>
             </div>
@@ -417,8 +334,8 @@ export default function HomePage() {
           </h1>
 
           <p style={{ fontSize: "16px", lineHeight: 1.65, color: T.text2, maxWidth: "500px", margin: "0 auto 36px" }}>
-            Replace acetate overlays and hand calculations with an AI workspace
-            grounded in Vishwakarma Prakash, Mayamatam, and Brihat Samhita.
+            Replace acetate overlays and hand calculations with a digital Vastu workspace.
+            Draw, analyze, and advise — all in one place.
           </p>
 
           <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap", marginBottom: "60px" }}>
@@ -439,7 +356,7 @@ export default function HomePage() {
               {[
                 { val: "16", lbl: "Vastu zones", accent: T.gold },
                 { val: "22.5°", lbl: "per zone", accent: T.teal },
-                { val: "3", lbl: "classical texts", accent: T.gold },
+                { val: "AI", lbl: "Vastu mapping", accent: T.gold },
                 { val: "100%", lbl: "exact math", accent: T.teal },
               ].map((s) => (
                 <div key={s.lbl} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: "10px", padding: "14px 20px", minWidth: "160px" }}>
@@ -467,7 +384,7 @@ export default function HomePage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", textAlign: "left" }}>
             {[
               { step: "01", title: "Draw the perimeter", desc: "Click to place polygon points on your uploaded blueprint. Any shape, any size." },
-              { step: "02", title: "Set True North & scale", desc: "Enter the compass angle. Calibrate scale with two reference points. NOAA declination built in." },
+              { step: "02", title: "Set True North", desc: "Enter your True North bearing. The Shakti Chakra aligns automatically to your site's orientation." },
               { step: "03", title: "Read the full analysis", desc: "16-zone breakdown, exact sq-ft per zone, cut severity scores, Brahmasthan, AI-grounded remedies." },
             ].map((s) => (
               <div key={s.step} style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: "12px", padding: "24px" }}>
@@ -564,9 +481,9 @@ export default function HomePage() {
             {/* AI advisor */}
             <PreviewCard title="Vastu AI Advisor">
               <div style={{ fontSize: "11px", color: T.text2, lineHeight: 1.7, background: T.tealBg, border: `1px solid ${T.tealBd}`, borderRadius: "8px", padding: "12px", marginBottom: "10px" }}>
-                The NE zone (Ishaan) shows a 31% cut — classified severe per Vishwakarma Prakash §4.2. This quadrant governs wisdom and new beginnings. A water element remedy at the NE corner is advised.
+                The NE zone (Ishaan) shows a 31% cut — classified severe. This quadrant governs wisdom and new beginnings. A water element remedy at the NE corner is advised.
               </div>
-              <div style={{ fontSize: "9px", color: T.text3 }}>Source: Vishwakarma Prakash · multi-turn context</div>
+              <div style={{ fontSize: "9px", color: T.text3 }}>Vastu AI · multi-turn context</div>
             </PreviewCard>
 
             {/* Brahmasthan */}
@@ -580,7 +497,7 @@ export default function HomePage() {
                 <div style={{ textAlign: "center" }}>
                   <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "28px", color: T.teal }}>↑</div>
                   <div style={{ fontSize: "10px", color: T.text2, marginTop: "4px" }}>True North</div>
-                  <div style={{ fontFamily: "var(--font-dm-mono)", fontSize: "10px", color: T.text3 }}>14.3° + 0.8° decl.</div>
+                  <div style={{ fontFamily: "var(--font-dm-mono)", fontSize: "10px", color: T.text3 }}>14.3°</div>
                 </div>
               </div>
             </PreviewCard>
@@ -612,30 +529,6 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* ── ROADMAP ── */}
-      <Section id="roadmap" style={{ padding: "80px 24px", borderTop: `1px solid ${T.border2}` }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "52px" }}>
-            <Pill>Roadmap</Pill>
-            <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: "clamp(28px, 4vw, 42px)", color: T.text, margin: "18px 0 10px" }}>What&apos;s coming in Phase 2</h2>
-            <p style={{ fontSize: "13px", color: T.text2 }}>Click any feature to get notified when it launches.</p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "18px" }}>
-            {Object.entries(ROADMAP).map(([category, items]) => (
-              <div key={category} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: "12px", padding: "20px" }}>
-                <div style={{ fontSize: "10px", color: T.teal, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "14px", fontFamily: "var(--font-dm-sans)" }}>{category}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {items.map((item) => (
-                    <RoadmapBtn key={item} label={item} onClick={() => setComingSoon(item)} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
       {/* ── FINAL CTA ── */}
       <Section style={{ padding: "96px 24px", background: `linear-gradient(180deg, ${T.bg2} 0%, rgba(154,120,32,0.04) 100%)`, borderTop: `1px solid ${T.border2}`, textAlign: "center" }}>
         <div style={{ maxWidth: "520px", margin: "0 auto" }}>
@@ -664,8 +557,8 @@ export default function HomePage() {
               { label: "Home",     fn: () => smoothTo("hero") },
               { label: "Features", fn: () => smoothTo("features") },
               { label: "Founder",  fn: () => smoothTo("founder") },
-              { label: "Dashboard",fn: goDashboard },
               { label: "Log In",   fn: goLogin },
+              { label: "Sign Up",  fn: goSignUp },
             ].map((l) => (
               <button key={l.label} onClick={l.fn}
                 style={{ background: "none", border: "none", fontSize: "11px", color: T.text3, cursor: "pointer", transition: "color 0.15s" }}
@@ -679,10 +572,6 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* ── COMING SOON MODAL ── */}
-      {comingSoon && (
-        <ComingSoonModal feature={comingSoon} onClose={() => setComingSoon(null)} />
-      )}
     </div>
   );
 }
@@ -720,24 +609,3 @@ function PreviewCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function RoadmapBtn({ label, onClick }: { label: string; onClick: () => void }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        fontSize: "11px", fontWeight: 500, padding: "5px 11px",
-        borderRadius: "7px", cursor: "pointer",
-        fontFamily: "var(--font-dm-sans)",
-        background: hov ? T.bg3 : T.bg,
-        border: `1px solid ${hov ? T.tealBd : T.border}`,
-        color: hov ? T.teal : T.text3,
-        transition: "all 0.15s",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
