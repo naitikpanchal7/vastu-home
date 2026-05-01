@@ -37,7 +37,11 @@ export const useProjectStore = create<ProjectStore>()(
       setLoading: (loading) => set({ loading }),
 
       addProject: (project) =>
-        set((s) => ({ projects: [project, ...s.projects] })),
+        set((s) => ({
+          projects: s.projects.some((p) => p.id === project.id)
+            ? s.projects.map((p) => (p.id === project.id ? { ...p, ...project } : p))
+            : [project, ...s.projects],
+        })),
 
       updateProject: (id, updates) =>
         set((s) => ({

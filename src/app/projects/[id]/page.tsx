@@ -59,18 +59,19 @@ export default function ProjectCanvasPage() {
     if (loadedIdRef.current === id) return;
 
     async function init() {
-      let project: Project | undefined = storeProject;
+      let project: Project | undefined;
 
-      // If not in store, try loading from DB
-      if (!project) {
-        try {
-          const res = await fetch(`/api/projects/${id}`);
-          const { data } = await res.json();
-          if (data) {
-            project = dbRowToProject(data);
-            projectStore.addProject(project);
-          }
-        } catch { /* ignore */ }
+      // Always fetch fresh from DB so floors are never stale
+      try {
+        const res = await fetch(`/api/projects/${id}`);
+        const { data } = await res.json();
+        if (data) {
+          project = dbRowToProject(data);
+          projectStore.addProject(project);
+        }
+      } catch {
+        // Offline fallback — use whatever is in the store
+        project = storeProject;
       }
 
       if (!project) {

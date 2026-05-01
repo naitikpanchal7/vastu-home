@@ -26,20 +26,20 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
 
   const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
   const isAuthPage  = AUTH_PAGES.some((p) => pathname.startsWith(p));
 
   // Unauthenticated user hitting a protected route → send to login
-  if (isProtected && !user) {
+  if (isProtected && !session) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // Authenticated user hitting login page → send to dashboard
-  if (isAuthPage && user) {
+  if (isAuthPage && session) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

@@ -202,36 +202,47 @@ export default function CanvasWorkspace() {
   }, [projectId]);
 
   // ── Auto-save canvas state to DB (debounced 2 s) ──────────────────────────
+  const saveNow = useCallback(async () => {
+    const pid = store.projectId;
+    const fid = store.currentFloorId;
+    if (!isDbProject(pid)) return;
+    if (fid.startsWith("floor-")) return;
+    const packed = store.getProjectFloors().find((f) => f.id === fid);
+    if (!packed) return;
+    try {
+      await fetch(`/api/projects/${pid}/floors/${fid}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canvasState:       packed.canvasState,
+          notes:             packed.notes,
+          consultantSummary: packed.consultantSummary,
+          consultantActions: packed.consultantActions,
+          zoomLevel:         packed.zoomLevel,
+          panX:              packed.panX,
+          panY:              packed.panY,
+        }),
+      });
+      persistFloors();
+    } catch { showToast("Auto-save failed — check your connection"); }
+  }, [store, isDbProject, persistFloors, showToast]);
+
   useEffect(() => {
     const pid = store.projectId;
     const fid = store.currentFloorId;
     if (!isDbProject(pid)) return;
-    if (fid.startsWith("floor-")) return; // skip until reconciliation replaces with real UUID
+    if (fid.startsWith("floor-")) return;
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      const packed = store.getProjectFloors().find((f) => f.id === fid);
-      if (!packed) return;
-      try {
-        await fetch(`/api/projects/${pid}/floors/${fid}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            canvasState:       packed.canvasState,
-            notes:             packed.notes,
-            consultantSummary: packed.consultantSummary,
-            consultantActions: packed.consultantActions,
-            zoomLevel:         packed.zoomLevel,
-            panX:              packed.panX,
-            panY:              packed.panY,
-          }),
-        });
-        // Also keep projectStore in sync
-        persistFloors();
-      } catch { showToast("Auto-save failed — check your connection"); }
-    }, 2000);
+    saveTimeoutRef.current = setTimeout(saveNow, 2000);
 
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+    // On unmount flush immediately so navigating away doesn't lose the last change
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveNow();
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     perimeterPoints, cuts, brahmaX, brahmaY, northDeg, notes,
