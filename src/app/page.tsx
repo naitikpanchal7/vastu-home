@@ -256,6 +256,7 @@ export default function HomePage() {
   const navLinks = [
     { label: "Home",      action: () => smoothTo("hero") },
     { label: "Features",  action: () => smoothTo("features") },
+    { label: "Demo",      action: () => smoothTo("demo") },
     { label: "Gratitude", action: () => smoothTo("gratitude") },
     { label: "Founder",   action: () => smoothTo("founder") },
   ];
@@ -398,6 +399,77 @@ export default function HomePage() {
         </div>
       </Section>
 
+      {/* ── DEMO VIDEO ── */}
+      <Section id="demo" style={{ padding: "80px 24px", background: T.bg2, borderTop: `1px solid ${T.border2}` }}>
+        <div style={{ maxWidth: "820px", margin: "0 auto", textAlign: "center" }}>
+          <Pill teal>See it in action</Pill>
+          <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: "clamp(28px, 4vw, 42px)", color: T.text, margin: "18px 0 12px" }}>
+            Watch the platform in action
+          </h2>
+          <p style={{ fontSize: "14px", color: T.text2, lineHeight: 1.7, maxWidth: "440px", margin: "0 auto 44px" }}>
+            A full walkthrough — from uploading a floor plan to a complete Vastu zone analysis.
+          </p>
+
+          {/* Video placeholder */}
+          <div style={{
+            position: "relative",
+            background: T.bg,
+            border: `1px solid ${T.border}`,
+            borderRadius: "16px",
+            overflow: "hidden",
+            aspectRatio: "16 / 9",
+            maxWidth: "720px",
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "20px",
+          }}>
+            {/* decorative grid lines */}
+            <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.04 }} xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke={T.gold} strokeWidth="0.8" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
+
+            {/* subtle chakra watermark */}
+            <div style={{ position: "absolute", opacity: 0.04 }}>
+              <ChakraPreview />
+            </div>
+
+            {/* play icon */}
+            <div style={{
+              width: "64px", height: "64px", borderRadius: "50%",
+              background: `rgba(154,120,32,0.10)`,
+              border: `1.5px solid rgba(154,120,32,0.25)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              zIndex: 1,
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <polygon points="8,5 19,12 8,19" fill={T.gold} opacity="0.7" />
+              </svg>
+            </div>
+
+            <div style={{ zIndex: 1, textAlign: "center" }}>
+              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "22px", color: T.text, marginBottom: "6px" }}>
+                Demo video coming soon
+              </div>
+              <div style={{ fontSize: "11px", color: T.text3, fontFamily: "var(--font-dm-mono)" }}>
+                We&apos;re recording a full walkthrough — check back shortly
+              </div>
+            </div>
+          </div>
+
+          <p style={{ fontSize: "11px", color: T.text3, marginTop: "20px" }}>
+            Can&apos;t wait? <button onClick={goSignUp} style={{ background: "none", border: "none", color: T.teal, fontSize: "11px", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Sign up free</button> and try it yourself.
+          </p>
+        </div>
+      </Section>
+
       {/* ── BENEFITS ── */}
       <Section id="benefits" style={{ padding: "80px 24px", borderTop: `1px solid ${T.border2}` }}>
         <div style={{ maxWidth: "900px", margin: "0 auto" }}>
@@ -533,13 +605,17 @@ export default function HomePage() {
           <p style={{ fontSize: "11px", color: T.text3, marginBottom: "20px" }}>Builder · vastu@home</p>
 
           <p style={{ fontSize: "14px", lineHeight: 1.75, color: T.text2, maxWidth: "520px", margin: "0 auto 20px" }}>
-            I built vastu@home because every Vastu consultant I spoke to was still
-            using printed acetate overlays, hand calculators, and guesswork for zone
-            percentages. Classical Vastu is rigorous — the tools should be too.
+            I&apos;m Naitik Panchal, the founder of vastu@home — and I&apos;m 15. My passion for Vastu
+            started at home, watching my mother struggle to accurately map out floor plans by hand.
+            That frustration stayed with me, and I decided I was going to fix it for her.
+            vastu@home is what that decision became.
           </p>
           <p style={{ fontSize: "14px", lineHeight: 1.75, color: T.text2, maxWidth: "520px", margin: "0 auto" }}>
-            This platform is my attempt to give consultants a workspace that matches
-            the precision and depth of the texts they work from.
+            I built it for her first, and now I&apos;m building it for every consultant and family
+            who deserves better tools. I believe Vastu — a Vedic science rooted in thousands of
+            years of knowledge — is a powerful tool that, when applied with precision, can genuinely
+            enhance the quality of our lives. Through vastu@home, I hope to bring that precision
+            to everyone, and make a meaningful impact on the world — one floor plan at a time.
           </p>
         </div>
       </Section>
@@ -571,6 +647,7 @@ export default function HomePage() {
             {[
               { label: "Home",      fn: () => smoothTo("hero") },
               { label: "Features",  fn: () => smoothTo("features") },
+              { label: "Demo",      fn: () => smoothTo("demo") },
               { label: "Gratitude", fn: () => smoothTo("gratitude") },
               { label: "Founder",   fn: () => smoothTo("founder") },
               { label: "Log In",    fn: goLogin },
