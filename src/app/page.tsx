@@ -254,9 +254,10 @@ export default function HomePage() {
 
   // ── NAV ──────────────────────────────────────────────────────────────────
   const navLinks = [
-    { label: "Home",     action: () => smoothTo("hero") },
-    { label: "Features", action: () => smoothTo("features") },
-    { label: "Founder",  action: () => smoothTo("founder") },
+    { label: "Home",      action: () => smoothTo("hero") },
+    { label: "Features",  action: () => smoothTo("features") },
+    { label: "Gratitude", action: () => smoothTo("gratitude") },
+    { label: "Founder",   action: () => smoothTo("founder") },
   ];
 
   return (
@@ -505,6 +506,20 @@ export default function HomePage() {
         </div>
       </Section>
 
+      {/* ── GRATITUDE ── */}
+      <Section id="gratitude" style={{ padding: "80px 24px", borderTop: `1px solid ${T.border2}` }}>
+        <div style={{ maxWidth: "680px", margin: "0 auto", textAlign: "center" }}>
+          <Pill>With gratitude</Pill>
+          <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: "clamp(28px, 4vw, 42px)", color: T.text, margin: "18px 0 10px" }}>
+            None of this without them
+          </h2>
+          <p style={{ fontSize: "13px", color: T.text2, marginBottom: "48px" }}>
+            The people who made this possible — and me.
+          </p>
+          <GratitudeCarousel />
+        </div>
+      </Section>
+
       {/* ── FOUNDER ── */}
       <Section id="founder" style={{ padding: "80px 24px", background: T.bg2, borderTop: `1px solid ${T.border2}` }}>
         <div style={{ maxWidth: "680px", margin: "0 auto", textAlign: "center" }}>
@@ -554,11 +569,12 @@ export default function HomePage() {
 
           <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
             {[
-              { label: "Home",     fn: () => smoothTo("hero") },
-              { label: "Features", fn: () => smoothTo("features") },
-              { label: "Founder",  fn: () => smoothTo("founder") },
-              { label: "Log In",   fn: goLogin },
-              { label: "Sign Up",  fn: goSignUp },
+              { label: "Home",      fn: () => smoothTo("hero") },
+              { label: "Features",  fn: () => smoothTo("features") },
+              { label: "Gratitude", fn: () => smoothTo("gratitude") },
+              { label: "Founder",   fn: () => smoothTo("founder") },
+              { label: "Log In",    fn: goLogin },
+              { label: "Sign Up",   fn: goSignUp },
             ].map((l) => (
               <button key={l.label} onClick={l.fn}
                 style={{ background: "none", border: "none", fontSize: "11px", color: T.text3, cursor: "pointer", transition: "color 0.15s" }}
@@ -577,6 +593,146 @@ export default function HomePage() {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+const GRATITUDE = [
+  {
+    name: "Bhagwan",
+    message: "Bhagwan, I am forever grateful for you being in my life. Thank you for everything you have given me — a life filled with love, devotion, happiness, and people who make it infinitely better. What a privilege you have bestowed upon me: to work towards my dream, to do what I love. I am truly grateful. I pray you bless me so I can make a meaningful impact in people's lives and leave a lasting mark on our world.",
+  },
+  {
+    name: "Bhaiya",
+    message: "To my Shree Ram, for whom I am Lakshman. Thank you, Bhaiya, for bringing light into my life. I am forever grateful to have the best brother in the world — the one who makes me laugh the most and stands as the pillar of my strength. None of this would have been possible without you. I hope to one day be like you.",
+  },
+  {
+    name: "Mumma & Papa",
+    message: "\"Behind every child who believes in themselves is a parent who believed first.\" Thank you, Mumma and Papa, for always having faith in me. Your belief gives me the confidence to never back down from any challenge. Thank you for instilling the right values in me — they are the foundation of everything I am and everything I am trying to build.",
+  },
+  {
+    name: "Aji · Abba · Dadi · Dada",
+    nameStyle: "serif" as const,
+    message: "Thank you for being the foundation this family is built on. Everything I have — the love, the values, the warmth I grew up surrounded by — traces back to you. You are the roots that hold all of us together, and I am endlessly grateful to have not one but four people loving me the way only grandparents can. Thank you for making me feel like the most special person in the room every single time.",
+  },
+  {
+    name: "Heena Maam & Yash Sir",
+    message: "Thank you for teaching me — I would still be in 9th grade struggling with Spanish and Maths if it weren't for you. You made learning genuinely fun. But more than the lessons, thank you for always having my back. Without your support, I wouldn't have had the courage to pursue my passions.",
+  },
+  {
+    name: "Chatrabhuj Narsee School",
+    message: "I am forever grateful to Chatrabhuj Narsee School for shaping me into the person I am. The school has always created a space where I could be myself, chase what I love, and grow without limits. And to every teacher who stood by me, believed in me, and quietly made things possible when I needed it most — thank you. You never just taught me subjects, you taught me that I was worth betting on.",
+  },
+];
+
+function GratitudeCarousel() {
+  const [idx, setIdx] = useState(0);
+  const [dir, setDir] = useState<1 | -1>(1);
+  const [anim, setAnim] = useState(false);
+  const total = GRATITUDE.length;
+
+  const navigate = (next: number, direction: 1 | -1) => {
+    if (anim) return;
+    setDir(direction);
+    setAnim(true);
+    setTimeout(() => {
+      setIdx(next);
+      setAnim(false);
+    }, 220);
+  };
+
+  const prev = () => navigate((idx - 1 + total) % total, -1);
+  const next = () => navigate((idx + 1) % total, 1);
+
+  const card = GRATITUDE[idx];
+
+  return (
+    <div style={{ position: "relative" }}>
+      {/* Card */}
+      <div style={{
+        background: T.bg2,
+        border: `1px solid ${T.border}`,
+        borderRadius: "16px",
+        padding: "40px 44px",
+        minHeight: "260px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        opacity: anim ? 0 : 1,
+        transform: anim ? `translateX(${dir * 18}px)` : "translateX(0)",
+        transition: "opacity 0.22s ease, transform 0.22s ease",
+      }}>
+        {/* Name — addressed to */}
+        <div style={{ marginBottom: "20px", textAlign: "left" }}>
+          <span style={{
+            fontFamily: "var(--font-cormorant)",
+            fontSize: card.nameStyle === "serif" ? "26px" : "22px",
+            fontStyle: "italic",
+            color: T.gold,
+            letterSpacing: card.nameStyle === "serif" ? "0.5px" : "0",
+          }}>
+            {card.name} —
+          </span>
+        </div>
+
+        {/* Message */}
+        <p style={{
+          fontSize: "14px",
+          lineHeight: 1.8,
+          color: T.text2,
+          textAlign: "left",
+          flex: 1,
+          margin: 0,
+        }}>
+          {card.message}
+        </p>
+      </div>
+
+      {/* Navigation */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "24px" }}>
+        {/* Prev */}
+        <button onClick={prev} style={{
+          background: "none", border: `1px solid ${T.border}`, borderRadius: "50%",
+          width: "36px", height: "36px", cursor: "pointer", color: T.text3,
+          fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.15s",
+        }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = T.gold3; (e.currentTarget as HTMLElement).style.color = T.gold; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = T.border; (e.currentTarget as HTMLElement).style.color = T.text3; }}
+        >‹</button>
+
+        {/* Dots */}
+        <div style={{ display: "flex", gap: "7px", alignItems: "center" }}>
+          {GRATITUDE.map((_, i) => (
+            <button key={i} onClick={() => navigate(i, i > idx ? 1 : -1)} style={{
+              width: i === idx ? "20px" : "6px",
+              height: "6px",
+              borderRadius: "3px",
+              border: "none",
+              cursor: "pointer",
+              background: i === idx ? T.gold : T.border,
+              transition: "all 0.25s ease",
+              padding: 0,
+            }} />
+          ))}
+        </div>
+
+        {/* Next */}
+        <button onClick={next} style={{
+          background: "none", border: `1px solid ${T.border}`, borderRadius: "50%",
+          width: "36px", height: "36px", cursor: "pointer", color: T.text3,
+          fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.15s",
+        }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = T.gold3; (e.currentTarget as HTMLElement).style.color = T.gold; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = T.border; (e.currentTarget as HTMLElement).style.color = T.text3; }}
+        >›</button>
+      </div>
+
+      {/* Counter */}
+      <div style={{ textAlign: "center", marginTop: "12px", fontFamily: "var(--font-dm-mono)", fontSize: "10px", color: T.text3 }}>
+        {idx + 1} / {total}
+      </div>
+    </div>
+  );
+}
 
 function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   const [hov, setHov] = useState(false);
