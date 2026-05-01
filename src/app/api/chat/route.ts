@@ -4,6 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
 import type { ChatMessage, ZoneAnalysis } from "@/lib/types";
+import { validateEnv } from "@/lib/env";
+
+validateEnv();
 
 const client = new Anthropic();
 

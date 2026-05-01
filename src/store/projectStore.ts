@@ -9,6 +9,7 @@ interface ProjectStore {
   activeProjectId: string | null;
 
   setProjects: (projects: Project[]) => void;
+  setLoading: (loading: boolean) => void;
   addProject: (project: Project) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
@@ -33,6 +34,7 @@ export const useProjectStore = create<ProjectStore>()(
       statusFilter: "all",
 
       setProjects: (projects) => set({ projects }),
+      setLoading: (loading) => set({ loading }),
 
       addProject: (project) =>
         set((s) => ({ projects: [project, ...s.projects] })),
