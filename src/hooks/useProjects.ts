@@ -40,6 +40,7 @@ export function useProjects() {
     if (loadedRef.current) return;
     loadedRef.current = true;
 
+    store.setLoading(true);
     fetch("/api/projects")
       .then((r) => r.json())
       .then(({ data }) => {
@@ -47,7 +48,8 @@ export function useProjects() {
           store.setProjects(data.map(dbRowToProject));
         }
       })
-      .catch(() => {/* network error — leave store as-is */});
+      .catch(() => {/* network error — leave store as-is */})
+      .finally(() => store.setLoading(false));
   }, [store]);
 
   const createProject = useCallback(

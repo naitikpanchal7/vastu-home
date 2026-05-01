@@ -30,10 +30,32 @@ export default function ChatPanel() {
   const [loading, setLoading] = useState(false);
   const historyRef = useRef<HTMLDivElement>(null);
 
-  // Load chat history from DB when a real project is open
+  // Load chat history — DB for real projects, localStorage for local (proj-*) ones
   useEffect(() => {
     const pid = store.projectId;
-    if (!pid || pid.startsWith("proj-")) return;
+    if (!pid) return;
+
+    if (pid.startsWith("proj-")) {
+      try {
+        const raw = localStorage.getItem(`vastu-chat-${pid}`);
+        if (raw) {
+          const loaded: ChatMessage[] = JSON.parse(raw);
+          if (loaded.length) {
+            setMessages([
+              {
+                id: "init",
+                role: "assistant",
+                content: "Namaste! I'm your Vastu advisor. Draw your floor plan perimeter first, then I can give you accurate zone analysis. What would you like to know?",
+                timestamp: new Date().toISOString(),
+                cite: "Vishwakarma Prakash",
+              },
+              ...loaded,
+            ]);
+          }
+        }
+      } catch { /* corrupt storage — ignore */ }
+      return;
+    }
 
     fetch(`/api/projects/${pid}/chat`)
       .then((r) => r.ok ? r.json() : null)
@@ -119,7 +141,7 @@ export default function ChatPanel() {
       };
       setMessages((prev) => [...prev, aiMsg]);
 
-      // Persist both turns to DB
+      // Persist both turns — DB for real projects, localStorage for local ones
       const pid = store.projectId;
       if (pid && !pid.startsWith("proj-")) {
         fetch(`/api/projects/${pid}/chat`, {
@@ -132,6 +154,14 @@ export default function ChatPanel() {
             ],
           }),
         }).catch(() => {});
+      } else if (pid) {
+        setMessages((prev) => {
+          try {
+            const toSave = prev.filter((m) => m.id !== "init");
+            localStorage.setItem(`vastu-chat-${pid}`, JSON.stringify(toSave));
+          } catch { /* quota exceeded — skip */ }
+          return prev;
+        });
       }
     } catch {
       setMessages((prev) => [

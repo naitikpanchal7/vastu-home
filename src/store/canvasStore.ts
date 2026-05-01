@@ -1,6 +1,6 @@
 // src/store/canvasStore.ts
 import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { devtools, persist } from "zustand/middleware";
 import type { Point } from "@/lib/vastu/geometry";
 import type { CanvasState, Cut, EntranceMarker, Floor, ScaleCalibration, ZoneAnalysis } from "@/lib/types";
 import { polygonCentroid } from "@/lib/vastu/geometry";
@@ -177,6 +177,7 @@ const DEFAULT_FLOOR = makeFloor("Floor 1", 0);
 
 export const useCanvasStore = create<CanvasStore>()(
   devtools(
+    persist(
     (set, get) => ({
       // Defaults
       projectId: null,
@@ -602,6 +603,20 @@ export const useCanvasStore = create<CanvasStore>()(
         };
       },
     }),
+    {
+      name: "vastu-canvas-store",
+      partialize: (state) => {
+        // Exclude: undoStack (contains non-serializable functions), zoneAnalysis
+        // (derived), currentTool (ephemeral), and floorPlanImage (potentially
+        // large base64 data URLs that would blow localStorage quota).
+        const { undoStack: _u, zoneAnalysis: _z, currentTool: _t, floorPlanImage: _img, ...rest } = state;
+        return {
+          ...rest,
+          floors: rest.floors.map(({ floorPlanImage: _fi, ...floor }) => floor),
+        };
+      },
+    }
+  ),
     { name: "vastu-canvas-store" }
   )
 );

@@ -8,7 +8,9 @@ import VastuCanvas from "@/components/canvas/VastuCanvas";
 import RightPanel from "@/components/panels/RightPanel";
 import AnalysisPanel from "@/components/panels/AnalysisPanel";
 import ChatPanel from "@/components/panels/ChatPanel";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { CanvasTool } from "@/store/canvasStore";
 import type { Floor, Project, Report } from "@/lib/types";
 import ReportBuilder from "@/components/reports/ReportBuilder";
@@ -20,6 +22,7 @@ export default function CanvasWorkspace() {
   const store = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -225,7 +228,7 @@ export default function CanvasWorkspace() {
         });
         // Also keep projectStore in sync
         persistFloors();
-      } catch { /* silent — next save will retry */ }
+      } catch { showToast("Auto-save failed — check your connection"); }
     }, 2000);
 
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
@@ -252,7 +255,7 @@ export default function CanvasWorkspace() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: trimmed }),
-        }).catch(() => {});
+        }).catch(() => showToast("Failed to save project name"));
       }
     }
     setEditingName(false);
@@ -628,7 +631,9 @@ export default function CanvasWorkspace() {
         </div>
 
         {/* Main canvas */}
-        <VastuCanvas />
+        <ErrorBoundary>
+          <VastuCanvas />
+        </ErrorBoundary>
 
         {/* Right panel */}
         <RightPanel onExport={() => setExportModal({ open: true })} />
@@ -687,7 +692,7 @@ export default function CanvasWorkspace() {
               <div className={`flex-1 overflow-hidden ${fullPanel === "ai" ? "flex flex-col" : "overflow-y-auto"}`}>
                 <div className={`p-[14px] h-full ${fullPanel === "ai" ? "flex flex-col" : ""}`}>
                   {fullPanel === "analysis" && <AnalysisPanel onExport={() => setExportModal({ open: true })} />}
-                  {fullPanel === "ai" && <ChatPanel />}
+                  {fullPanel === "ai" && <ErrorBoundary><ChatPanel /></ErrorBoundary>}
                 </div>
               </div>
             </div>
