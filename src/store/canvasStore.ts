@@ -289,17 +289,19 @@ export const useCanvasStore = create<CanvasStore>()(
         const target = packedFloors.find((f) => f.id === targetId);
         if (!target) return;
 
+        const cs = target.canvasState ?? {};
+
         set({
           floors: packedFloors,
           currentFloorId: targetId,
-          perimeterPoints: target.canvasState.perimeterPoints ?? [],
-          perimeterComplete: target.canvasState.perimeterComplete ?? false,
-          brahmaX: target.canvasState.brahmaX ?? 380,
-          brahmaY: target.canvasState.brahmaY ?? 310,
-          brahmaConfirmed: target.canvasState.brahmaConfirmed ?? false,
-          cuts: target.canvasState.cuts ?? [],
-          entrancePoints: target.canvasState.entrancePoints ?? [],
-          facingDirection: target.canvasState.facingDirection ?? null,
+          perimeterPoints: cs.perimeterPoints ?? [],
+          perimeterComplete: cs.perimeterComplete ?? false,
+          brahmaX: cs.brahmaX ?? 380,
+          brahmaY: cs.brahmaY ?? 310,
+          brahmaConfirmed: cs.brahmaConfirmed ?? false,
+          cuts: cs.cuts ?? [],
+          entrancePoints: cs.entrancePoints ?? [],
+          facingDirection: cs.facingDirection ?? null,
           floorPlanImage: target.floorPlanImage ?? null,
           notes: target.notes ?? "",
           consultantSummary: target.consultantSummary ?? "",

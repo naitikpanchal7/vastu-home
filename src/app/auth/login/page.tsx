@@ -69,9 +69,7 @@ function LoginForm() {
       if (err) {
         setError(err.message);
       } else if (data.session) {
-        // Email confirmation is off — session returned immediately
-        router.push(next);
-        router.refresh();
+        window.location.href = next;
       } else {
         // Email confirmation is on — ask them to check email
         setSuccess("Account created! Check your email to confirm, then log in.");
@@ -82,8 +80,7 @@ function LoginForm() {
       if (err) {
         setError(err.message);
       } else {
-        router.push(next);
-        router.refresh();
+        window.location.href = next;
       }
     }
 
@@ -95,7 +92,7 @@ function LoginForm() {
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (err) setError(err.message);
