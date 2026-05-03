@@ -150,7 +150,9 @@ export default function CanvasWorkspace() {
       .then((r) => r.json())
       .then(({ data }) => {
         if (!Array.isArray(data)) return;
-        const existingIds = new Set(reportStore.reports.map((r) => r.id));
+        // Use live store state (not the stale closure) to avoid adding duplicates
+        // when the effect fires twice (StrictMode, re-navigation, concurrent fetches).
+        const existingIds = new Set(useReportStore.getState().reports.map((r) => r.id));
         data.forEach((row: Record<string, unknown>) => {
           if (existingIds.has(row.id as string)) return;
           const report: Report = {

@@ -573,6 +573,22 @@ export const useCanvasStore = create<CanvasStore>()(
         const first = floorsToLoad[0];
         const cs = first.canvasState ?? BLANK_CANVAS_STATE;
 
+        // Clamp/convert zoom in case old data used decimal scale (1.0 = 100%)
+        // or was otherwise corrupted. Values < 5 are treated as old decimal format.
+        const rawZoom = first.zoomLevel;
+        let safeZoom = 100;
+        let safePanX = 0;
+        let safePanY = 0;
+        if (rawZoom != null && rawZoom > 0) {
+          if (rawZoom < 5) {
+            safeZoom = Math.round(rawZoom * 100);
+          } else {
+            safeZoom = Math.max(30, Math.min(300, rawZoom));
+            safePanX = first.panX ?? 0;
+            safePanY = first.panY ?? 0;
+          }
+        }
+
         set({
           projectId,
           projectName,
@@ -594,9 +610,10 @@ export const useCanvasStore = create<CanvasStore>()(
           notes: first.notes ?? "",
           consultantSummary: first.consultantSummary ?? "",
           consultantActions: first.consultantActions ?? "",
-          zoomLevel: first.zoomLevel ?? 100,
-          panX: first.panX ?? 0,
-          panY: first.panY ?? 0,
+          zoomLevel: safeZoom,
+          panX: safePanX,
+          panY: safePanY,
+          chakraVisible: true,
           undoStack: [],
           zoneAnalysis: [],
         });

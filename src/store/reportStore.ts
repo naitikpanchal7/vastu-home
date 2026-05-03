@@ -18,7 +18,12 @@ export const useReportStore = create<ReportStore>()(
         reports: [],
 
         addReport: (report) =>
-          set((s) => ({ reports: [...s.reports, report] })),
+          set((s) => {
+            // Skip if a report with this ID already exists (prevents duplicates from
+            // concurrent fetches, React StrictMode double-invocation, or re-navigation).
+            if (s.reports.some((r) => r.id === report.id)) return s;
+            return { reports: [...s.reports, report] };
+          }),
 
         updateReport: (id, updates) =>
           set((s) => ({
@@ -43,6 +48,17 @@ export const useReportStore = create<ReportStore>()(
             attachments: attachments?.map(({ dataUrl, ...attachment }) => attachment),
           })),
         }),
+        onRehydrateStorage: () => (state) => {
+          if (!state) return;
+          // Deduplicate any reports that were double-written in a previous session
+          // before the addReport idempotency guard was in place.
+          const seen = new Set<string>();
+          state.reports = state.reports.filter((r) => {
+            if (seen.has(r.id)) return false;
+            seen.add(r.id);
+            return true;
+          });
+        },
       }
     ),
     { name: "vastu-reports-store" }

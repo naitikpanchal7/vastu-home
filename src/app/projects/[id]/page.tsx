@@ -9,6 +9,26 @@ import CanvasWorkspace from "@/app/canvas/CanvasWorkspace";
 import type { Floor, Project, PropertyType, ProjectStatus } from "@/lib/types";
 
 function dbFloorToFloor(row: Record<string, unknown>): Floor {
+  // Old data stored zoom as a decimal scale factor (1.0 = 100%).
+  // Current code stores it as a percentage integer (100 = 100%).
+  // If the stored value is < 5, treat it as old-format and convert; also reset
+  // pan because the old pan offsets were calibrated to the old zoom unit and
+  // would put the view completely off-screen at the converted zoom.
+  const rawZoom = row.zoom_level as number | null;
+  let zoomLevel = 100;
+  let panX = 0;
+  let panY = 0;
+  if (rawZoom != null && rawZoom > 0) {
+    if (rawZoom < 5) {
+      // Old decimal format: convert to percentage and reset pan
+      zoomLevel = Math.round(rawZoom * 100);
+    } else {
+      zoomLevel = Math.max(30, Math.min(300, rawZoom));
+      panX = (row.pan_x as number) ?? 0;
+      panY = (row.pan_y as number) ?? 0;
+    }
+  }
+
   return {
     id:                row.id as string,
     name:              row.name as string,
@@ -18,9 +38,9 @@ function dbFloorToFloor(row: Record<string, unknown>): Floor {
     notes:             (row.notes as string) ?? "",
     consultantSummary: (row.consultant_summary as string) ?? "",
     consultantActions: (row.consultant_actions as string) ?? "",
-    zoomLevel:         (row.zoom_level as number) ?? 100,
-    panX:              (row.pan_x as number) ?? 0,
-    panY:              (row.pan_y as number) ?? 0,
+    zoomLevel,
+    panX,
+    panY,
   };
 }
 
