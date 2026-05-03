@@ -1,6 +1,7 @@
 // src/app/api/reports/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Report } from "@/lib/types";
 
 // GET /api/reports/:id
@@ -69,8 +70,15 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Use service role client to bypass RLS for the soft-delete update.
+  // Ownership is enforced by the consultant_id check below.
+  const admin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await (admin as any)
     .from("reports")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id)

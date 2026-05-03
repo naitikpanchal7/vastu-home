@@ -62,12 +62,21 @@ export default function ReportsPage() {
     reportStore.updateReport(report.id, { status: "downloaded" });
   };
 
-  const handleDelete = (id: string) => {
-    reportStore.deleteReport(id);
+  const handleDelete = async (id: string) => {
     setDeleteConfirm(null);
+    // For DB-backed reports, wait for the soft-delete to succeed before
+    // removing locally. If we delete locally first and the API fails silently,
+    // the report disappears from the local store but stays in DB — it then
+    // gets re-added the next time the project is opened.
     if (!id.startsWith("report-")) {
-      fetch(`/api/reports/${id}`, { method: "DELETE" }).catch(() => {});
+      try {
+        const res = await fetch(`/api/reports/${id}`, { method: "DELETE" });
+        if (!res.ok) return; // keep the report if the API rejected it
+      } catch {
+        return; // keep the report on network failure
+      }
     }
+    reportStore.deleteReport(id);
   };
 
   // Count by status
