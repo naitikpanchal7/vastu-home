@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useProjectStore } from "@/store/projectStore";
-import { useCanvasStore } from "@/store/canvasStore";
+import { useCanvasStore, isCanvasStoreHydrated, onCanvasStoreHydrated } from "@/store/canvasStore";
 import CanvasWorkspace from "@/app/canvas/CanvasWorkspace";
 import type { Floor, Project, PropertyType, ProjectStatus } from "@/lib/types";
 
@@ -53,9 +53,20 @@ export default function ProjectCanvasPage() {
   const [notFound, setNotFound] = useState(false);
   const loadedIdRef = useRef<string | null>(null);
 
+  // Wait for Zustand to finish rehydrating from localStorage before loading from DB.
+  // Without this, loadCanvasState (which sets floorPlanImage) runs first, then
+  // Zustand rehydration overwrites the store and clears floorPlanImage back to null.
+  const [hydrated, setHydrated] = useState(() => isCanvasStoreHydrated());
+  useEffect(() => {
+    if (hydrated) return;
+    const unsub = onCanvasStoreHydrated(() => setHydrated(true));
+    return unsub;
+  }, [hydrated]);
+
   const storeProject = projectStore.projects.find((p) => p.id === id);
 
   useEffect(() => {
+    if (!hydrated) return;
     if (loadedIdRef.current === id) return;
 
     async function init() {
@@ -91,7 +102,7 @@ export default function ProjectCanvasPage() {
     }
 
     init();
-  }, [id, storeProject, projectStore, loadCanvasState]);
+  }, [id, hydrated, storeProject, projectStore, loadCanvasState]);
 
   if (notFound) {
     return (

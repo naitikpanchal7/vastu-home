@@ -42,6 +42,10 @@ export default function CanvasWorkspace() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const autoCreatedRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSavingRef    = useRef(false);
+  const pendingSaveRef = useRef(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const savedTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // True when projectId is a real DB UUID (not a local `proj-xxx` ID)
   const isDbProject = useCallback(
@@ -49,9 +53,15 @@ export default function CanvasWorkspace() {
     []
   );
 
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+
   // Upload a File to storage and update the floor's image URL in the store
   const uploadFloorImage = useCallback(
     async (file: File, pid: string, floorId: string) => {
+      if (file.size > MAX_IMAGE_BYTES) {
+        showToast("Image too large — maximum size is 10 MB");
+        return;
+      }
       const formData = new FormData();
       formData.append("file", file);
       try {
@@ -59,11 +69,14 @@ export default function CanvasWorkspace() {
           method: "POST",
           body: formData,
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { data } = await res.json();
         if (data?.url) store.setFloorPlanImage(data.url);
-      } catch { /* keep blob URL on error */ }
+      } catch {
+        showToast("Image upload failed — showing locally only. Refresh may lose the image.");
+      }
     },
-    [store]
+    [store, showToast]
   );
 
   const {
@@ -203,29 +216,77 @@ export default function CanvasWorkspace() {
 
   // ── Auto-save canvas state to DB (debounced 2 s) ──────────────────────────
   const saveNow = useCallback(async () => {
+    // Race condition guard — if already saving, flag for a follow-up save
+    if (isSavingRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
+
     const pid = store.projectId;
     const fid = store.currentFloorId;
     if (!isDbProject(pid)) return;
     if (fid.startsWith("floor-")) return;
     const packed = store.getProjectFloors().find((f) => f.id === fid);
     if (!packed) return;
-    try {
-      await fetch(`/api/projects/${pid}/floors/${fid}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          canvasState:       packed.canvasState,
-          notes:             packed.notes,
-          consultantSummary: packed.consultantSummary,
-          consultantActions: packed.consultantActions,
-          zoomLevel:         packed.zoomLevel,
-          panX:              packed.panX,
-          panY:              packed.panY,
-        }),
-      });
+
+    isSavingRef.current = true;
+    setSaveStatus("saving");
+
+    const body = JSON.stringify({
+      canvasState:       packed.canvasState,
+      notes:             packed.notes,
+      consultantSummary: packed.consultantSummary,
+      consultantActions: packed.consultantActions,
+      zoomLevel:         packed.zoomLevel,
+      panX:              packed.panX,
+      panY:              packed.panY,
+    });
+
+    let success = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch(`/api/projects/${pid}/floors/${fid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+
+        // Project was deleted in another tab
+        if (res.status === 404) {
+          showToast("This project no longer exists — it may have been deleted");
+          store.setProjectId(null);
+          router.push("/projects");
+          isSavingRef.current = false;
+          setSaveStatus("idle");
+          return;
+        }
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        success = true;
+        break;
+      } catch {
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      }
+    }
+
+    isSavingRef.current = false;
+
+    if (success) {
       persistFloors();
-    } catch { showToast("Auto-save failed — check your connection"); }
-  }, [store, isDbProject, persistFloors, showToast]);
+      setSaveStatus("saved");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2500);
+    } else {
+      setSaveStatus("error");
+      showToast("Auto-save failed — check your connection");
+    }
+
+    // Another change came in while we were saving — save it now
+    if (pendingSaveRef.current) {
+      pendingSaveRef.current = false;
+      saveNow();
+    }
+  }, [store, isDbProject, persistFloors, showToast, router]);
 
   useEffect(() => {
     const pid = store.projectId;
@@ -312,6 +373,17 @@ export default function CanvasWorkspace() {
             <div className="text-[9px] text-vastu-text-3 whitespace-nowrap">{clientName}</div>
           )}
         </div>
+
+        {/* Save status indicator */}
+        {saveStatus === "saving" && (
+          <span className="text-[9px] text-vastu-text-3 font-mono animate-pulse flex-shrink-0">Saving…</span>
+        )}
+        {saveStatus === "saved" && (
+          <span className="text-[9px] text-green-500/70 font-mono flex-shrink-0">✓ Saved</span>
+        )}
+        {saveStatus === "error" && (
+          <span className="text-[9px] text-red-400 font-mono flex-shrink-0">⚠ Save failed</span>
+        )}
 
         <div className="w-[1px] h-4 bg-[rgba(100,70,20,0.20)] flex-shrink-0" />
 

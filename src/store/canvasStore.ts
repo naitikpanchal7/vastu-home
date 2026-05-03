@@ -5,6 +5,20 @@ import type { Point } from "@/lib/vastu/geometry";
 import type { CanvasState, Cut, EntranceMarker, Floor, ScaleCalibration, ZoneAnalysis } from "@/lib/types";
 import { polygonCentroid } from "@/lib/vastu/geometry";
 
+// ── Hydration helpers ─────────────────────────────────────────────────────────
+let _hydrated = false;
+const _hydrateCallbacks: Array<() => void> = [];
+
+export function isCanvasStoreHydrated() { return _hydrated; }
+export function onCanvasStoreHydrated(cb: () => void): () => void {
+  if (_hydrated) { cb(); return () => {}; }
+  _hydrateCallbacks.push(cb);
+  return () => {
+    const i = _hydrateCallbacks.indexOf(cb);
+    if (i !== -1) _hydrateCallbacks.splice(i, 1);
+  };
+}
+
 // ── Canvas Tool ───────────────────────────────────────────────────────────────
 export type CanvasTool =
   | "select"
@@ -607,6 +621,14 @@ export const useCanvasStore = create<CanvasStore>()(
     }),
     {
       name: "vastu-canvas-store",
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) {
+          console.warn("Canvas store: localStorage corrupted or unreadable — resetting to defaults");
+        }
+        _hydrated = true;
+        _hydrateCallbacks.forEach((cb) => cb());
+        _hydrateCallbacks.length = 0;
+      },
       partialize: (state) => {
         // Exclude: undoStack (contains non-serializable functions), zoneAnalysis
         // (derived), currentTool (ephemeral), and floorPlanImage (potentially
