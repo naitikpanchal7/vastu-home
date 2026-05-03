@@ -607,6 +607,12 @@ export const useCanvasStore = create<CanvasStore>()(
     }),
     {
       name: "vastu-canvas-store",
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) {
+          console.warn("Canvas store: localStorage corrupted or unreadable — resetting to defaults");
+          // Zustand will use the initial state automatically when rehydration fails
+        }
+      },
       partialize: (state) => {
         // Exclude: undoStack (contains non-serializable functions), zoneAnalysis
         // (derived), currentTool (ephemeral), and floorPlanImage (potentially

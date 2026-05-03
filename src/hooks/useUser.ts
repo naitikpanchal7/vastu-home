@@ -37,7 +37,17 @@ export function useUser(): UserState {
     const supabase = createClient();
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      let user = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+      } catch (err: unknown) {
+        // Supabase lock race condition on concurrent token refreshes — safe to retry once
+        if (err instanceof Error && err.message?.includes("lock")) {
+          await new Promise((r) => setTimeout(r, 300));
+          try { const { data } = await supabase.auth.getUser(); user = data.user; } catch { /* give up */ }
+        }
+      }
       if (!user) { setState({ user: null, profile: null, subscription: null, loading: false }); return; }
 
       const [{ data: profile }, { data: subscription }] = await Promise.all([

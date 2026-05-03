@@ -20,7 +20,9 @@ export default function ProjectsPage() {
   const { filteredProjects, searchQuery, statusFilter, setSearchQuery, setStatusFilter, createProject, toggleStatus, deleteProject } = useProjects();
 
   const [showNewProject, setShowNewProject] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [npName, setNpName]       = useState("");
   const [npClient, setNpClient]   = useState("");
   const [npContact, setNpContact] = useState("");
@@ -31,14 +33,29 @@ export default function ProjectsPage() {
 
   const handleCreate = async () => {
     if (!npName.trim() || !npClient.trim()) return;
-    const project = await createProject({
-      name: npName, clientName: npClient, clientContact: npContact || undefined,
-      propertyAddress: npAddress || undefined, propertyType: npType,
-      areaSqFt: npArea ? parseFloat(npArea) : undefined, notes: npNotes || undefined,
-    });
-    setShowNewProject(false);
-    setNpName(""); setNpClient(""); setNpContact(""); setNpAddress(""); setNpArea(""); setNpNotes("");
-    router.push(`/projects/${project.id}`);
+    setCreating(true);
+    try {
+      const project = await createProject({
+        name: npName, clientName: npClient, clientContact: npContact || undefined,
+        propertyAddress: npAddress || undefined, propertyType: npType,
+        areaSqFt: npArea ? parseFloat(npArea) : undefined, notes: npNotes || undefined,
+      });
+      setShowNewProject(false);
+      setNpName(""); setNpClient(""); setNpContact(""); setNpAddress(""); setNpArea(""); setNpNotes("");
+      router.push(`/projects/${project.id}`);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleting(true);
+    try {
+      await deleteProject(id);
+    } finally {
+      setDeleting(false);
+      setConfirmDeleteId(null);
+    }
   };
 
   return (
@@ -137,12 +154,13 @@ export default function ProjectsPage() {
         subtitle="This action cannot be undone. The project and all its floors will be permanently deleted."
         footer={
           <>
-            <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)} disabled={deleting}>Cancel</Button>
             <button
-              onClick={() => { if (confirmDeleteId) { deleteProject(confirmDeleteId); setConfirmDeleteId(null); } }}
-              className="px-3 py-[5px] rounded-md bg-red-900/40 border border-red-700/40 text-red-300 font-sans font-medium text-[11px] hover:bg-red-900/60 hover:border-red-600/60 transition-colors"
+              onClick={() => { if (confirmDeleteId) handleDelete(confirmDeleteId); }}
+              disabled={deleting}
+              className="px-3 py-[5px] rounded-md bg-red-900/40 border border-red-700/40 text-red-300 font-sans font-medium text-[11px] hover:bg-red-900/60 hover:border-red-600/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Delete Project
+              {deleting ? "Deleting…" : "Delete Project"}
             </button>
           </>
         }
@@ -165,8 +183,10 @@ export default function ProjectsPage() {
         wide
         footer={
           <>
-            <Button variant="ghost" size="sm" onClick={() => setShowNewProject(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={handleCreate}>Create Project →</Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowNewProject(false)} disabled={creating}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={handleCreate} disabled={creating}>
+              {creating ? "Creating…" : "Create Project →"}
+            </Button>
           </>
         }
       >
