@@ -85,6 +85,13 @@ export default function ProjectCanvasPage() {
 
   const storeProject = projectStore.projects.find((p) => p.id === id);
 
+  // Reset the guard on unmount so a refresh (unmount + remount) always re-fetches
+  // the image from the API. Without this, the guard blocks the re-fetch and the
+  // image stays null after Zustand rehydrates from localStorage (which excludes floorPlanImage).
+  useEffect(() => {
+    return () => { loadedIdRef.current = null; };
+  }, [id]);
+
   useEffect(() => {
     if (!hydrated) return;
     if (loadedIdRef.current === id) return;
