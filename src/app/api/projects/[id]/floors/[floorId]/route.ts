@@ -1,6 +1,8 @@
 // src/app/api/projects/[id]/floors/[floorId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateString, validateNumber, validationFail } from "@/lib/validate";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 // GET /api/projects/:id/floors/:floorId
 export async function GET(
@@ -42,7 +44,20 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
+  let body: Record<string, unknown> = {};
+  try { body = await req.json(); } catch { /* empty body is fine — all fields are optional */ }
+
+  const invalid = validationFail([
+    validateString(body.name, "name", { maxLength: 100 }),
+    validateString(body.notes, "notes", { maxLength: 5000 }),
+    validateString(body.consultantSummary, "consultantSummary", { maxLength: 5000 }),
+    validateString(body.consultantActions, "consultantActions", { maxLength: 5000 }),
+    validateNumber(body.order, "order", { min: 0, max: 50 }),
+    validateNumber(body.zoomLevel, "zoomLevel", { min: 10, max: 500 }),
+    validateNumber(body.panX, "panX", { min: -10000, max: 10000 }),
+    validateNumber(body.panY, "panY", { min: -10000, max: 10000 }),
+  ]);
+  if (invalid) return invalid;
 
   const update: Record<string, unknown> = {};
   if (body.name               !== undefined) update.name               = body.name;
@@ -70,19 +85,35 @@ export async function PATCH(
 
 // DELETE /api/projects/:id/floors/:floorId
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; floorId: string }> }
 ) {
-  const { floorId } = await params;
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!rateLimit(`${ip}:floors:delete`, 20, 60_000))
+    return rateLimitResponse();
+
+  const { id, floorId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Verify the project belongs to this user before deleting the floor
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: project } = await (supabase as any)
+    .from("projects")
+    .select("id")
+    .eq("id", id)
+    .eq("consultant_id", user.id)
+    .single();
+
+  if (!project) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from("floors")
     .delete()
-    .eq("id", floorId);
+    .eq("id", floorId)
+    .eq("project_id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

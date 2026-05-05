@@ -45,7 +45,8 @@ export default function CanvasWorkspace() {
   const isSavingRef    = useRef(false);
   const pendingSaveRef = useRef(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const savedTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imageFetchedForRef = useRef<string | null>(null); // tracks which floorId we've already re-fetched for
 
   // True when projectId is a real DB UUID (not a local `proj-xxx` ID)
   const isDbProject = useCallback(
@@ -97,6 +98,27 @@ export default function CanvasWorkspace() {
     const pid = store.projectId;
     if (pid) projectStore.updateProject(pid, { floors: store.getProjectFloors() });
   }, [store, projectStore]);
+
+  // Re-fetch the floor plan image URL from the DB whenever the store rehydrates
+  // without one (floorPlanImage is excluded from localStorage persist).
+  // This covers /canvas direct navigation and any other route that doesn't call loadCanvasState.
+  useEffect(() => {
+    const pid = store.projectId;
+    const fid = store.currentFloorId;
+    if (!isDbProject(pid)) return;
+    if (fid.startsWith("floor-")) return;
+    if (store.floorPlanImage) return;
+    if (imageFetchedForRef.current === fid) return; // already tried for this floor
+    imageFetchedForRef.current = fid;
+
+    fetch(`/api/projects/${pid}/floors/${fid}`)
+      .then((r) => r.json())
+      .then(({ data }) => {
+        if (data?.floor_plan_image_url) store.setFloorPlanImage(data.floor_plan_image_url);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.projectId, store.currentFloorId, store.floorPlanImage]);
 
   // Auto-create project when user starts drawing (first perimeter point)
   useEffect(() => {
@@ -717,7 +739,13 @@ export default function CanvasWorkspace() {
 
         {/* Main canvas */}
         <ErrorBoundary>
-          <VastuCanvas />
+          <VastuCanvas
+            onImageFile={(file) => {
+              setFloorPlanImage(URL.createObjectURL(file));
+              const pid = store.projectId;
+              if (isDbProject(pid)) uploadFloorImage(file, pid!, currentFloorId);
+            }}
+          />
         </ErrorBoundary>
 
         {/* Right panel */}

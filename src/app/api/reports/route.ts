@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Report } from "@/lib/types";
+import { validateString, validateEnum, validationFail } from "@/lib/validate";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 // GET /api/reports?projectId=xxx — list reports for a project
 export async function GET(req: NextRequest) {
@@ -30,11 +32,22 @@ export async function GET(req: NextRequest) {
 
 // POST /api/reports — create a new report draft
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!rateLimit(`${ip}:reports:create`, 20, 60_000))
+    return rateLimitResponse();
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json() as Partial<Report>;
+
+  const invalid = validationFail([
+    validateString(body.reportName, "reportName", { maxLength: 200 }),
+    validateEnum(body.preset, "preset", ["custom", "standard", "detailed"]),
+    validateEnum(body.status, "status", ["draft", "final"]),
+  ]);
+  if (invalid) return invalid;
 
   const insertRow: Record<string, unknown> = {
     project_id:       body.projectId,

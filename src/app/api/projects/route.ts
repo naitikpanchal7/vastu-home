@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Project } from "@/lib/types";
 import { validateEnv } from "@/lib/env";
+import { validateString, validateEnum, validationFail } from "@/lib/validate";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 validateEnv();
 
@@ -27,11 +29,25 @@ export async function GET() {
 
 // POST /api/projects — create a new project + initial Floor 1
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!rateLimit(`${ip}:projects:create`, 20, 60_000))
+    return rateLimitResponse();
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json() as Partial<Project>;
+
+  const invalid = validationFail([
+    validateString(body.name, "name", { maxLength: 200 }),
+    validateString(body.clientName, "clientName", { maxLength: 200 }),
+    validateString(body.clientContact, "clientContact", { maxLength: 100 }),
+    validateString(body.clientEmail, "clientEmail", { maxLength: 200 }),
+    validateString(body.propertyAddress, "propertyAddress", { maxLength: 500 }),
+    validateEnum(body.propertyType, "propertyType", ["Residential", "Commercial", "Industrial", "Plot"]),
+  ]);
+  if (invalid) return invalid;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: project, error: projErr } = await (supabase as any)

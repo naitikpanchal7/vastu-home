@@ -1,6 +1,7 @@
 // src/app/api/projects/[id]/floors/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateString, validateNumber, validationFail } from "@/lib/validate";
 
 // GET /api/projects/:id/floors — list all floors for a project
 export async function GET(
@@ -46,6 +47,13 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+
+  const invalid = validationFail([
+    validateString(body.name, "name", { maxLength: 100 }),
+    validateNumber(body.order, "order", { min: 0, max: 50 }),
+    validateNumber(body.zoomLevel, "zoomLevel", { min: 10, max: 500 }),
+  ]);
+  if (invalid) return invalid;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
