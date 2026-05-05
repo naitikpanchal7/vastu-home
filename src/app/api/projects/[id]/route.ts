@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { validateString, validateEnum, validateNumber, validationFail } from "@/lib/validate";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 // GET /api/projects/:id — load project with floors
 export async function GET(
@@ -59,6 +61,19 @@ export async function PATCH(
 
   const body = await req.json();
 
+  const invalid = validationFail([
+    validateString(body.name, "name", { maxLength: 200 }),
+    validateString(body.clientName, "clientName", { maxLength: 200 }),
+    validateString(body.clientContact, "clientContact", { maxLength: 100 }),
+    validateString(body.clientEmail, "clientEmail", { maxLength: 200 }),
+    validateString(body.propertyAddress, "propertyAddress", { maxLength: 500 }),
+    validateString(body.notes, "notes", { maxLength: 5000 }),
+    validateEnum(body.propertyType, "propertyType", ["Residential", "Commercial", "Industrial", "Plot"]),
+    validateEnum(body.status, "status", ["draft", "active", "completed", "archived"]),
+    validateNumber(body.areaSqFt, "areaSqFt", { min: 0, max: 10_000_000 }),
+  ]);
+  if (invalid) return invalid;
+
   const update: Record<string, unknown> = {};
   if (body.name             !== undefined) update.name             = body.name;
   if (body.clientName       !== undefined) update.client_name      = body.clientName;
@@ -86,9 +101,13 @@ export async function PATCH(
 
 // DELETE /api/projects/:id — soft delete
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!rateLimit(`${ip}:projects:delete`, 20, 60_000))
+    return rateLimitResponse();
+
   const { id } = await params;
 
   // Verify the user is authenticated first

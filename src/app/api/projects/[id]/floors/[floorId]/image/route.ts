@@ -16,6 +16,19 @@ export async function POST(
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
+  // Server-side size check — reject before reading into memory
+  const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+  if (file.size > MAX_BYTES)
+    return NextResponse.json({ error: "File too large. Maximum size is 10 MB." }, { status: 413 });
+
+  // File type whitelist — reject anything that isn't a real image
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!ALLOWED_TYPES.includes(file.type))
+    return NextResponse.json(
+      { error: "Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed." },
+      { status: 415 }
+    );
+
   const ext = file.name.split(".").pop() ?? "png";
   const storagePath = `${user.id}/${id}/${floorId}/floor-plan.${ext}`;
 
