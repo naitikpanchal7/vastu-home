@@ -6,7 +6,6 @@ import Topbar from "@/components/layout/Topbar";
 import StatsBar from "@/components/dashboard/StatsBar";
 import RecentProjects from "@/components/dashboard/RecentProjects";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -64,53 +63,53 @@ export default function DashboardPage() {
 
         <RecentProjects onNewProject={() => setShowNewProject(true)} />
 
-        <AnalyticsCard />
-
-        <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 280px" }}>
-          <ActivityFeed />
+        <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 252px" }}>
+          <AnalyticsCard />
 
           <div className="flex flex-col gap-3">
-            {/* Subscription card — tier/limits wired in Phase 2 */}
-            <CollapsibleCard title={<>◌ Subscription</>}>
-              <div className="font-serif text-[17px] text-gold-2 mb-[2px]">— {/* TODO Phase 2: fetch plan */}</div>
-              <div className="text-[9px] text-vastu-text-3 mb-[10px]">Subscription tiers coming soon</div>
-              <div className="mb-[9px]">
-                <div className="flex justify-between text-[9px] text-vastu-text-2 mb-[3px]">
-                  <span>Projects</span>
-                  <span className="font-mono">{projects.length}</span>
-                </div>
-                <div className="h-[3px] bg-bg-4 rounded-[2px]" />
-              </div>
-              <div className="mb-[9px]">
-                <div className="flex justify-between text-[9px] text-vastu-text-2 mb-[3px]">
-                  <span>Reports</span>
-                  <span className="font-mono">{reportCount}</span>
-                </div>
-                <div className="h-[3px] bg-bg-4 rounded-[2px]" />
-              </div>
-              <Button variant="ghost" className="w-full justify-center text-[10px] py-[5px]">
-                Manage
-              </Button>
-            </CollapsibleCard>
-
             {/* Quick actions */}
             <CollapsibleCard title={<>⚡ Quick Actions</>}>
               <div className="grid grid-cols-2 gap-[6px]">
                 {[
-                  { icon: "＋", label: "New Project",    action: () => setShowNewProject(true) },
-                  { icon: "↑",  label: "Upload Plan",    action: () => router.push("/canvas") },
-                  { icon: "⊙",  label: "Open Canvas",    action: () => router.push("/canvas") },
-                  { icon: "⎙",  label: "Export Report",  action: () => router.push("/reports") },
+                  { icon: "＋", label: "New Project",   action: () => setShowNewProject(true) },
+                  { icon: "↑",  label: "Upload Plan",   action: () => router.push("/canvas") },
+                  { icon: "⊙",  label: "Open Canvas",   action: () => router.push("/canvas") },
+                  { icon: "⎙",  label: "Export Report", action: () => router.push("/reports") },
                 ].map((qa) => (
                   <button
                     key={qa.label}
                     onClick={qa.action}
-                    className="py-2 px-[9px] bg-bg-4 border border-[rgba(100,70,20,0.12)] rounded-[6px] cursor-pointer hover:border-gold-3 hover:text-gold-2 transition-all duration-[130ms] text-vastu-text-2 text-[10px] font-sans text-center"
+                    className="py-[10px] px-[9px] bg-bg-4 border border-[rgba(100,70,20,0.12)] rounded-[6px] cursor-pointer hover:border-gold-3 hover:text-gold-2 transition-all duration-[130ms] text-vastu-text-2 text-[10px] font-sans text-center"
                   >
-                    <span className="text-[15px] block mb-[2px]">{qa.icon}</span>
+                    <span className="text-[16px] block mb-[4px]">{qa.icon}</span>
                     {qa.label}
                   </button>
                 ))}
+              </div>
+            </CollapsibleCard>
+
+            {/* Subscription card — Phase 2 */}
+            <CollapsibleCard title={<>◌ Workspace</>}>
+              <div className="flex flex-col gap-[10px]">
+                <div>
+                  <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
+                    <span>Projects</span>
+                    <span className="font-mono text-vastu-text-2">{projects.length}</span>
+                  </div>
+                  <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-r from-gold-3 to-saffron rounded-full opacity-40" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
+                    <span>Reports</span>
+                    <span className="font-mono text-vastu-text-2">{reportCount}</span>
+                  </div>
+                  <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-r from-gold-3 to-saffron rounded-full opacity-40" />
+                  </div>
+                </div>
+                <div className="text-[8px] text-vastu-text-3 italic pt-[2px]">Subscription tiers in Phase 2</div>
               </div>
             </CollapsibleCard>
           </div>
