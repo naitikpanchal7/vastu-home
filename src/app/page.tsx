@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 // ─── Design tokens (page-local) ──────────────────────────────────────────────
 const T = {
@@ -230,6 +231,14 @@ export default function HomePage() {
   const router = useRouter();
   const [scrolled, setScrolled]     = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [checking, setChecking]     = useState(true);
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace("/dashboard");
+      else setChecking(false);
+    });
+  }, [router]);
 
   // Body class for scrolling
   useEffect(() => {
@@ -243,6 +252,8 @@ export default function HomePage() {
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  if (checking) return null;
 
   const smoothTo = (id: string) => {
     setMobileOpen(false);

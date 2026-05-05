@@ -202,8 +202,7 @@ export default function SettingsClient({ profile }: Props) {
   // ── Sign Out ─────────────────────────────────────────────────
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.push("/auth/login");
-    router.refresh();
+    window.location.href = "/";
   }
 
   // ── Logo Handlers ────────────────────────────────────────────
