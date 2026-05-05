@@ -15,7 +15,13 @@ const SVG_H = 620;
 type PanOrigin = { mx: number; my: number; px: number; py: number };
 
 
-export default function VastuCanvas() {
+interface VastuCanvasProps {
+  /** Called with the raw File whenever the user drops or picks an image inside the canvas.
+   *  The parent (CanvasWorkspace) is responsible for uploading to storage. */
+  onImageFile?: (file: File) => void;
+}
+
+export default function VastuCanvas({ onImageFile }: VastuCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const innerGRef = useRef<SVGGElement>(null);
   const { store, getSVGCoords, recalcZones } = useCanvas();
@@ -174,7 +180,11 @@ export default function VastuCanvas() {
           e.preventDefault();
           const file = e.dataTransfer.files[0];
           if (file?.type.startsWith("image/")) {
-            setFloorPlanImage(URL.createObjectURL(file));
+            if (onImageFile) {
+              onImageFile(file);
+            } else {
+              setFloorPlanImage(URL.createObjectURL(file));
+            }
           }
           setShowDropZone(false);
         }}
@@ -467,7 +477,11 @@ export default function VastuCanvas() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    setFloorPlanImage(URL.createObjectURL(file));
+                    if (onImageFile) {
+                      onImageFile(file);
+                    } else {
+                      setFloorPlanImage(URL.createObjectURL(file));
+                    }
                     setShowDropZone(false);
                     e.target.value = "";
                   }}
