@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           getAll() { return request.cookies.getAll(); },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
             cookiesToSet.forEach(({ name, value, options }) => {
               response.cookies.set(name, value, {
                 maxAge: 60 * 60 * 24 * 30,
