@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useProjectStore } from "@/store/projectStore";
+import { useCanvasStore } from "@/store/canvasStore";
 import type { Project, ProjectStatus, PropertyType, Floor } from "@/lib/types";
 
 // Map DB snake_case row → TS Project
@@ -123,6 +124,12 @@ export function useProjects() {
       store.deleteProject(id);
       if (!id.startsWith("proj-")) {
         fetch(`/api/projects/${id}`, { method: "DELETE" }).catch(() => {});
+      }
+      // If the deleted project is currently open in the canvas, wipe the local
+      // state so the canvas doesn't show a ghost of a deleted project.
+      // The real data stays safe in the DB for 15 days.
+      if (useCanvasStore.getState().projectId === id) {
+        useCanvasStore.getState().resetToBlank();
       }
     },
     [store]
