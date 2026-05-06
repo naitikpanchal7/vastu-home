@@ -77,6 +77,15 @@ export async function DELETE(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Collect the PDF path and all attachment paths before soft-deleting
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: report } = await (admin as any)
+    .from("reports")
+    .select("pdf_storage_path, report_attachments(storage_path)")
+    .eq("id", id)
+    .eq("consultant_id", user.id)
+    .single();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin as any)
     .from("reports")
@@ -85,6 +94,22 @@ export async function DELETE(
     .eq("consultant_id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Enqueue PDF and attachments for deletion after 15 days — matching the DB
+  // hard-delete window so a report can be recovered within the grace period.
+  const deleteAfter = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+  const queueEntries = [
+    ...(report?.pdf_storage_path
+      ? [{ bucket: "report-exports", path: report.pdf_storage_path, delete_after: deleteAfter }]
+      : []),
+    ...((report?.report_attachments ?? []) as { storage_path: string }[])
+      .map((a) => ({ bucket: "report-attachments", path: a.storage_path, delete_after: deleteAfter }))
+      .filter((e) => e.path),
+  ];
+  if (queueEntries.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("storage_cleanup_queue").insert(queueEntries);
+  }
 
   return NextResponse.json({ status: "ok" });
 }

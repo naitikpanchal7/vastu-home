@@ -108,6 +108,14 @@ export async function DELETE(
 
   if (!project) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  // Fetch the floor's image path before deleting so we can clean up Storage
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: floor } = await (supabase as any)
+    .from("floors")
+    .select("floor_plan_image_path")
+    .eq("id", floorId)
+    .single();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from("floors")
@@ -116,6 +124,14 @@ export async function DELETE(
     .eq("project_id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Delete the floor plan image from Storage after the row is gone
+  if (floor?.floor_plan_image_path) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).storage
+      .from("floor-plans")
+      .remove([floor.floor_plan_image_path]);
+  }
 
   return NextResponse.json({ status: "ok" });
 }
