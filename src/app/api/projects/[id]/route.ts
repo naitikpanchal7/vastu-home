@@ -122,6 +122,16 @@ export async function DELETE(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Collect all floor plan image paths for this project before soft-deleting.
+  // Use the user-scoped client (not admin) so RLS ensures we only read floors
+  // the authenticated user actually owns — prevents deleting another user's files.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: floors } = await (supabase as any)
+    .from("floors")
+    .select("floor_plan_image_path")
+    .eq("project_id", id)
+    .not("floor_plan_image_path", "is", null);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin as any)
     .from("projects")
@@ -132,6 +142,18 @@ export async function DELETE(
   if (error) {
     console.error("[DELETE project] Supabase error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Enqueue floor plan images for deletion after 15 days — matching when the DB
+  // rows are hard-deleted, so a project can be fully recovered within that window.
+  const deleteAfter = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+  const queueEntries = (floors ?? [])
+    .map((f: { floor_plan_image_path: string }) => f.floor_plan_image_path)
+    .filter(Boolean)
+    .map((path: string) => ({ bucket: "floor-plans", path, delete_after: deleteAfter }));
+  if (queueEntries.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("storage_cleanup_queue").insert(queueEntries);
   }
 
   return NextResponse.json({ status: "ok" });

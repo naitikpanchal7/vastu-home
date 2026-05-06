@@ -219,21 +219,12 @@ export default function SettingsClient({ profile }: Props) {
     setLogoUploading(true);
 
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateErr } = await (supabase as any)
-        .from("profiles")
-        .update({ logo_url: dataUrl })
-        .eq("id", profile.id);
-
-      if (updateErr) throw updateErr;
-      setLogoUrl(dataUrl);
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/profiles/logo", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Upload failed.");
+      setLogoUrl(json.data.url);
       router.refresh();
     } catch (err) {
       setLogoError(err instanceof Error ? err.message : "Logo upload failed.");
@@ -246,12 +237,9 @@ export default function SettingsClient({ profile }: Props) {
     setLogoUploading(true);
     setLogoError(null);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateErr } = await (supabase as any)
-        .from("profiles")
-        .update({ logo_url: null })
-        .eq("id", profile.id);
-      if (updateErr) throw updateErr;
+      const res = await fetch("/api/profiles/logo", { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Remove failed.");
       setLogoUrl(null);
       router.refresh();
     } catch (err) {

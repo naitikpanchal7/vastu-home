@@ -46,7 +46,9 @@ export default function CanvasWorkspace() {
   const pendingSaveRef = useRef(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const savedTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const imageFetchedForRef = useRef<string | null>(null); // tracks which floorId we've already re-fetched for
+  const imageFetchedForRef  = useRef<string | null>(null); // tracks which floorId we've already re-fetched for
+  const uploadGenRef        = useRef(0);                   // incremented on each new import or Remove, so stale upload callbacks are ignored
+  const pendingImageRef     = useRef<File | null>(null);   // image imported before DB project existed — uploaded once auto-create completes
 
   // True when projectId is a real DB UUID (not a local `proj-xxx` ID)
   const isDbProject = useCallback(
@@ -56,13 +58,16 @@ export default function CanvasWorkspace() {
 
   const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-  // Upload a File to storage and update the floor's image URL in the store
+  // Upload a File to storage and update the floor's image URL in the store.
+  // Captures the current generation so that if the user imports another image
+  // or clicks Remove while this upload is in flight, the callback is ignored.
   const uploadFloorImage = useCallback(
     async (file: File, pid: string, floorId: string) => {
       if (file.size > MAX_IMAGE_BYTES) {
         showToast("Image too large — maximum size is 10 MB");
         return;
       }
+      const gen = uploadGenRef.current;
       const formData = new FormData();
       formData.append("file", file);
       try {
@@ -72,7 +77,7 @@ export default function CanvasWorkspace() {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { data } = await res.json();
-        if (data?.url) store.setFloorPlanImage(data.url);
+        if (data?.url && uploadGenRef.current === gen) store.setFloorPlanImage(data.url);
       } catch {
         showToast("Image upload failed — showing locally only. Refresh may lose the image.");
       }
@@ -93,6 +98,18 @@ export default function CanvasWorkspace() {
     brahmaX, brahmaY, zoomLevel, panX, panY,
   } = store;
 
+  // Remove the floor plan image: clear the store, delete from storage, and null the DB path.
+  const removeFloorImage = useCallback(() => {
+    uploadGenRef.current++;
+    pendingImageRef.current = null;
+    setFloorPlanImage(null);
+    const pid = store.projectId;
+    const fid = store.currentFloorId;
+    if (isDbProject(pid)) {
+      fetch(`/api/projects/${pid}/floors/${fid}/image`, { method: "DELETE" }).catch(() => {});
+    }
+  }, [store, isDbProject, setFloorPlanImage]);
+
   // Sync floors to projectStore in-memory (for report builder etc.)
   const persistFloors = useCallback(() => {
     const pid = store.projectId;
@@ -107,9 +124,9 @@ export default function CanvasWorkspace() {
     const fid = store.currentFloorId;
     if (!isDbProject(pid)) return;
     if (fid.startsWith("floor-")) return;
-    if (store.floorPlanImage) return;
     if (imageFetchedForRef.current === fid) return; // already tried for this floor
-    imageFetchedForRef.current = fid;
+    imageFetchedForRef.current = fid; // mark floor as checked before the null check so
+    if (store.floorPlanImage) return; // Remove doesn't trigger a re-fetch from DB
 
     fetch(`/api/projects/${pid}/floors/${fid}`)
       .then((r) => r.json())
@@ -147,11 +164,15 @@ export default function CanvasWorkspace() {
             };
             projectStore.addProject(project);
             store.setProjectId(data.id);
-            // Replace local floor ID with real DB UUID so auto-save hits correct endpoint
+            // Replace the order-0 local floor ID with the real DB UUID.
+            // Must use order-0 specifically — using currentFloorId would wrongly
+            // reassign the DB UUID to whichever floor the user happens to be on,
+            // causing reconciliation to delete the real Floor 1.
             if (data.floors?.[0]) {
               const dbFloor = data.floors[0];
-              const localId = store.currentFloorId;
-              store.replaceFloorId(localId, dbFloor.id);
+              const liveFloors = useCanvasStore.getState().floors;
+              const floor1 = liveFloors.find((f) => f.order === 0 && f.id.startsWith("floor-"));
+              store.replaceFloorId(floor1?.id ?? store.currentFloorId, dbFloor.id);
             }
           }
         })
@@ -164,6 +185,19 @@ export default function CanvasWorkspace() {
         });
     }
   }, [perimeterPoints.length, projectId, projectName, clientName, projectStore, store]);
+
+  // Fire any image upload that was queued before the DB project existed.
+  // Runs whenever projectId or currentFloorId changes — once both are real DB
+  // UUIDs and a pending file is waiting, upload it then clear the ref.
+  useEffect(() => {
+    if (!isDbProject(projectId)) return;
+    if (currentFloorId.startsWith("floor-")) return;
+    const file = pendingImageRef.current;
+    if (!file) return;
+    pendingImageRef.current = null;
+    uploadFloorImage(file, projectId!, currentFloorId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, currentFloorId]);
 
   // ── Load reports from DB when a real project is opened ───────────────────
   useEffect(() => {
@@ -278,7 +312,7 @@ export default function CanvasWorkspace() {
         // Project was deleted in another tab
         if (res.status === 404) {
           showToast("This project no longer exists — it may have been deleted");
-          store.setProjectId(null);
+          store.resetToBlank();
           router.push("/projects");
           isSavingRef.current = false;
           setSaveStatus("idle");
@@ -472,10 +506,14 @@ export default function CanvasWorkspace() {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              // Show immediately via blob URL; upload to storage if DB project
+              uploadGenRef.current++;
               setFloorPlanImage(URL.createObjectURL(file));
               const pid = store.projectId;
-              if (isDbProject(pid)) uploadFloorImage(file, pid!, currentFloorId);
+              if (isDbProject(pid)) {
+                uploadFloorImage(file, pid!, currentFloorId);
+              } else {
+                pendingImageRef.current = file;
+              }
               e.target.value = "";
             }}
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
@@ -485,7 +523,7 @@ export default function CanvasWorkspace() {
 
         {floorPlanImage && (
           <button
-            onClick={() => setFloorPlanImage(null)}
+            onClick={removeFloorImage}
             className="text-[10px] px-[5px] py-[2px] rounded-[3px] cursor-pointer text-vastu-text-3 hover:text-red-400 bg-transparent border-none transition-colors flex-shrink-0"
             title="Remove floor plan image"
           >
@@ -632,7 +670,7 @@ export default function CanvasWorkspace() {
               <LpSection title="Floor Plan" defaultOpen>
                 {floorPlanImage && (
                   <button
-                    onClick={() => setFloorPlanImage(null)}
+                    onClick={removeFloorImage}
                     className="w-full text-[9px] px-2 py-[5px] bg-transparent border border-[rgba(200,60,40,0.2)] text-red-400 rounded-md hover:border-red-400 cursor-pointer font-sans mb-1"
                   >
                     ✕ Remove Image
@@ -741,9 +779,14 @@ export default function CanvasWorkspace() {
         <ErrorBoundary>
           <VastuCanvas
             onImageFile={(file) => {
+              uploadGenRef.current++;
               setFloorPlanImage(URL.createObjectURL(file));
               const pid = store.projectId;
-              if (isDbProject(pid)) uploadFloorImage(file, pid!, currentFloorId);
+              if (isDbProject(pid)) {
+                uploadFloorImage(file, pid!, currentFloorId);
+              } else {
+                pendingImageRef.current = file;
+              }
             }}
           />
         </ErrorBoundary>

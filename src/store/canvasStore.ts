@@ -183,6 +183,9 @@ interface CanvasStore {
 
   // Serialise current floor for save
   getCanvasState: () => CanvasState;
+
+  // Wipe all canvas state back to a single blank floor with no project attached
+  resetToBlank: () => void;
 }
 
 let entranceIdCounter = 0;
@@ -634,6 +637,36 @@ export const useCanvasStore = create<CanvasStore>()(
           facingDirection: s.facingDirection ?? undefined,
           scale: s.scale ?? undefined,
         };
+      },
+
+      resetToBlank: () => {
+        const blank = makeFloor("Floor 1", 0);
+        set({
+          projectId: null,
+          projectName: "Untitled Project",
+          clientName: "",
+          floors: [blank],
+          currentFloorId: blank.id,
+          northDeg: 0,
+          northMethod: "manual",
+          brahmaX: 380,
+          brahmaY: 310,
+          brahmaConfirmed: false,
+          perimeterPoints: [],
+          perimeterComplete: false,
+          cuts: [],
+          entrancePoints: [],
+          facingDirection: null,
+          scale: null,
+          floorPlanImage: null,
+          notes: "",
+          consultantSummary: "",
+          consultantActions: "",
+          undoStack: [],
+          zoomLevel: 100,
+          panX: 0,
+          panY: 0,
+        });
       },
     }),
     {

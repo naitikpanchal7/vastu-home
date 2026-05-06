@@ -123,8 +123,6 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const [reportName, setReportName] = useState(defaultReportName);
   const [preset, setPreset] = useState<ReportPreset>(initialReport?.preset ?? "consultant-standard");
   const [generating, setGenerating] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [floorAttachments, setFloorAttachments] = useState<Record<string, ReportAttachment[]>>(() => {
     const initial: Record<string, ReportAttachment[]> = {};
@@ -368,71 +366,6 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     return null;
   }, [reportName, selectedFloors]);
 
-  // ── Save report without generating PDF ───────────────────────────────────────
-  const handleSave = useCallback(() => {
-    if (validationError) return;
-    setSaving(true);
-    const now = new Date().toISOString();
-    const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
-    const project = projectStore.projects.find((p) => p.id === projectId);
-    const floorSelectionsArr: ReportFloorSelection[] = selectedFloors
-      .map((f) => ({
-        floorId: f.id,
-        floorName: f.name,
-        floorOrder: f.order,
-        enabled: true,
-        pages: floorSelections[f.id]?.pages ?? [],
-        pageNotes: floorSelections[f.id]?.pageNotes ?? {},
-        attachments: floorAttachments[f.id] ?? [],
-      }));
-
-    const report: Report = {
-      id: initialReport?.id ?? crypto.randomUUID(),
-      projectId,
-      projectName: canvasStore.projectName,
-      clientName: canvasStore.clientName,
-      propertyAddress: project?.propertyAddress ?? "",
-      northDeg: canvasStore.northDeg,
-      reportName: reportName.trim(),
-      preset,
-      floorSelections: floorSelectionsArr,
-      status: "draft",
-      createdAt: initialReport?.createdAt ?? now,
-      updatedAt: now,
-      pdfDataUrl: initialReport?.pdfDataUrl,
-    };
-
-    if (initialReport) {
-      reportStore.updateReport(initialReport.id, report);
-    } else {
-      reportStore.addReport(report);
-    }
-
-    // Persist to DB if real project
-    if (projectId && !projectId.startsWith("proj-")) {
-      const isNew = !initialReport;
-      fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
-        method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id:              report.id,
-          projectId:       report.projectId,
-          reportName:      report.reportName,
-          preset:          report.preset,
-          floorSelections: report.floorSelections,
-          status:          report.status,
-        }),
-      }).catch(() => {});
-    }
-
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      onClose();
-    }, 900);
-  }, [validationError, canvasStore, projectStore, selectedFloors, floorSelections, reportName, preset, initialReport, reportStore, onClose, attachments]);
-
   // ── Computed page list for preview ───────────────────────────────────────────
   const totalPageCount = reportPagePlan.length + 2; // +2 for cover + TOC
 
@@ -574,6 +507,8 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         }).catch(() => {});
       }
 
+      onClose();
+
     } catch (err) {
       console.error("PDF generation failed:", err);
       setError("PDF generation failed. Please try again.");
@@ -649,36 +584,19 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
           Cancel
         </button>
 
-        {/* Save without PDF */}
-        <button
-          onClick={handleSave}
-          disabled={!!validationError || saving || generating || saved}
-          className={cn(
-            "text-[10px] px-3 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer border",
-            saved
-              ? "bg-[rgba(42,122,58,0.15)] border-[rgba(42,122,58,0.4)] text-green-400"
-              : validationError || saving || generating
-              ? "bg-transparent border-[rgba(100,70,20,0.1)] text-vastu-text-3 cursor-not-allowed"
-              : "bg-transparent border-[rgba(100,70,20,0.25)] text-vastu-text-2 hover:border-gold-3 hover:text-vastu-text"
-          )}
-          title={validationError ?? "Save report configuration without generating PDF"}
-        >
-          {saved ? "✓ Saved" : saving ? "Saving…" : "✦ Save"}
-        </button>
-
-        {/* Generate PDF */}
+        {/* Generate & Download PDF */}
         <button
           onClick={handleGenerate}
-          disabled={!!validationError || generating || saving}
+          disabled={!!validationError || generating}
           className={cn(
             "text-[10px] px-4 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer",
-            validationError || generating || saving
+            validationError || generating
               ? "bg-[rgba(100,70,20,0.15)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.1)]"
               : "bg-gold text-bg hover:bg-gold-2 border border-transparent"
           )}
           title={validationError ?? undefined}
         >
-          {generating ? "⏳ Generating…" : "⎙ Generate PDF"}
+          {generating ? "⏳ Generating…" : "⎙ Generate & Download"}
         </button>
       </div>
 

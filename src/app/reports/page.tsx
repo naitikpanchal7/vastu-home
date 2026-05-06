@@ -31,13 +31,7 @@ export default function ReportsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [builderInitialReport, setBuilderInitialReport] = useState<Report | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  const openBuilder = (report?: Report) => {
-    setBuilderInitialReport(report);
-    setBuilderOpen(true);
-  };
 
   const filtered = useMemo(() => {
     return reportStore.reports
@@ -108,7 +102,7 @@ export default function ReportsPage() {
             </p>
           </div>
           <button
-            onClick={() => openBuilder()}
+            onClick={() => setBuilderOpen(true)}
             className="flex items-center gap-2 text-[11px] px-4 py-[7px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
           >
             <span>⎙</span>
@@ -161,7 +155,7 @@ export default function ReportsPage() {
                 </p>
               </div>
               <button
-                onClick={() => openBuilder()}
+                onClick={() => setBuilderOpen(true)}
                 className="text-[10px] px-4 py-[6px] bg-gold text-bg rounded-md font-sans hover:bg-gold-2 transition-colors cursor-pointer"
               >
                 ⎙ New Report
@@ -215,23 +209,6 @@ export default function ReportsPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Draft: open builder to generate PDF */}
-                      {report.status === "draft" && (
-                        <button
-                          onClick={() => openBuilder(report)}
-                          className="text-[9px] px-3 py-[4px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
-                        >
-                          ⎙ Make PDF
-                        </button>
-                      )}
-                      {/* Edit / re-open builder for any report */}
-                      <button
-                        onClick={() => openBuilder(report)}
-                        title="Edit this report configuration"
-                        className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md hover:border-gold-3 hover:text-vastu-text-2 cursor-pointer font-sans transition-colors"
-                      >
-                        Edit
-                      </button>
                       {/* Download if PDF exists */}
                       {report.pdfDataUrl && (
                         <button
@@ -277,8 +254,7 @@ export default function ReportsPage() {
       {/* Report Builder overlay */}
       <ReportBuilder
         open={builderOpen}
-        onClose={() => { setBuilderOpen(false); setBuilderInitialReport(undefined); }}
-        initialReport={builderInitialReport}
+        onClose={() => setBuilderOpen(false)}
       />
     </AppShell>
   );
