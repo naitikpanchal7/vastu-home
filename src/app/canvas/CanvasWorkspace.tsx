@@ -97,6 +97,17 @@ export default function CanvasWorkspace() {
     brahmaX, brahmaY, zoomLevel, panX, panY,
   } = store;
 
+  // Remove the floor plan image: clear the store, delete from storage, and null the DB path.
+  const removeFloorImage = useCallback(() => {
+    uploadGenRef.current++;
+    setFloorPlanImage(null);
+    const pid = store.projectId;
+    const fid = store.currentFloorId;
+    if (isDbProject(pid)) {
+      fetch(`/api/projects/${pid}/floors/${fid}/image`, { method: "DELETE" }).catch(() => {});
+    }
+  }, [store, isDbProject, setFloorPlanImage]);
+
   // Sync floors to projectStore in-memory (for report builder etc.)
   const persistFloors = useCallback(() => {
     const pid = store.projectId;
@@ -489,7 +500,7 @@ export default function CanvasWorkspace() {
 
         {floorPlanImage && (
           <button
-            onClick={() => { uploadGenRef.current++; setFloorPlanImage(null); }}
+            onClick={removeFloorImage}
             className="text-[10px] px-[5px] py-[2px] rounded-[3px] cursor-pointer text-vastu-text-3 hover:text-red-400 bg-transparent border-none transition-colors flex-shrink-0"
             title="Remove floor plan image"
           >
@@ -636,7 +647,7 @@ export default function CanvasWorkspace() {
               <LpSection title="Floor Plan" defaultOpen>
                 {floorPlanImage && (
                   <button
-                    onClick={() => { uploadGenRef.current++; setFloorPlanImage(null); }}
+                    onClick={removeFloorImage}
                     className="w-full text-[9px] px-2 py-[5px] bg-transparent border border-[rgba(200,60,40,0.2)] text-red-400 rounded-md hover:border-red-400 cursor-pointer font-sans mb-1"
                   >
                     ✕ Remove Image
