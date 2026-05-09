@@ -14,12 +14,6 @@ interface AnalysisPanelProps {
   onExport: () => void;
 }
 
-const SEV_STYLE = {
-  mild:     { bar: "#c8a028", badge: "rgba(120,80,0,0.35)",  text: "#c8a028" },
-  moderate: { bar: "#e87820", badge: "rgba(160,70,0,0.35)",  text: "#e87820" },
-  severe:   { bar: "#e05050", badge: "rgba(160,30,30,0.35)", text: "#e05050" },
-} as const;
-
 export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
   const router = useRouter();
   const {
@@ -29,12 +23,9 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
 
   const hasPerimeter = perimeterPoints.length >= 3;
 
-  // Zone rows — reactive to northDeg, brahmaX/Y, perimeter, cuts, scale
   const zoneRows = useMemo(() => {
     if (!hasPerimeter) {
-      return VASTU_ZONES.map(z => ({
-        zone: z, pct: 6.25, status: "good" as const, hasCut: false, cutPct: 0,
-      }));
+      return VASTU_ZONES.map(z => ({ zone: z, pct: 6.25, hasCut: false, cutPct: 0 }));
     }
     const results = calculateZoneAreas(
       perimeterPoints, brahmaX, brahmaY, northDeg,
@@ -42,15 +33,15 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
     );
     return VASTU_ZONES.map(z => {
       const r = results.find(res => res.zoneName === z.shortName);
-      const pct = r?.pctOfTotal ?? 0;
-      const cutPct = r?.cutPctOfZone ?? 0;
-      const status: "good" | "warning" | "critical" =
-        pct >= 5 && pct <= 7.5 ? "good" : pct < 3 ? "critical" : "warning";
-      return { zone: z, pct, status, hasCut: r?.hasCut ?? false, cutPct };
+      return {
+        zone: z,
+        pct: r?.pctOfTotal ?? 0,
+        hasCut: r?.hasCut ?? false,
+        cutPct: r?.cutPctOfZone ?? 0,
+      };
     });
   }, [perimeterPoints, brahmaX, brahmaY, northDeg, cuts, scale, hasPerimeter]);
 
-  // Cut analysis rows — reactive to same deps
   const cutRows = useMemo(() => {
     if (!hasPerimeter || cuts.length === 0) return [];
     return calculateCutAnalysis(
@@ -86,39 +77,26 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
       </div>
 
       <div className="flex flex-col">
-        {zoneRows.map(({ zone, pct, status, hasCut, cutPct }) => (
+        {zoneRows.map(({ zone, pct, hasCut, cutPct }) => (
           <div
             key={zone.shortName}
             className="group flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] cursor-default hover:bg-[rgba(100,70,20,0.07)] relative"
           >
-            {/* Color swatch */}
             <div
               className="w-[5px] h-[18px] rounded-[2px] flex-shrink-0"
               style={{ background: zone.color }}
             />
-            {/* Zone code */}
             <span className="font-mono text-[9px] text-vastu-text-2 w-[30px] flex-shrink-0">
               {zone.shortName}
             </span>
-            {/* Bar */}
             <div className="flex-1">
               <div
                 className="h-[3px] rounded-[2px] transition-all duration-300"
-                style={{
-                  width: `${(pct / maxPct) * 100}%`,
-                  background:
-                    status === "good" ? zone.color :
-                    status === "warning" ? "#c8a028" : "#c04040",
-                }}
+                style={{ width: `${(pct / maxPct) * 100}%`, background: zone.color }}
               />
             </div>
-            {/* Pct */}
-            <span className="font-mono text-[9px] text-vastu-text-3 w-8 text-right flex-shrink-0">
-              {pct.toFixed(1)}%
-            </span>
-            {/* Status icon */}
-            <span className="text-[9px] w-[14px] text-center flex-shrink-0">
-              {status === "good" ? "✓" : status === "warning" ? "⚠" : "✕"}
+            <span className="font-mono text-[9px] text-vastu-text-3 w-10 text-right flex-shrink-0">
+              {pct.toFixed(2)}%
             </span>
 
             {/* Hover tooltip */}
@@ -132,7 +110,7 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
                 {hasCut && (
                   <><br />
                     <span style={{ color: "#e05050" }}>
-                      ✕ Cut present — {cutPct.toFixed(1)}% of zone
+                      ✕ Cut present — {cutPct.toFixed(2)}% of zone
                     </span>
                   </>
                 )}
@@ -140,21 +118,19 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
             </div>
           </div>
         ))}
-      </div>{/* end zone rows */}
+      </div>
 
       {/* ── Bar Chart ── */}
       <div className="mt-[8px] pt-[8px] border-t border-[rgba(100,70,20,0.12)]">
         <div className="text-[8px] text-vastu-text-3 mb-[4px]">Zone Distribution</div>
         <div className="flex items-end gap-[2px] h-[44px]">
-          {zoneRows.map(({ zone, pct, status }) => (
+          {zoneRows.map(({ zone, pct }) => (
             <div
               key={zone.shortName}
               className="flex-1 rounded-t-[2px] min-w-0 transition-all duration-300"
               style={{
                 height: `${Math.max((pct / maxPct) * 100, 4)}%`,
-                background:
-                  status === "good" ? zone.color :
-                  status === "warning" ? "#c8a028" : "#c04040",
+                background: zone.color,
                 opacity: 0.8,
               }}
             />
@@ -176,8 +152,6 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
       {/* ── Cut Analysis ── */}
       {cutRows.length > 0 && (
         <div className="mt-[10px] pt-[9px] border-t border-[rgba(100,70,20,0.15)]">
-
-          {/* Section header */}
           <div className="flex items-center justify-between mb-[7px]">
             <div className="flex items-center gap-[5px]">
               <span className="text-[8px] text-vastu-text-3 uppercase tracking-[1px]">Cut Analysis</span>
@@ -191,67 +165,40 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
             <div className="text-[7px] text-vastu-text-3 italic">% of floor + cuts</div>
           </div>
 
-          {/* Cut rows */}
           <div className="flex flex-col gap-[3px]">
-            {cutRows.map(row => {
-              const s = SEV_STYLE[row.severity];
-              return (
+            {cutRows.map(row => (
+              <div
+                key={row.id}
+                className="flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] hover:bg-[rgba(100,70,20,0.06)]"
+              >
                 <div
-                  key={row.id}
-                  className="flex items-center gap-[5px] px-[3px] py-[3px] rounded-[4px] hover:bg-[rgba(100,70,20,0.06)]"
+                  className="w-[5px] h-[18px] rounded-[2px] flex-shrink-0"
+                  style={{ background: "#e05050", opacity: 0.6 }}
+                />
+                <span className="font-mono text-[8px] text-vastu-text-3 flex-shrink-0 min-w-[32px]">
+                  {row.label}
+                </span>
+                <span
+                  className="text-[7px] font-mono px-[4px] py-[1px] rounded-[3px] flex-shrink-0"
+                  style={{ background: "rgba(100,70,20,0.14)", color: "var(--gold-3)" }}
                 >
-                  {/* Severity swatch */}
+                  {row.primaryZone}
+                </span>
+                <div className="flex-1">
                   <div
-                    className="w-[5px] h-[18px] rounded-[2px] flex-shrink-0"
-                    style={{ background: s.bar, opacity: 0.75 }}
+                    className="h-[3px] rounded-[2px] transition-all duration-300"
+                    style={{
+                      width: `${(row.pctOfCombined / maxCutPct) * 100}%`,
+                      background: "#e05050",
+                      opacity: 0.7,
+                    }}
                   />
-                  {/* Cut label */}
-                  <span className="font-mono text-[8px] text-vastu-text-3 flex-shrink-0 min-w-[32px]">
-                    {row.label}
-                  </span>
-                  {/* Zone badge */}
-                  <span
-                    className="text-[7px] font-mono px-[4px] py-[1px] rounded-[3px] flex-shrink-0"
-                    style={{ background: "rgba(100,70,20,0.14)", color: "var(--gold-3)" }}
-                  >
-                    {row.primaryZone}
-                  </span>
-                  {/* Bar */}
-                  <div className="flex-1">
-                    <div
-                      className="h-[3px] rounded-[2px] transition-all duration-300"
-                      style={{
-                        width: `${(row.pctOfCombined / maxCutPct) * 100}%`,
-                        background: s.bar,
-                        opacity: 0.9,
-                      }}
-                    />
-                  </div>
-                  {/* Pct */}
-                  <span
-                    className="font-mono text-[9px] w-8 text-right flex-shrink-0"
-                    style={{ color: s.text }}
-                  >
-                    {row.pctOfCombined.toFixed(1)}%
-                  </span>
-                  {/* Severity badge */}
-                  <span
-                    className="text-[6px] px-[4px] py-[1px] rounded-[3px] uppercase font-sans font-semibold flex-shrink-0 tracking-[0.5px]"
-                    style={{ background: s.badge, color: s.text }}
-                  >
-                    {row.severity}
-                  </span>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div className="mt-[6px] text-[7px] text-vastu-text-3 leading-[1.9]">
-            <span style={{ color: "#c8a028" }}>●</span> mild &lt;5%&ensp;
-            <span style={{ color: "#e87820" }}>●</span> moderate 5–15%&ensp;
-            <span style={{ color: "#e05050" }}>●</span> severe &gt;15%
-            <span className="ml-1 italic">(% of floor plan)</span>
+                <span className="font-mono text-[9px] text-vastu-text-2 w-10 text-right flex-shrink-0">
+                  {row.pctOfCombined.toFixed(2)}%
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

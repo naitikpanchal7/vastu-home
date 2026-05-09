@@ -816,7 +816,9 @@ export default function CanvasWorkspace() {
                 </div>
                 <div className="flex items-center gap-[2px] border border-[rgba(100,70,20,0.20)] rounded-md p-[2px] flex-shrink-0">
                   {(["analysis", "ai"] as const).map((p) => {
+                    const isComingSoon = p === "ai";
                     const switchPanel = () => {
+                      if (isComingSoon) return;
                       const params = new URLSearchParams(searchParams.toString());
                       params.set("panel", p);
                       router.push(`${pathname}?${params.toString()}`);
@@ -825,13 +827,22 @@ export default function CanvasWorkspace() {
                       <button
                         key={p}
                         onClick={switchPanel}
-                        className={`text-[9px] px-[9px] py-[3px] rounded-[4px] font-sans cursor-pointer transition-all border ${
-                          fullPanel === p
-                            ? "bg-[rgba(100,70,20,0.20)] border-[rgba(100,70,20,0.50)] text-gold-2"
-                            : "bg-transparent border-transparent text-vastu-text-3 hover:text-vastu-text-2"
+                        disabled={isComingSoon}
+                        title={isComingSoon ? "Coming soon" : undefined}
+                        className={`text-[9px] px-[9px] py-[3px] rounded-[4px] font-sans transition-all border ${
+                          isComingSoon
+                            ? "opacity-40 cursor-not-allowed bg-transparent border-transparent text-vastu-text-3"
+                            : fullPanel === p
+                            ? "cursor-pointer bg-[rgba(100,70,20,0.20)] border-[rgba(100,70,20,0.50)] text-gold-2"
+                            : "cursor-pointer bg-transparent border-transparent text-vastu-text-3 hover:text-vastu-text-2"
                         }`}
                       >
                         {p === "analysis" ? "⊹ Analysis" : "✦ Vastu AI"}
+                        {isComingSoon && (
+                          <span className="ml-1 text-[6px] bg-[rgba(100,70,20,0.25)] text-vastu-text-3 px-[4px] py-[1px] rounded-full uppercase tracking-[0.5px] align-middle">
+                            Soon
+                          </span>
+                        )}
                       </button>
                     );
                   })}

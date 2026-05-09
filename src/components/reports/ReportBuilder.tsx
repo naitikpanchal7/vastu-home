@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useReportStore } from "@/store/reportStore";
@@ -94,7 +95,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
-  const { profile } = useUser();
+  const { user, profile } = useUser();
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -112,6 +113,10 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
 
   const consultantName = profile?.full_name || profile?.email || "Consultant";
 
+  // Stable ID for this report — generated once per open so attachments uploaded
+  // before PDF generation share the same storage prefix as the final PDF.
+  const [reportId, setReportId] = useState<string>(() => initialReport?.id ?? crypto.randomUUID());
+
   // ── Report state ────────────────────────────────────────────────────────────
   const defaultReportName = useMemo(() => {
     if (initialReport) return initialReport.reportName;
@@ -121,6 +126,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   }, [canvasStore.projectName, initialReport, initialActiveFloor]);
 
   const [reportName, setReportName] = useState(defaultReportName);
+  const [isNameCustomized, setIsNameCustomized] = useState(!!initialReport);
   const [preset, setPreset] = useState<ReportPreset>(initialReport?.preset ?? "consultant-standard");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +202,17 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
 
   useEffect(() => {
     if (!open) return;
-    setReportName(initialReport?.reportName ?? defaultReportName);
+    setReportId(initialReport?.id ?? crypto.randomUUID());
+    if (initialReport) {
+      setReportName(initialReport.reportName);
+      setIsNameCustomized(true);
+    } else {
+      const restoredId = canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
+      const floor = allFloors.find((f) => f.id === restoredId) ?? allFloors[0];
+      const d = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      setReportName(`${canvasStore.projectName} — ${floor?.name ?? "Floor"} — ${d}`);
+      setIsNameCustomized(false);
+    }
     setPreset(initialReport?.preset ?? "consultant-standard");
     const restoredFloorId = initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
     setFloorAttachments(() => {
@@ -208,7 +224,8 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       return next;
     });
     setActiveFloorId(restoredFloorId);
-  }, [open, initialReport]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialReport, canvasStore.currentFloorId, canvasStore.projectName]);
 
   // Keep new reports in sync with whichever floor is active on canvas.
   // If floors are added/removed, recover to the current canvas floor or first available.
@@ -235,6 +252,14 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     [allFloors, activeFloorId]
   );
   const activeSelection = activeFloor ? floorSelections[activeFloor.id] : undefined;
+
+  // Auto-update report name when floor changes, unless user has customized it
+  useEffect(() => {
+    if (!open || isNameCustomized || !activeFloor) return;
+    const d = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    setReportName(`${canvasStore.projectName} — ${activeFloor.name} — ${d}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFloor?.id]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -286,23 +311,67 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     }));
   };
 
+  const ALLOWED_IMAGE_TYPES = new Set([
+    "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif",
+  ]);
+  const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB per image
+
   const handleAttachmentUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || !activeFloorId) return;
+
+    const rejected: string[] = [];
+    const accepted = Array.from(files).filter((file) => {
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        rejected.push(`${file.name} — only JPEG, PNG, WEBP, GIF or HEIC images are allowed`);
+        return false;
+      }
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        rejected.push(`${file.name} — exceeds 10 MB limit`);
+        return false;
+      }
+      return true;
+    });
+    if (rejected.length > 0) {
+      setError(rejected.join("\n"));
+      if (accepted.length === 0) return;
+    }
+
+    const supabase = createSupabaseClient();
     const nextAttachments = await Promise.all(
-      Array.from(files).map(async (file) => ({
-        id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: file.name,
-        mimeType: file.type || "application/octet-stream",
-        sizeBytes: file.size,
-        position: attachmentPosition,
-        dataUrl: await readFileAsDataUrl(file),
-      }))
+      accepted.map(async (file) => {
+        const attachmentId = `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const dataUrl = await readFileAsDataUrl(file);
+        let storagePath: string | undefined;
+
+        // Upload to Supabase Storage if the user is authenticated
+        if (user?.id) {
+          const ext = file.name.split(".").pop() ?? "bin";
+          const path = `${user.id}/${reportId}/${attachmentId}.${ext}`;
+          // Convert dataUrl to blob for upload
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const { error } = await supabase.storage
+            .from("report-attachments")
+            .upload(path, blob, { contentType: file.type || "application/octet-stream", upsert: true });
+          if (!error) storagePath = path;
+        }
+
+        return {
+          id: attachmentId,
+          name: file.name,
+          mimeType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+          position: attachmentPosition,
+          dataUrl,
+          storagePath,
+        };
+      })
     );
     setFloorAttachments((prev) => ({
       ...prev,
       [activeFloorId]: [...(prev[activeFloorId] ?? []), ...nextAttachments],
     }));
-  }, [attachmentPosition, activeFloorId]);
+  }, [attachmentPosition, activeFloorId, user?.id, reportId]);
 
   const removeAttachment = (id: string) => {
     if (!activeFloorId) return;
@@ -375,61 +444,68 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     setGenerating(true);
     setError(null);
     try {
-      if (!activeFloor || !activeSelection?.enabled) {
-        throw new Error("No active floor selected for report generation.");
+      if (selectedFloors.length === 0) {
+        throw new Error("No floors selected for report generation.");
       }
 
-      // Build floor PDF data — generate canvas snapshots for the active floor only
+      // Build floor PDF data — loop through all enabled floors
       const floorPDFDataArray: FloorPDFData[] = [];
-      const cs = activeFloor.canvasState;
+      for (const floor of selectedFloors) {
+        const cs = floor.canvasState;
+        const floorSel = floorSelections[floor.id];
 
-      // Convert blob URL to base64 (needed for PDF image embedding)
-      const imageBase64 = activeFloor.floorPlanImage
-        ? await blobUrlToBase64(activeFloor.floorPlanImage)
-        : null;
+        // Convert blob URL to base64 (needed for PDF image embedding)
+        const imageBase64 = floor.floorPlanImage
+          ? await blobUrlToBase64(floor.floorPlanImage)
+          : null;
 
-      // Generate all overlay snapshots (chakra-16, chakra-8, perimeter, cuts)
-      // These run in parallel — each returns a PNG data URL
-      const snapshots = await generateAllSnapshots(activeFloor, imageBase64);
+        // Generate all overlay snapshots — bail after 30 s so the button never freezes forever
+        const snapshots = await Promise.race([
+          generateAllSnapshots(floor, imageBase64),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Snapshot timed out for ${floor.name}. Please try again.`)), 30_000)
+          ),
+        ]);
 
-      const zoneAnalysis = cs.perimeterPoints.length >= 3
-        ? calculateZoneAreas(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts, cs.scale?.pixelsPerUnit)
-        : [];
+        const zoneAnalysis = cs.perimeterPoints.length >= 3
+          ? calculateZoneAreas(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts, cs.scale?.pixelsPerUnit)
+          : [];
 
-      const zoneRows = buildZoneRows(activeFloor);
+        const zoneRows = buildZoneRows(floor);
 
-      const cutAnalysis = cs.perimeterPoints.length >= 3 && cs.cuts.length > 0
-        ? calculateCutAnalysis(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts)
-        : [];
+        const cutAnalysis = cs.perimeterPoints.length >= 3 && cs.cuts.length > 0
+          ? calculateCutAnalysis(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts)
+          : [];
 
-      floorPDFDataArray.push({
-        floorId: activeFloor.id,
-        floorName: activeFloor.name,
-        floorOrder: activeFloor.order,
-        floorPlanImageBase64: imageBase64,
-        snapshots: {
-          planOnly:          snapshots.planOnly,
-          planBrahma:        snapshots.planBrahma,
-          planChakra:        snapshots.planChakra,
-          planPerimeter:     snapshots.planPerimeter,
-          planCutsOnly:      snapshots.planCutsOnly,
-          planPerimeterCuts: snapshots.planPerimeterCuts,
-          planFull:          snapshots.planFull,
-          zoneLines16:       snapshots.zoneLines16,
-          zoneLines8:        snapshots.zoneLines8,
-          panchabhuta:       snapshots.panchabhuta,
-        },
-        northDeg: cs.northDeg,
-        zoneAnalysis,
-        zoneRows,
-        cutAnalysis,
-        hasCuts: cs.cuts.length > 0,
-        scaleUnit: cs.scale?.unit ?? "ft",
-        selectedPages: activeSelection.pages,
-        pageNotes: activeSelection.pageNotes,
-        consultantSummary: activeFloor.consultantSummary ?? "",
-        consultantActions: activeFloor.consultantActions ?? "",
-      });
+        floorPDFDataArray.push({
+          floorId: floor.id,
+          floorName: floor.name,
+          floorOrder: floor.order,
+          floorPlanImageBase64: imageBase64,
+          snapshots: {
+            planOnly:          snapshots.planOnly,
+            planBrahma:        snapshots.planBrahma,
+            planChakra:        snapshots.planChakra,
+            planPerimeter:     snapshots.planPerimeter,
+            planCutsOnly:      snapshots.planCutsOnly,
+            planPerimeterCuts: snapshots.planPerimeterCuts,
+            planFull:          snapshots.planFull,
+            zoneLines16:       snapshots.zoneLines16,
+            zoneLines8:        snapshots.zoneLines8,
+            panchabhuta:       snapshots.panchabhuta,
+          },
+          northDeg: cs.northDeg,
+          zoneAnalysis,
+          zoneRows,
+          cutAnalysis,
+          hasCuts: cs.cuts.length > 0,
+          scaleUnit: cs.scale?.unit ?? "ft",
+          selectedPages: floorSel?.pages ?? [],
+          pageNotes: floorSel?.pageNotes ?? {},
+          consultantSummary: floor.consultantSummary ?? "",
+          consultantActions: floor.consultantActions ?? "",
+        });
+      }
 
       const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
       const project = projectStore.projects.find((p) => p.id === projectId);
@@ -448,15 +524,29 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         northDeg: canvasStore.northDeg,
         floors: floorPDFDataArray,
         totalProjectFloors: allFloors.length,
-        attachments,
+        attachments: selectedFloors.flatMap((f) => floorAttachments[f.id] ?? []),
       };
 
-      // Generate and download
+      // Generate PDF data URL (used for immediate download + storage upload)
+      const pdfDataUrl = await generatePDFDataUrl(docData);
+
+      // Trigger browser download immediately
       const filename = `${reportName.trim().replace(/[^a-z0-9\-_ ]/gi, "").replace(/\s+/g, "-")}.pdf`;
       await generateAndDownloadPDF(docData, filename);
 
-      // Save report to store
-      const pdfDataUrl = await generatePDFDataUrl(docData);
+      // Upload PDF to Supabase Storage so it can be re-downloaded later without the builder
+      let pdfStoragePath: string | undefined;
+      if (user?.id) {
+        const supabase = createSupabaseClient();
+        const path = `${user.id}/${reportId}.pdf`;
+        const pdfBlob = await fetch(pdfDataUrl).then((r) => r.blob());
+        const { error: uploadErr } = await supabase.storage
+          .from("report-exports")
+          .upload(path, pdfBlob, { contentType: "application/pdf", upsert: true });
+        if (!uploadErr) pdfStoragePath = path;
+        else console.warn("PDF storage upload failed:", uploadErr);
+      }
+
       const now = new Date().toISOString();
       const floorSelectionsArr: ReportFloorSelection[] = selectedFloors
         .map((f) => ({
@@ -470,7 +560,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         }));
 
       const report: Report = {
-        id: initialReport?.id ?? crypto.randomUUID(),
+        id: reportId,
         projectId,
         projectName: canvasStore.projectName,
         clientName: canvasStore.clientName,
@@ -483,6 +573,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         createdAt: initialReport?.createdAt ?? now,
         updatedAt: now,
         pdfDataUrl,
+        pdfStoragePath,
       };
       if (initialReport) {
         reportStore.updateReport(initialReport.id, report);
@@ -493,18 +584,29 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       // Persist to DB if real project
       if (projectId && !projectId.startsWith("proj-")) {
         const isNew = !initialReport;
-        fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
-          method: isNew ? "POST" : "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id:              report.id,
-            projectId:       report.projectId,
-            reportName:      report.reportName,
-            preset:          report.preset,
-            floorSelections: report.floorSelections,
-            status:          "downloaded",
-          }),
-        }).catch(() => {});
+        try {
+          const res = await fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
+            method: isNew ? "POST" : "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id:              report.id,
+              projectId:       report.projectId,
+              reportName:      report.reportName,
+              preset:          report.preset,
+              floorSelections: report.floorSelections,
+              status:          "downloaded",
+              pdfStoragePath:  report.pdfStoragePath,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            console.warn("Report DB save failed:", body);
+            setError("Report downloaded. Could not save to database — it will be available locally only.");
+          }
+        } catch (networkErr) {
+          console.warn("Report DB save network error:", networkErr);
+          setError("Report downloaded. Server unreachable — saved locally only.");
+        }
       }
 
       onClose();
@@ -532,7 +634,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
             <div className="text-[11px] text-vastu-text-3 uppercase tracking-[1.5px]">Report Builder</div>
             <input
               value={reportName}
-              onChange={(e) => setReportName(e.target.value)}
+              onChange={(e) => { setReportName(e.target.value); setIsNameCustomized(true); }}
               placeholder="Report name…"
               className="font-serif text-[15px] font-medium text-vastu-text bg-transparent border-none outline-none w-[320px] truncate placeholder:text-vastu-text-3"
             />
@@ -722,7 +824,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,application/pdf,.doc,.docx,.txt,.md,.rtf,.csv,.json,.xml,.yml,.yaml"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
                 onChange={(e) => {
                   void handleAttachmentUpload(e.target.files);
                   e.currentTarget.value = "";
@@ -878,11 +980,6 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
   const hasCuts = floor.canvasState.cuts.length > 0;
   const cs = floor.canvasState;
 
-  // Zone rows for inline status
-  const zoneRows = useMemo(() => buildZoneRows(floor), [floor]);
-  const goodCount = zoneRows.filter((r) => r.status === "good").length;
-  const critCount = zoneRows.filter((r) => r.status === "critical").length;
-
   const allPageTypes = Object.keys(REPORT_PAGE_META) as ReportPageType[];
 
   return (
@@ -912,9 +1009,7 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
         ) : (
           <div className="flex gap-3 text-[8px] text-vastu-text-3">
             <span>N: <strong className="text-gold-2 font-mono">{cs.northDeg.toFixed(1)}°</strong></span>
-            <span className="text-green-500">{goodCount} good</span>
-            {critCount > 0 && <span className="text-red-400">{critCount} critical</span>}
-            {hasCuts && <span className="text-amber-400">{cs.cuts.length} cuts</span>}
+            {hasCuts && <span className="text-vastu-text-3">{cs.cuts.length} cut{cs.cuts.length !== 1 ? "s" : ""}</span>}
           </div>
         )}
       </div>
@@ -932,16 +1027,21 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
                 <div className="flex flex-col gap-[3px]">
                   {groupPages.map((page) => {
                     const meta = REPORT_PAGE_META[page];
+                    const isComingSoon = page === "ai-summary";
                     const checked = selection.pages.includes(page);
-                    const disabled = !selection.enabled || (meta.requiresCuts && !hasCuts);
+                    const disabled = isComingSoon || !selection.enabled || (meta.requiresCuts && !hasCuts);
                     return (
                       <label
                         key={page}
                         className={cn(
-                          "flex items-start gap-2 px-2 py-[5px] rounded-[4px] cursor-pointer transition-colors",
-                          disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[rgba(100,70,20,0.06)]"
+                          "flex items-start gap-2 px-2 py-[5px] rounded-[4px] transition-colors",
+                          disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-[rgba(100,70,20,0.06)]"
                         )}
-                        title={meta.requiresCuts && !hasCuts ? "No cuts present — this page will be disabled" : undefined}
+                        title={
+                          isComingSoon ? "Coming soon" :
+                          meta.requiresCuts && !hasCuts ? "No cuts present — this page will be disabled" :
+                          undefined
+                        }
                       >
                         <input
                           type="checkbox"
@@ -953,7 +1053,10 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
                         <div className="min-w-0">
                           <div className="text-[10px] text-vastu-text-2 leading-tight">
                             {meta.label}
-                            {meta.requiresCuts && !hasCuts && (
+                            {isComingSoon && (
+                              <span className="ml-1 text-[7px] bg-[rgba(100,70,20,0.25)] text-vastu-text-3 px-[4px] py-[1px] rounded-full uppercase tracking-[0.5px]">Soon</span>
+                            )}
+                            {!isComingSoon && meta.requiresCuts && !hasCuts && (
                               <span className="ml-1 text-[7px] text-vastu-text-3">(no cuts)</span>
                             )}
                           </div>
@@ -1344,14 +1447,14 @@ function ZoneTableContent({ pageType, floor }: { pageType: "16-zone" | "8-zone";
         <span style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", letterSpacing: 0.5 }}>ZONE</span>
         <span style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", letterSpacing: 0.5 }}>%</span>
       </div>
-      {rows.length > 0 ? rows.slice(0, 10).map(({ zone, pct, status }) => (
+      {rows.length > 0 ? rows.slice(0, 10).map(({ zone, pct }) => (
         <div key={zone.shortName} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
           <div style={{ width: 4, height: 4, borderRadius: 1, background: zone.color, flexShrink: 0 }} />
           <span style={{ fontSize: 4, color: PDF.text2, fontFamily: "monospace", flexShrink: 0, width: 13 }}>{zone.shortName}</span>
           <div style={{ flex: 1, height: 3, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${Math.min((pct / 12.5) * 100, 100)}%`, background: status === "good" ? zone.color : status === "critical" ? PDF.red : PDF.amber, borderRadius: 1 }} />
+            <div style={{ height: "100%", width: `${Math.min((pct / 12.5) * 100, 100)}%`, background: zone.color, borderRadius: 1 }} />
           </div>
-          <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", flexShrink: 0, width: 14, textAlign: "right" }}>{pct.toFixed(1)}%</span>
+          <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", flexShrink: 0, width: 14, textAlign: "right" }}>{pct.toFixed(2)}%</span>
         </div>
       )) : Array.from({ length: Math.min(count, 10) }).map((_, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
@@ -1382,13 +1485,13 @@ function BarGraphContent({ pageType, floor }: { pageType: "bar-graph-16" | "bar-
       <div style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", marginBottom: 3 }}>Ideal: 6.25% per zone</div>
       {/* Ideal reference line */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {rows.length > 0 ? rows.slice(0, count).map(({ zone, pct, status }) => (
+        {rows.length > 0 ? rows.slice(0, count).map(({ zone, pct }) => (
           <div key={zone.shortName} style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 11, textAlign: "right", flexShrink: 0 }}>{zone.shortName}</span>
             <div style={{ flex: 1, height: 3.5, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: status === "good" ? zone.color : status === "critical" ? PDF.red : PDF.amber, borderRadius: 1, opacity: 0.85 }} />
+              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: zone.color, borderRadius: 1, opacity: 0.85 }} />
             </div>
-            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 14, textAlign: "right", flexShrink: 0 }}>{pct.toFixed(1)}%</span>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 14, textAlign: "right", flexShrink: 0 }}>{pct.toFixed(2)}%</span>
           </div>
         )) : Array.from({ length: count }).map((_, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -1464,7 +1567,7 @@ function CutAnalysisContent({ floor }: { floor: Floor | null }) {
                   <div style={{ width: 14, flexShrink: 0, background: PDF.bg2, borderRadius: 1, padding: "1px 2px" }}>
                     <span style={{ fontSize: 3.5, color: PDF.gold, fontFamily: "monospace" }}>{cut.primaryZone}</span>
                   </div>
-                  <span style={{ fontSize: 4, color: sc, fontFamily: "monospace", flex: 1, textAlign: "right", fontWeight: "bold" }}>{cut.pctOfFloor.toFixed(1)}%</span>
+                  <span style={{ fontSize: 4, color: sc, fontFamily: "monospace", flex: 1, textAlign: "right", fontWeight: "bold" }}>{cut.pctOfFloor.toFixed(2)}%</span>
                   <div style={{ width: 22, flexShrink: 0, background: sc + "22", borderRadius: 1, padding: "1px 2px", textAlign: "center" }}>
                     <span style={{ fontSize: 3.5, color: sc, fontFamily: "sans-serif", textTransform: "uppercase", fontWeight: "bold" }}>{cut.severity}</span>
                   </div>

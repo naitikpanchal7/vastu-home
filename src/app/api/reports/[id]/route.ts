@@ -45,6 +45,8 @@ export async function PATCH(
   if (body.preset          !== undefined) update.preset           = body.preset;
   if (body.floorSelections !== undefined) update.floor_selections = body.floorSelections;
   if (body.status          !== undefined) update.status           = body.status;
+  const bodyAny = body as Record<string, unknown>;
+  if (bodyAny.pdfStoragePath !== undefined) update.pdf_storage_path = bodyAny.pdfStoragePath;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -77,11 +79,12 @@ export async function DELETE(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Collect the PDF path and all attachment paths before soft-deleting
+  // Collect the PDF path and all attachment paths before soft-deleting.
+  // Attachments are stored inline in floor_selections JSON under each floor's attachments[].storagePath.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: report } = await (admin as any)
     .from("reports")
-    .select("pdf_storage_path, report_attachments(storage_path)")
+    .select("pdf_storage_path, floor_selections")
     .eq("id", id)
     .eq("consultant_id", user.id)
     .single();
@@ -98,13 +101,16 @@ export async function DELETE(
   // Enqueue PDF and attachments for deletion after 15 days — matching the DB
   // hard-delete window so a report can be recovered within the grace period.
   const deleteAfter = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+  // Extract attachment storagePaths from floor_selections JSON
+  type FloorSel = { attachments?: { storagePath?: string }[] };
+  const attachmentPaths: string[] = ((report?.floor_selections ?? []) as FloorSel[])
+    .flatMap((f) => (f.attachments ?? []).map((a) => a.storagePath).filter(Boolean) as string[]);
+
   const queueEntries = [
     ...(report?.pdf_storage_path
       ? [{ bucket: "report-exports", path: report.pdf_storage_path, delete_after: deleteAfter }]
       : []),
-    ...((report?.report_attachments ?? []) as { storage_path: string }[])
-      .map((a) => ({ bucket: "report-attachments", path: a.storage_path, delete_after: deleteAfter }))
-      .filter((e) => e.path),
+    ...attachmentPaths.map((path) => ({ bucket: "report-attachments", path, delete_after: deleteAfter })),
   ];
   if (queueEntries.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

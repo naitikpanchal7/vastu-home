@@ -243,6 +243,7 @@ export interface ReportAttachment {
   sizeBytes: number;
   position: ReportSupplementaryPosition;
   dataUrl: string;
+  storagePath?: string;
 }
 
 export interface Report {
@@ -260,6 +261,7 @@ export interface Report {
   createdAt: string;
   updatedAt: string;
   pdfDataUrl?: string;
+  pdfStoragePath?: string;
 }
 
 // ── API Response types ────────────────────────────────────────────────────────

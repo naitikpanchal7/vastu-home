@@ -47,21 +47,33 @@ export default function RightPanel({ onExport }: RightPanelProps) {
           {/* Tab header */}
           <div className="flex items-center h-9 border-b border-[rgba(100,70,20,0.12)] flex-shrink-0 px-[10px]">
             <div className="flex flex-1">
-              {(["analysis", "north", "chatbot", "summary"] as Tab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    "flex-1 py-[9px] text-center text-[10px] cursor-pointer border-b-2 transition-all duration-[130ms] font-sans whitespace-nowrap bg-transparent border-none",
-                    activeTab === tab
-                      ? "text-gold-2 border-b-gold border-b-2"
-                      : "text-vastu-text-3 border-b-transparent hover:text-vastu-text-2"
-                  )}
-                  style={{ borderBottom: activeTab === tab ? "2px solid var(--gold)" : "2px solid transparent" }}
-                >
-                  {TAB_LABELS[tab]}
-                </button>
-              ))}
+              {(["analysis", "north", "chatbot", "summary"] as Tab[]).map((tab) => {
+                const isComingSoon = tab === "chatbot";
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => !isComingSoon && setActiveTab(tab)}
+                    disabled={isComingSoon}
+                    className={cn(
+                      "flex-1 py-[9px] text-center text-[10px] border-b-2 transition-all duration-[130ms] font-sans whitespace-nowrap bg-transparent border-none relative",
+                      isComingSoon
+                        ? "text-vastu-text-3 opacity-40 cursor-not-allowed"
+                        : activeTab === tab
+                        ? "text-gold-2 cursor-pointer"
+                        : "text-vastu-text-3 cursor-pointer border-b-transparent hover:text-vastu-text-2"
+                    )}
+                    style={{ borderBottom: !isComingSoon && activeTab === tab ? "2px solid var(--gold)" : "2px solid transparent" }}
+                    title={isComingSoon ? "Coming soon" : undefined}
+                  >
+                    {TAB_LABELS[tab]}
+                    {isComingSoon && (
+                      <span className="ml-1 text-[6px] bg-[rgba(100,70,20,0.25)] text-vastu-text-3 px-[4px] py-[1px] rounded-full uppercase tracking-[0.5px] align-middle">
+                        Soon
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             <button
               onClick={() => setOpen(false)}

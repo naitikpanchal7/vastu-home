@@ -44,18 +44,19 @@ export async function POST(req: NextRequest) {
 
   const invalid = validationFail([
     validateString(body.reportName, "reportName", { maxLength: 200 }),
-    validateEnum(body.preset, "preset", ["custom", "standard", "detailed"]),
-    validateEnum(body.status, "status", ["draft", "final"]),
+    validateEnum(body.preset, "preset", ["consultant-standard", "quick-summary", "custom"]),
+    validateEnum(body.status, "status", ["draft", "generating", "generated", "downloaded"]),
   ]);
   if (invalid) return invalid;
 
   const insertRow: Record<string, unknown> = {
-    project_id:       body.projectId,
-    consultant_id:    user.id,
-    report_name:      body.reportName ?? "Untitled Report",
-    preset:           body.preset ?? "custom",
-    floor_selections: body.floorSelections ?? [],
-    status:           body.status ?? "draft",
+    project_id:        body.projectId,
+    consultant_id:     user.id,
+    report_name:       body.reportName ?? "Untitled Report",
+    preset:            body.preset ?? "custom",
+    floor_selections:  body.floorSelections ?? [],
+    status:            body.status ?? "draft",
+    pdf_storage_path:  (body as Record<string, unknown>).pdfStoragePath ?? null,
   };
   // Use client-provided UUID if given (keeps store ID in sync with DB)
   if (body.id && typeof body.id === "string" && !body.id.startsWith("report-")) {
