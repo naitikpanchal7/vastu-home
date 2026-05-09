@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import { useCanvasStore } from "@/store/canvasStore";
 import { useProjectStore } from "@/store/projectStore";
 import { useReportStore } from "@/store/reportStore";
@@ -94,7 +95,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
-  const { profile } = useUser();
+  const { user, profile } = useUser();
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -111,6 +112,10 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const initialActiveFloor = allFloors.find((floor) => floor.id === initialActiveFloorId) ?? allFloors[0];
 
   const consultantName = profile?.full_name || profile?.email || "Consultant";
+
+  // Stable ID for this report — generated once per open so attachments uploaded
+  // before PDF generation share the same storage prefix as the final PDF.
+  const [reportId, setReportId] = useState<string>(() => initialReport?.id ?? crypto.randomUUID());
 
   // ── Report state ────────────────────────────────────────────────────────────
   const defaultReportName = useMemo(() => {
@@ -197,6 +202,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
 
   useEffect(() => {
     if (!open) return;
+    setReportId(initialReport?.id ?? crypto.randomUUID());
     if (initialReport) {
       setReportName(initialReport.reportName);
       setIsNameCustomized(true);
@@ -305,23 +311,67 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     }));
   };
 
+  const ALLOWED_IMAGE_TYPES = new Set([
+    "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif",
+  ]);
+  const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB per image
+
   const handleAttachmentUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || !activeFloorId) return;
+
+    const rejected: string[] = [];
+    const accepted = Array.from(files).filter((file) => {
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+        rejected.push(`${file.name} — only JPEG, PNG, WEBP, GIF or HEIC images are allowed`);
+        return false;
+      }
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        rejected.push(`${file.name} — exceeds 10 MB limit`);
+        return false;
+      }
+      return true;
+    });
+    if (rejected.length > 0) {
+      setError(rejected.join("\n"));
+      if (accepted.length === 0) return;
+    }
+
+    const supabase = createSupabaseClient();
     const nextAttachments = await Promise.all(
-      Array.from(files).map(async (file) => ({
-        id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: file.name,
-        mimeType: file.type || "application/octet-stream",
-        sizeBytes: file.size,
-        position: attachmentPosition,
-        dataUrl: await readFileAsDataUrl(file),
-      }))
+      accepted.map(async (file) => {
+        const attachmentId = `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const dataUrl = await readFileAsDataUrl(file);
+        let storagePath: string | undefined;
+
+        // Upload to Supabase Storage if the user is authenticated
+        if (user?.id) {
+          const ext = file.name.split(".").pop() ?? "bin";
+          const path = `${user.id}/${reportId}/${attachmentId}.${ext}`;
+          // Convert dataUrl to blob for upload
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const { error } = await supabase.storage
+            .from("report-attachments")
+            .upload(path, blob, { contentType: file.type || "application/octet-stream", upsert: true });
+          if (!error) storagePath = path;
+        }
+
+        return {
+          id: attachmentId,
+          name: file.name,
+          mimeType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+          position: attachmentPosition,
+          dataUrl,
+          storagePath,
+        };
+      })
     );
     setFloorAttachments((prev) => ({
       ...prev,
       [activeFloorId]: [...(prev[activeFloorId] ?? []), ...nextAttachments],
     }));
-  }, [attachmentPosition, activeFloorId]);
+  }, [attachmentPosition, activeFloorId, user?.id, reportId]);
 
   const removeAttachment = (id: string) => {
     if (!activeFloorId) return;
@@ -394,61 +444,68 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     setGenerating(true);
     setError(null);
     try {
-      if (!activeFloor || !activeSelection?.enabled) {
-        throw new Error("No active floor selected for report generation.");
+      if (selectedFloors.length === 0) {
+        throw new Error("No floors selected for report generation.");
       }
 
-      // Build floor PDF data — generate canvas snapshots for the active floor only
+      // Build floor PDF data — loop through all enabled floors
       const floorPDFDataArray: FloorPDFData[] = [];
-      const cs = activeFloor.canvasState;
+      for (const floor of selectedFloors) {
+        const cs = floor.canvasState;
+        const floorSel = floorSelections[floor.id];
 
-      // Convert blob URL to base64 (needed for PDF image embedding)
-      const imageBase64 = activeFloor.floorPlanImage
-        ? await blobUrlToBase64(activeFloor.floorPlanImage)
-        : null;
+        // Convert blob URL to base64 (needed for PDF image embedding)
+        const imageBase64 = floor.floorPlanImage
+          ? await blobUrlToBase64(floor.floorPlanImage)
+          : null;
 
-      // Generate all overlay snapshots (chakra-16, chakra-8, perimeter, cuts)
-      // These run in parallel — each returns a PNG data URL
-      const snapshots = await generateAllSnapshots(activeFloor, imageBase64);
+        // Generate all overlay snapshots — bail after 30 s so the button never freezes forever
+        const snapshots = await Promise.race([
+          generateAllSnapshots(floor, imageBase64),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Snapshot timed out for ${floor.name}. Please try again.`)), 30_000)
+          ),
+        ]);
 
-      const zoneAnalysis = cs.perimeterPoints.length >= 3
-        ? calculateZoneAreas(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts, cs.scale?.pixelsPerUnit)
-        : [];
+        const zoneAnalysis = cs.perimeterPoints.length >= 3
+          ? calculateZoneAreas(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts, cs.scale?.pixelsPerUnit)
+          : [];
 
-      const zoneRows = buildZoneRows(activeFloor);
+        const zoneRows = buildZoneRows(floor);
 
-      const cutAnalysis = cs.perimeterPoints.length >= 3 && cs.cuts.length > 0
-        ? calculateCutAnalysis(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts)
-        : [];
+        const cutAnalysis = cs.perimeterPoints.length >= 3 && cs.cuts.length > 0
+          ? calculateCutAnalysis(cs.perimeterPoints, cs.brahmaX, cs.brahmaY, cs.northDeg, VASTU_ZONES, cs.cuts)
+          : [];
 
-      floorPDFDataArray.push({
-        floorId: activeFloor.id,
-        floorName: activeFloor.name,
-        floorOrder: activeFloor.order,
-        floorPlanImageBase64: imageBase64,
-        snapshots: {
-          planOnly:          snapshots.planOnly,
-          planBrahma:        snapshots.planBrahma,
-          planChakra:        snapshots.planChakra,
-          planPerimeter:     snapshots.planPerimeter,
-          planCutsOnly:      snapshots.planCutsOnly,
-          planPerimeterCuts: snapshots.planPerimeterCuts,
-          planFull:          snapshots.planFull,
-          zoneLines16:       snapshots.zoneLines16,
-          zoneLines8:        snapshots.zoneLines8,
-          panchabhuta:       snapshots.panchabhuta,
-        },
-        northDeg: cs.northDeg,
-        zoneAnalysis,
-        zoneRows,
-        cutAnalysis,
-        hasCuts: cs.cuts.length > 0,
-        scaleUnit: cs.scale?.unit ?? "ft",
-        selectedPages: activeSelection.pages,
-        pageNotes: activeSelection.pageNotes,
-        consultantSummary: activeFloor.consultantSummary ?? "",
-        consultantActions: activeFloor.consultantActions ?? "",
-      });
+        floorPDFDataArray.push({
+          floorId: floor.id,
+          floorName: floor.name,
+          floorOrder: floor.order,
+          floorPlanImageBase64: imageBase64,
+          snapshots: {
+            planOnly:          snapshots.planOnly,
+            planBrahma:        snapshots.planBrahma,
+            planChakra:        snapshots.planChakra,
+            planPerimeter:     snapshots.planPerimeter,
+            planCutsOnly:      snapshots.planCutsOnly,
+            planPerimeterCuts: snapshots.planPerimeterCuts,
+            planFull:          snapshots.planFull,
+            zoneLines16:       snapshots.zoneLines16,
+            zoneLines8:        snapshots.zoneLines8,
+            panchabhuta:       snapshots.panchabhuta,
+          },
+          northDeg: cs.northDeg,
+          zoneAnalysis,
+          zoneRows,
+          cutAnalysis,
+          hasCuts: cs.cuts.length > 0,
+          scaleUnit: cs.scale?.unit ?? "ft",
+          selectedPages: floorSel?.pages ?? [],
+          pageNotes: floorSel?.pageNotes ?? {},
+          consultantSummary: floor.consultantSummary ?? "",
+          consultantActions: floor.consultantActions ?? "",
+        });
+      }
 
       const projectId = canvasStore.projectId ?? `proj-local-${Date.now()}`;
       const project = projectStore.projects.find((p) => p.id === projectId);
@@ -467,15 +524,29 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         northDeg: canvasStore.northDeg,
         floors: floorPDFDataArray,
         totalProjectFloors: allFloors.length,
-        attachments,
+        attachments: selectedFloors.flatMap((f) => floorAttachments[f.id] ?? []),
       };
 
-      // Generate and download
+      // Generate PDF data URL (used for immediate download + storage upload)
+      const pdfDataUrl = await generatePDFDataUrl(docData);
+
+      // Trigger browser download immediately
       const filename = `${reportName.trim().replace(/[^a-z0-9\-_ ]/gi, "").replace(/\s+/g, "-")}.pdf`;
       await generateAndDownloadPDF(docData, filename);
 
-      // Save report to store
-      const pdfDataUrl = await generatePDFDataUrl(docData);
+      // Upload PDF to Supabase Storage so it can be re-downloaded later without the builder
+      let pdfStoragePath: string | undefined;
+      if (user?.id) {
+        const supabase = createSupabaseClient();
+        const path = `${user.id}/${reportId}.pdf`;
+        const pdfBlob = await fetch(pdfDataUrl).then((r) => r.blob());
+        const { error: uploadErr } = await supabase.storage
+          .from("report-exports")
+          .upload(path, pdfBlob, { contentType: "application/pdf", upsert: true });
+        if (!uploadErr) pdfStoragePath = path;
+        else console.warn("PDF storage upload failed:", uploadErr);
+      }
+
       const now = new Date().toISOString();
       const floorSelectionsArr: ReportFloorSelection[] = selectedFloors
         .map((f) => ({
@@ -489,7 +560,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         }));
 
       const report: Report = {
-        id: initialReport?.id ?? crypto.randomUUID(),
+        id: reportId,
         projectId,
         projectName: canvasStore.projectName,
         clientName: canvasStore.clientName,
@@ -502,6 +573,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         createdAt: initialReport?.createdAt ?? now,
         updatedAt: now,
         pdfDataUrl,
+        pdfStoragePath,
       };
       if (initialReport) {
         reportStore.updateReport(initialReport.id, report);
@@ -512,18 +584,29 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       // Persist to DB if real project
       if (projectId && !projectId.startsWith("proj-")) {
         const isNew = !initialReport;
-        fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
-          method: isNew ? "POST" : "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id:              report.id,
-            projectId:       report.projectId,
-            reportName:      report.reportName,
-            preset:          report.preset,
-            floorSelections: report.floorSelections,
-            status:          "downloaded",
-          }),
-        }).catch(() => {});
+        try {
+          const res = await fetch(isNew ? "/api/reports" : `/api/reports/${report.id}`, {
+            method: isNew ? "POST" : "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id:              report.id,
+              projectId:       report.projectId,
+              reportName:      report.reportName,
+              preset:          report.preset,
+              floorSelections: report.floorSelections,
+              status:          "downloaded",
+              pdfStoragePath:  report.pdfStoragePath,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            console.warn("Report DB save failed:", body);
+            setError("Report downloaded. Could not save to database — it will be available locally only.");
+          }
+        } catch (networkErr) {
+          console.warn("Report DB save network error:", networkErr);
+          setError("Report downloaded. Server unreachable — saved locally only.");
+        }
       }
 
       onClose();
@@ -741,7 +824,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,application/pdf,.doc,.docx,.txt,.md,.rtf,.csv,.json,.xml,.yml,.yaml"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
                 onChange={(e) => {
                   void handleAttachmentUpload(e.target.files);
                   e.currentTarget.value = "";

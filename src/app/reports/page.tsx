@@ -31,6 +31,7 @@ export default function ReportsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [editReport, setEditReport] = useState<Report | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -47,13 +48,40 @@ export default function ReportsPage() {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [reportStore.reports, search, statusFilter]);
 
-  const handleDownload = (report: Report) => {
-    if (!report.pdfDataUrl) return;
-    const a = document.createElement("a");
-    a.href = report.pdfDataUrl;
-    a.download = `${report.reportName.replace(/[^a-z0-9\-_ ]/gi, "").replace(/\s+/g, "-")}.pdf`;
-    a.click();
-    reportStore.updateReport(report.id, { status: "downloaded" });
+  const handleDownload = async (report: Report) => {
+    const filename = `${report.reportName.replace(/[^a-z0-9\-_ ]/gi, "").replace(/\s+/g, "-")}.pdf`;
+
+    // Helper: trigger a browser save-file dialog from any URL or data URL
+    const triggerDownload = (url: string) => {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+    };
+
+    // If the data URL is still in memory (same session), use it directly
+    if (report.pdfDataUrl) {
+      triggerDownload(report.pdfDataUrl);
+      reportStore.updateReport(report.id, { status: "downloaded" });
+      return;
+    }
+
+    // Otherwise fetch from Supabase Storage — but fetch as blob first so the
+    // browser treats it as same-origin and actually saves it instead of opening it
+    if (report.pdfStoragePath) {
+      try {
+        const res = await fetch(`/api/reports/${report.id}/download-url`);
+        if (!res.ok) return;
+        const { url: signedUrl } = await res.json();
+        const blob = await fetch(signedUrl).then((r) => r.blob());
+        const objectUrl = URL.createObjectURL(blob);
+        triggerDownload(objectUrl);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+        reportStore.updateReport(report.id, { status: "downloaded" });
+      } catch {
+        // silently fail — user can try again
+      }
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -209,13 +237,20 @@ export default function ReportsPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Download if PDF exists */}
-                      {report.pdfDataUrl && (
+                      {(report.pdfDataUrl || report.pdfStoragePath) ? (
                         <button
                           onClick={() => handleDownload(report)}
                           className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md font-sans hover:border-gold-3 hover:text-vastu-text-2 transition-colors cursor-pointer"
                         >
                           ↓ Download
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { setEditReport(report); setBuilderOpen(true); }}
+                          className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md font-sans hover:border-gold-3 hover:text-vastu-text-2 transition-colors cursor-pointer"
+                          title="PDF not in storage — click to regenerate"
+                        >
+                          ⟳ Regenerate
                         </button>
                       )}
                       {isDeleting ? (
@@ -254,7 +289,8 @@ export default function ReportsPage() {
       {/* Report Builder overlay */}
       <ReportBuilder
         open={builderOpen}
-        onClose={() => setBuilderOpen(false)}
+        onClose={() => { setBuilderOpen(false); setEditReport(null); }}
+        initialReport={editReport ?? undefined}
       />
     </AppShell>
   );
