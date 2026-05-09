@@ -121,6 +121,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   }, [canvasStore.projectName, initialReport, initialActiveFloor]);
 
   const [reportName, setReportName] = useState(defaultReportName);
+  const [isNameCustomized, setIsNameCustomized] = useState(!!initialReport);
   const [preset, setPreset] = useState<ReportPreset>(initialReport?.preset ?? "consultant-standard");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +197,16 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
 
   useEffect(() => {
     if (!open) return;
-    setReportName(initialReport?.reportName ?? defaultReportName);
+    if (initialReport) {
+      setReportName(initialReport.reportName);
+      setIsNameCustomized(true);
+    } else {
+      const restoredId = canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
+      const floor = allFloors.find((f) => f.id === restoredId) ?? allFloors[0];
+      const d = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      setReportName(`${canvasStore.projectName} — ${floor?.name ?? "Floor"} — ${d}`);
+      setIsNameCustomized(false);
+    }
     setPreset(initialReport?.preset ?? "consultant-standard");
     const restoredFloorId = initialReportFloorId ?? canvasStore.currentFloorId ?? allFloors[0]?.id ?? "";
     setFloorAttachments(() => {
@@ -208,7 +218,8 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       return next;
     });
     setActiveFloorId(restoredFloorId);
-  }, [open, initialReport]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialReport, canvasStore.currentFloorId, canvasStore.projectName]);
 
   // Keep new reports in sync with whichever floor is active on canvas.
   // If floors are added/removed, recover to the current canvas floor or first available.
@@ -235,6 +246,14 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
     [allFloors, activeFloorId]
   );
   const activeSelection = activeFloor ? floorSelections[activeFloor.id] : undefined;
+
+  // Auto-update report name when floor changes, unless user has customized it
+  useEffect(() => {
+    if (!open || isNameCustomized || !activeFloor) return;
+    const d = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    setReportName(`${canvasStore.projectName} — ${activeFloor.name} — ${d}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFloor?.id]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -532,7 +551,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
             <div className="text-[11px] text-vastu-text-3 uppercase tracking-[1.5px]">Report Builder</div>
             <input
               value={reportName}
-              onChange={(e) => setReportName(e.target.value)}
+              onChange={(e) => { setReportName(e.target.value); setIsNameCustomized(true); }}
               placeholder="Report name…"
               className="font-serif text-[15px] font-medium text-vastu-text bg-transparent border-none outline-none w-[320px] truncate placeholder:text-vastu-text-3"
             />
