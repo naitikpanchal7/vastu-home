@@ -1034,16 +1034,21 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
                 <div className="flex flex-col gap-[3px]">
                   {groupPages.map((page) => {
                     const meta = REPORT_PAGE_META[page];
+                    const isComingSoon = page === "ai-summary";
                     const checked = selection.pages.includes(page);
-                    const disabled = !selection.enabled || (meta.requiresCuts && !hasCuts);
+                    const disabled = isComingSoon || !selection.enabled || (meta.requiresCuts && !hasCuts);
                     return (
                       <label
                         key={page}
                         className={cn(
-                          "flex items-start gap-2 px-2 py-[5px] rounded-[4px] cursor-pointer transition-colors",
-                          disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-[rgba(100,70,20,0.06)]"
+                          "flex items-start gap-2 px-2 py-[5px] rounded-[4px] transition-colors",
+                          disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-[rgba(100,70,20,0.06)]"
                         )}
-                        title={meta.requiresCuts && !hasCuts ? "No cuts present — this page will be disabled" : undefined}
+                        title={
+                          isComingSoon ? "Coming soon" :
+                          meta.requiresCuts && !hasCuts ? "No cuts present — this page will be disabled" :
+                          undefined
+                        }
                       >
                         <input
                           type="checkbox"
@@ -1055,7 +1060,10 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
                         <div className="min-w-0">
                           <div className="text-[10px] text-vastu-text-2 leading-tight">
                             {meta.label}
-                            {meta.requiresCuts && !hasCuts && (
+                            {isComingSoon && (
+                              <span className="ml-1 text-[7px] bg-[rgba(100,70,20,0.25)] text-vastu-text-3 px-[4px] py-[1px] rounded-full uppercase tracking-[0.5px]">Soon</span>
+                            )}
+                            {!isComingSoon && meta.requiresCuts && !hasCuts && (
                               <span className="ml-1 text-[7px] text-vastu-text-3">(no cuts)</span>
                             )}
                           </div>
