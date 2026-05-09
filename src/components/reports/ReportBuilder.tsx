@@ -980,11 +980,6 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
   const hasCuts = floor.canvasState.cuts.length > 0;
   const cs = floor.canvasState;
 
-  // Zone rows for inline status
-  const zoneRows = useMemo(() => buildZoneRows(floor), [floor]);
-  const goodCount = zoneRows.filter((r) => r.status === "good").length;
-  const critCount = zoneRows.filter((r) => r.status === "critical").length;
-
   const allPageTypes = Object.keys(REPORT_PAGE_META) as ReportPageType[];
 
   return (
@@ -1014,9 +1009,7 @@ function FloorConfigurator({ floor, selection, onToggleFloor, onTogglePage }: Fl
         ) : (
           <div className="flex gap-3 text-[8px] text-vastu-text-3">
             <span>N: <strong className="text-gold-2 font-mono">{cs.northDeg.toFixed(1)}°</strong></span>
-            <span className="text-green-500">{goodCount} good</span>
-            {critCount > 0 && <span className="text-red-400">{critCount} critical</span>}
-            {hasCuts && <span className="text-amber-400">{cs.cuts.length} cuts</span>}
+            {hasCuts && <span className="text-vastu-text-3">{cs.cuts.length} cut{cs.cuts.length !== 1 ? "s" : ""}</span>}
           </div>
         )}
       </div>
@@ -1454,14 +1447,14 @@ function ZoneTableContent({ pageType, floor }: { pageType: "16-zone" | "8-zone";
         <span style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", letterSpacing: 0.5 }}>ZONE</span>
         <span style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", letterSpacing: 0.5 }}>%</span>
       </div>
-      {rows.length > 0 ? rows.slice(0, 10).map(({ zone, pct, status }) => (
+      {rows.length > 0 ? rows.slice(0, 10).map(({ zone, pct }) => (
         <div key={zone.shortName} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
           <div style={{ width: 4, height: 4, borderRadius: 1, background: zone.color, flexShrink: 0 }} />
           <span style={{ fontSize: 4, color: PDF.text2, fontFamily: "monospace", flexShrink: 0, width: 13 }}>{zone.shortName}</span>
           <div style={{ flex: 1, height: 3, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${Math.min((pct / 12.5) * 100, 100)}%`, background: status === "good" ? zone.color : status === "critical" ? PDF.red : PDF.amber, borderRadius: 1 }} />
+            <div style={{ height: "100%", width: `${Math.min((pct / 12.5) * 100, 100)}%`, background: zone.color, borderRadius: 1 }} />
           </div>
-          <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", flexShrink: 0, width: 14, textAlign: "right" }}>{pct.toFixed(1)}%</span>
+          <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", flexShrink: 0, width: 14, textAlign: "right" }}>{pct.toFixed(2)}%</span>
         </div>
       )) : Array.from({ length: Math.min(count, 10) }).map((_, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
@@ -1492,13 +1485,13 @@ function BarGraphContent({ pageType, floor }: { pageType: "bar-graph-16" | "bar-
       <div style={{ fontSize: 4, color: PDF.text3, fontFamily: "sans-serif", marginBottom: 3 }}>Ideal: 6.25% per zone</div>
       {/* Ideal reference line */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {rows.length > 0 ? rows.slice(0, count).map(({ zone, pct, status }) => (
+        {rows.length > 0 ? rows.slice(0, count).map(({ zone, pct }) => (
           <div key={zone.shortName} style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 11, textAlign: "right", flexShrink: 0 }}>{zone.shortName}</span>
             <div style={{ flex: 1, height: 3.5, background: PDF.bg2, borderRadius: 1, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: status === "good" ? zone.color : status === "critical" ? PDF.red : PDF.amber, borderRadius: 1, opacity: 0.85 }} />
+              <div style={{ height: "100%", width: `${(pct / maxPct) * 100}%`, background: zone.color, borderRadius: 1, opacity: 0.85 }} />
             </div>
-            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 14, textAlign: "right", flexShrink: 0 }}>{pct.toFixed(1)}%</span>
+            <span style={{ fontSize: 3.5, color: PDF.text3, fontFamily: "monospace", width: 14, textAlign: "right", flexShrink: 0 }}>{pct.toFixed(2)}%</span>
           </div>
         )) : Array.from({ length: count }).map((_, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -1574,7 +1567,7 @@ function CutAnalysisContent({ floor }: { floor: Floor | null }) {
                   <div style={{ width: 14, flexShrink: 0, background: PDF.bg2, borderRadius: 1, padding: "1px 2px" }}>
                     <span style={{ fontSize: 3.5, color: PDF.gold, fontFamily: "monospace" }}>{cut.primaryZone}</span>
                   </div>
-                  <span style={{ fontSize: 4, color: sc, fontFamily: "monospace", flex: 1, textAlign: "right", fontWeight: "bold" }}>{cut.pctOfFloor.toFixed(1)}%</span>
+                  <span style={{ fontSize: 4, color: sc, fontFamily: "monospace", flex: 1, textAlign: "right", fontWeight: "bold" }}>{cut.pctOfFloor.toFixed(2)}%</span>
                   <div style={{ width: 22, flexShrink: 0, background: sc + "22", borderRadius: 1, padding: "1px 2px", textAlign: "center" }}>
                     <span style={{ fontSize: 3.5, color: sc, fontFamily: "sans-serif", textTransform: "uppercase", fontWeight: "bold" }}>{cut.severity}</span>
                   </div>

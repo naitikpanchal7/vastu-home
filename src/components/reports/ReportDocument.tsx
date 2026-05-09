@@ -554,9 +554,9 @@ function ZoneAnalysisPage({ floor, pageNum, total }: { floor: FloorPDFData; page
                 <Text style={[styles.small, { fontFamily: "Helvetica-Bold" }]}>{zone.shortName}</Text>
               </View>
               <Text style={[styles.small, { flex: 1 }]}>{zone.name}</Text>
-              <Text style={[styles.small, { width: 50, textAlign: "right", fontFamily: "Helvetica-Bold" }]}>{pct.toFixed(1)}%</Text>
+              <Text style={[styles.small, { width: 50, textAlign: "right", fontFamily: "Helvetica-Bold" }]}>{pct.toFixed(2)}%</Text>
               <Text style={[styles.small, { width: 50, color: hasCut ? C.sevSev : C.text3 }]}>
-                {hasCut ? `✂ ${cutPct.toFixed(0)}%` : "—"}
+                {hasCut ? `✂ ${cutPct.toFixed(2)}%` : "—"}
               </Text>
               {/* Mini bar */}
               <View style={{ width: 64, height: 6, backgroundColor: "#e8e0d0", borderRadius: 2 }}>
@@ -651,7 +651,7 @@ function BarGraph16Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNu
             <View key={zone.shortName} style={[styles.row, { width: 56, alignItems: "center", gap: 3, paddingVertical: 2 }]}>
               <View style={{ width: 4, height: 10, backgroundColor: zone.color, borderRadius: 1 }} />
               <Text style={[styles.small, { width: 20, fontFamily: "Helvetica-Bold" }]}>{zone.shortName}</Text>
-              <Text style={[styles.small, { fontFamily: "Helvetica-Bold" }]}>{pct.toFixed(1)}%</Text>
+              <Text style={[styles.small, { fontFamily: "Helvetica-Bold" }]}>{pct.toFixed(2)}%</Text>
             </View>
           ))}
         </View>
@@ -719,7 +719,7 @@ function EightZonePage({ floor, pageNum, total }: { floor: FloorPDFData; pageNum
               <View style={{ flex: 1, height: 10, backgroundColor: "#e8e0d0", borderRadius: 3, marginRight: 8 }}>
                 <View style={{ width: barW, height: 10, backgroundColor: color, borderRadius: 3, opacity: 0.85 }} />
               </View>
-              <Text style={[styles.body, { width: 42, textAlign: "right", fontFamily: "Helvetica-Bold" }]}>{pct.toFixed(1)}%</Text>
+              <Text style={[styles.body, { width: 42, textAlign: "right", fontFamily: "Helvetica-Bold" }]}>{pct.toFixed(2)}%</Text>
             </View>
           );
         })}
@@ -811,7 +811,7 @@ function BarGraph8Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNum
             <View key={shortLabel} style={[styles.row, { width: 100, alignItems: "center", gap: 4, paddingVertical: 2 }]}>
               <View style={{ width: 6, height: 10, backgroundColor: color, borderRadius: 1 }} />
               <Text style={[styles.small, { width: 26, fontFamily: "Helvetica-Bold" }]}>{shortLabel}</Text>
-              <Text style={[styles.small]}>{pct.toFixed(1)}%</Text>
+              <Text style={[styles.small]}>{pct.toFixed(2)}%</Text>
             </View>
           ))}
         </View>
@@ -878,8 +878,8 @@ function CutAnalysisPage({ floor, pageNum, total }: { floor: FloorPDFData; pageN
                   <View style={[styles.badge, { width: 40, backgroundColor: C.bg2 }]}>
                     <Text style={[styles.small, { color: C.gold }]}>{cut.primaryZone}</Text>
                   </View>
-                  <Text style={[styles.small, { width: 60, textAlign: "right", color: sc, fontFamily: "Helvetica-Bold" }]}>{cut.pctOfFloor.toFixed(1)}%</Text>
-                  <Text style={[styles.small, { width: 60, textAlign: "right" }]}>{cut.pctOfCombined.toFixed(1)}%</Text>
+                  <Text style={[styles.small, { width: 60, textAlign: "right", color: sc, fontFamily: "Helvetica-Bold" }]}>{cut.pctOfFloor.toFixed(2)}%</Text>
+                  <Text style={[styles.small, { width: 60, textAlign: "right" }]}>{cut.pctOfCombined.toFixed(2)}%</Text>
                   <View style={[styles.badge, { flex: 1, backgroundColor: sc + "22" }]}>
                     <Text style={[styles.small, { color: sc, fontFamily: "Helvetica-Bold", textTransform: "uppercase" }]}>{cut.severity}</Text>
                   </View>
