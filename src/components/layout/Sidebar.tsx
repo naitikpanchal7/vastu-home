@@ -9,8 +9,6 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: "⊞", href: "/dashboard", section: "Workspace", panel: null },
   { label: "Projects",  icon: "◫", href: "/projects",  section: null,        panel: null },
   { label: "Canvas",    icon: "◈", href: "/canvas",    section: null,        panel: null },
-  { label: "Analysis",  icon: "◉", href: null,         section: "Tools",     panel: "analysis" as const },
-  { label: "Vastu AI",  icon: "◎", href: null,         section: null,        panel: "ai" as const },
   { label: "Reports",   icon: "◌", href: "/reports",   section: "Account",   panel: null },
   { label: "Settings",  icon: "⚙", href: "/settings",  section: null,        panel: null },
 ];
