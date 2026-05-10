@@ -95,7 +95,8 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
-  const { user, profile, planFeatures } = useUser();
+  const { user, profile, planFeatures, subscription } = useUser();
+  const reportsAtLimit = subscription && subscription.reports_limit !== -1 && subscription.reports_used >= subscription.reports_limit;
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -695,10 +696,19 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                 Upgrade →
               </a>
             </span>
-            <button
-              disabled
-              className="text-[10px] px-4 py-[5px] rounded-md font-sans font-medium bg-[rgba(100,70,20,0.10)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.10)]"
-            >
+            <button disabled className="text-[10px] px-4 py-[5px] rounded-md font-sans font-medium bg-[rgba(100,70,20,0.10)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.10)]">
+              ⎙ Generate & Download
+            </button>
+          </div>
+        ) : reportsAtLimit ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-vastu-text-3">
+              Report limit reached ({subscription?.reports_used}/{subscription?.reports_limit}).{" "}
+              <a href="/settings" className="text-gold-2 underline underline-offset-2 hover:text-gold transition-colors">
+                Upgrade →
+              </a>
+            </span>
+            <button disabled className="text-[10px] px-4 py-[5px] rounded-md font-sans font-medium bg-[rgba(100,70,20,0.10)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.10)]">
               ⎙ Generate & Download
             </button>
           </div>
