@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       { status: 402 }
     );
 
-  if (sub && sub.reports_limit !== -1 && sub.reports_used >= sub.reports_limit)
+  if (sub && sub.reports_limit >= 0 && sub.reports_used >= sub.reports_limit)
     return NextResponse.json(
       { error: `Report limit reached. Your plan allows ${sub.reports_limit} reports. Upgrade to create more.`, limitReached: true },
       { status: 402 }

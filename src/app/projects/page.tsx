@@ -35,7 +35,7 @@ export default function ProjectsPage() {
   const [npArea, setNpArea]       = useState("");
   const [npNotes, setNpNotes]     = useState("");
 
-  const projectsAtLimit = subscription && subscription.projects_limit !== -1 && subscription.projects_used >= subscription.projects_limit;
+  const projectsAtLimit = subscription && subscription.projects_limit >= 0 && subscription.projects_used >= subscription.projects_limit;
 
   const openNewProject = () => {
     if (projectsAtLimit) { setShowLimitModal(true); return; }
