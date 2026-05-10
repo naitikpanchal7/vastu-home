@@ -125,6 +125,48 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ status: "ok", id }, { status: 201 });
 }
 
+// DELETE /api/admin/tiers — hard-delete a tier, optionally moving users first
+export async function DELETE(req: NextRequest) {
+  const adminUser = await assertAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json() as { id: string; moveTo?: string };
+  if (!body.id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+  const admin = createAdminClient();
+
+  // If moveTo specified, migrate all subscribers to the target tier first
+  if (body.moveTo) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: targetTier } = await (admin as any)
+      .from("plan_tiers")
+      .select("projects_limit, pdf_exports_limit")
+      .eq("id", body.moveTo)
+      .single();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("subscriptions").update({
+      plan:           body.moveTo,
+      projects_limit: targetTier?.projects_limit ?? 5,
+      reports_limit:  targetTier?.pdf_exports_limit ?? 5,
+    }).eq("plan", body.id);
+  }
+
+  // Hard-delete the tier
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any).from("plan_tiers").delete().eq("id", body.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("activity_logs").insert({
+    consultant_id: adminUser.id,
+    action:        "admin_tier_delete",
+    label:         `Admin deleted tier ${body.id}${body.moveTo ? `, moved users to ${body.moveTo}` : ""}`,
+  });
+
+  return NextResponse.json({ status: "ok" });
+}
+
 // POST /api/admin/tiers — bulk-upgrade all users from one tier to another
 export async function POST(req: NextRequest) {
   const adminUser = await assertAdmin();

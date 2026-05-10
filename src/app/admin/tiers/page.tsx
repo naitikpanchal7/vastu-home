@@ -70,6 +70,9 @@ export default function AdminTiersPage() {
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [bulkDialog, setBulkDialog] = useState<{ fromTier: string } | null>(null);
   const [bulkTarget, setBulkTarget] = useState("");
+  const [deleteDialog, setDeleteDialog] = useState<{ tierId: string; tierName: string; userCount: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [newPromo, setNewPromo] = useState({ code: "", description: "", discountPct: 10, maxUses: "", validUntil: "" });
 
   const load = useCallback(() => {
@@ -109,6 +112,21 @@ export default function AdminTiersPage() {
     });
     setSaving(false);
     setNewTier(null);
+    load();
+  };
+
+  const deleteTier = async () => {
+    if (!deleteDialog) return;
+    if (deleteDialog.userCount > 0 && !deleteTarget) return;
+    setDeleting(true);
+    await fetch("/api/admin/tiers", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: deleteDialog.tierId, moveTo: deleteTarget || undefined }),
+    });
+    setDeleting(false);
+    setDeleteDialog(null);
+    setDeleteTarget("");
     load();
   };
 
@@ -227,6 +245,10 @@ export default function AdminTiersPage() {
                     className="flex-1 py-[6px] text-[10px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer">
                     Bulk Move
                   </button>
+                  <button onClick={() => { setDeleteDialog({ tierId: tier.id, tierName: tier.name, userCount: tier.userCount }); setDeleteTarget(""); }}
+                    className="py-[6px] px-3 text-[10px] bg-bg-3 border border-[rgba(200,50,50,0.20)] rounded-[6px] text-red-700 hover:border-[rgba(200,50,50,0.40)] hover:bg-[rgba(200,50,50,0.05)] transition-all cursor-pointer">
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -323,6 +345,49 @@ export default function AdminTiersPage() {
             <div className="flex gap-2 justify-end">
               <button onClick={() => setBulkDialog(null)} className="px-4 py-[6px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
               <button onClick={bulkUpgrade} disabled={!bulkTarget} className="px-4 py-[6px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold disabled:opacity-40 cursor-pointer font-medium">Confirm Move</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete tier modal ── */}
+      {deleteDialog && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setDeleteDialog(null)}>
+          <div className="bg-bg border border-[rgba(200,50,50,0.25)] rounded-[12px] p-6 w-[380px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="font-serif text-[16px] text-red-700 mb-1">Delete "{deleteDialog.tierName}"</div>
+            <div className="text-[11px] text-vastu-text-3 mb-4">
+              This permanently removes the tier from the database. This cannot be undone.
+            </div>
+
+            {deleteDialog.userCount > 0 ? (
+              <div className="mb-4">
+                <div className="bg-[rgba(200,50,50,0.06)] border border-[rgba(200,50,50,0.15)] rounded-[6px] px-3 py-2 text-[10px] text-red-700 mb-3">
+                  {deleteDialog.userCount} user{deleteDialog.userCount !== 1 ? "s" : ""} are on this tier. You must move them before deleting.
+                </div>
+                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Move users to</label>
+                <select value={deleteTarget} onChange={(e) => setDeleteTarget(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[6px] text-[12px] text-vastu-text outline-none focus:border-gold-3">
+                  <option value="">Select a plan…</option>
+                  {tiers.filter((t) => t.id !== deleteDialog.tierId).map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="bg-[rgba(200,50,50,0.06)] border border-[rgba(200,50,50,0.15)] rounded-[6px] px-3 py-2 text-[10px] text-red-700 mb-4">
+                No users on this tier. Safe to delete immediately.
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setDeleteDialog(null)} className="px-4 py-[6px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
+              <button
+                onClick={deleteTier}
+                disabled={deleting || (deleteDialog.userCount > 0 && !deleteTarget)}
+                className="px-4 py-[6px] text-[11px] bg-red-700 text-white rounded-[6px] hover:bg-red-800 disabled:opacity-40 cursor-pointer font-medium transition-all"
+              >
+                {deleting ? "Deleting…" : "Delete Tier"}
+              </button>
             </div>
           </div>
         </div>
