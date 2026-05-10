@@ -232,7 +232,6 @@ export default function BillingClient() {
                     <FeatureRow label="Projects"            enabled={true}                       value={tier.projects_limit === -1 ? "Unlimited" : `Up to ${tier.projects_limit}`} />
                     <FeatureRow label="AI Messages/month"   enabled={tier.ai_chat_enabled}        value={tier.ai_messages_limit === -1 ? "Unlimited" : `${tier.ai_messages_limit}`} />
                     <FeatureRow label="PDF Exports/month"   enabled={tier.pdf_export_enabled}     value={tier.pdf_exports_limit === -1 ? "Unlimited" : tier.pdf_export_enabled ? `${tier.pdf_exports_limit}` : undefined} />
-                    <FeatureRow label="Storage"             enabled={true}                        value={`${tier.storage_limit_gb} GB`} />
                     <FeatureRow label="Vastu AI Chat"       enabled={tier.ai_chat_enabled} />
                     <FeatureRow label="White-label Reports" enabled={tier.white_label_enabled} />
                     <FeatureRow label="Priority Support"    enabled={tier.priority_support} />

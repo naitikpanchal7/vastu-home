@@ -56,7 +56,6 @@ export default function PricingPage() {
     { key: "projects_limit",    label: "Projects",          format: (t: Tier) => fmtLimit(t.projects_limit) },
     { key: "ai_messages_limit", label: "AI Messages/month",  format: (t: Tier) => fmtLimit(t.ai_messages_limit) },
     { key: "pdf_exports_limit", label: "PDF Exports/month",  format: (t: Tier) => t.pdf_export_enabled ? fmtLimit(t.pdf_exports_limit) : "—" },
-    { key: "storage_limit_gb",  label: "Storage",            format: (t: Tier) => `${t.storage_limit_gb} GB` },
     { key: "ai_chat_enabled",   label: "Vastu AI Chat",      format: (t: Tier) => t.ai_chat_enabled   ? "✓" : "—" },
     { key: "pdf_export_enabled", label: "PDF Report Export", format: (t: Tier) => t.pdf_export_enabled ? "✓" : "—" },
     { key: "white_label_enabled", label: "White-label Reports", format: (t: Tier) => t.white_label_enabled ? "✓" : "—" },
