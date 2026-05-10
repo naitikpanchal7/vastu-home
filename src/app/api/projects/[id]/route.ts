@@ -144,6 +144,7 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+
   // Enqueue floor plan images for deletion after 15 days — matching when the DB
   // rows are hard-deleted, so a project can be fully recovered within that window.
   const deleteAfter = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
