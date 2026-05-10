@@ -42,8 +42,8 @@ export async function PATCH(req: NextRequest) {
   const adminUser = await assertAdmin();
   if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const body = await req.json() as { id: string; [key: string]: unknown };
-  const { id, ...updates } = body;
+  const body = await req.json() as { id: string; userCount?: number; [key: string]: unknown };
+  const { id, userCount: _uc, ...updates } = body;
 
   const admin = createAdminClient();
 
@@ -86,6 +86,43 @@ export async function PATCH(req: NextRequest) {
   // ────────────────────────────────────────────────────────────────────────────
 
   return NextResponse.json({ status: "ok" });
+}
+
+// PUT /api/admin/tiers — create a new custom tier
+export async function PUT(req: NextRequest) {
+  const adminUser = await assertAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json();
+  if (!body.name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+
+  const admin = createAdminClient();
+
+  // Generate a slug ID from the name
+  const id = body.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any).from("plan_tiers").insert({
+    id,
+    name:                  body.name,
+    description:           body.description ?? "",
+    price_monthly:         body.price_monthly ?? 0,
+    price_yearly:          body.price_yearly ?? 0,
+    projects_limit:        body.projects_limit ?? 5,
+    storage_limit_gb:      body.storage_limit_gb ?? 1,
+    ai_messages_limit:     body.ai_messages_limit ?? 50,
+    pdf_exports_limit:     body.pdf_exports_limit ?? 5,
+    ai_chat_enabled:       body.ai_chat_enabled ?? true,
+    pdf_export_enabled:    body.pdf_export_enabled ?? true,
+    white_label_enabled:   body.white_label_enabled ?? false,
+    priority_support:      body.priority_support ?? false,
+    is_active:             body.is_active ?? true,
+    razorpay_plan_id_monthly: body.razorpay_plan_id_monthly ?? null,
+    razorpay_plan_id_yearly:  body.razorpay_plan_id_yearly ?? null,
+  });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ status: "ok", id }, { status: 201 });
 }
 
 // POST /api/admin/tiers — bulk-upgrade all users from one tier to another

@@ -8,6 +8,7 @@ import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useProjects } from "@/hooks/useProjects";
+import { useUser } from "@/hooks/useUser";
 import type { ProjectStatus, PropertyType } from "@/lib/types";
 
 const FILTERS: { label: string; value: "all" | ProjectStatus }[] = [
@@ -18,9 +19,12 @@ const FILTERS: { label: string; value: "all" | ProjectStatus }[] = [
 export default function ProjectsPage() {
   const router = useRouter();
   const { filteredProjects, searchQuery, statusFilter, setSearchQuery, setStatusFilter, createProject, toggleStatus, deleteProject } = useProjects();
+  const { subscription } = useUser();
 
   const [showNewProject, setShowNewProject] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [npName, setNpName]       = useState("");
@@ -31,9 +35,18 @@ export default function ProjectsPage() {
   const [npArea, setNpArea]       = useState("");
   const [npNotes, setNpNotes]     = useState("");
 
+  const projectsAtLimit = subscription && subscription.projects_limit !== -1 && subscription.projects_used >= subscription.projects_limit;
+
+  const openNewProject = () => {
+    if (projectsAtLimit) { setShowLimitModal(true); return; }
+    setCreateError(null);
+    setShowNewProject(true);
+  };
+
   const handleCreate = async () => {
     if (!npName.trim() || !npClient.trim()) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const project = await createProject({
         name: npName, clientName: npClient, clientContact: npContact || undefined,
@@ -43,6 +56,8 @@ export default function ProjectsPage() {
       setShowNewProject(false);
       setNpName(""); setNpClient(""); setNpContact(""); setNpAddress(""); setNpArea(""); setNpNotes("");
       router.push(`/projects/${project.id}`);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create project.");
     } finally {
       setCreating(false);
     }
@@ -63,7 +78,7 @@ export default function ProjectsPage() {
       <Topbar
         title="All Projects"
         actions={
-          <Button variant="primary" size="sm" onClick={() => setShowNewProject(true)}>＋ New Project</Button>
+          <Button variant="primary" size="sm" onClick={openNewProject}>＋ New Project</Button>
         }
       />
 
@@ -190,6 +205,14 @@ export default function ProjectsPage() {
           </>
         }
       >
+        {createError && (
+          <div className="mb-3 px-3 py-2 bg-[rgba(200,60,40,0.08)] border border-[rgba(200,60,40,0.25)] rounded-[6px] text-[11px] text-red-400 flex items-center justify-between gap-3">
+            <span>{createError}</span>
+            {createError.toLowerCase().includes("limit") && (
+              <a href="/settings" className="text-[10px] px-2 py-1 bg-gold-2 text-[#faf7f0] rounded-[4px] hover:bg-gold transition-colors whitespace-nowrap flex-shrink-0">Upgrade →</a>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-[9px]">
           <div className="col-span-2">
             <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Project Name</label>
@@ -230,6 +253,24 @@ export default function ProjectsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Limit reached modal */}
+      {showLimitModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowLimitModal(false)}>
+          <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[360px] shadow-xl text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[28px] mb-3">◫</div>
+            <div className="font-serif text-[18px] text-gold-2 mb-2">Project Limit Reached</div>
+            <div className="text-[12px] text-vastu-text-2 leading-relaxed mb-1">
+              You&apos;ve used <span className="font-mono text-vastu-text">{subscription?.projects_used}/{subscription?.projects_limit}</span> projects on your current plan.
+            </div>
+            <div className="text-[11px] text-vastu-text-3 mb-5">Upgrade your plan to create more projects.</div>
+            <div className="flex gap-2 justify-center">
+              <button onClick={() => setShowLimitModal(false)} className="px-4 py-[7px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[7px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
+              <a href="/settings" className="px-4 py-[7px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[7px] hover:bg-gold transition-colors font-medium">Upgrade Plan →</a>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

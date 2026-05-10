@@ -42,14 +42,31 @@ const BOOL_FEATURES: Array<{ key: keyof Tier; label: string }> = [
   { key: "priority_support",    label: "Priority Support" },
 ];
 
+const NUM_FIELDS: Array<{ label: string; key: keyof Tier }> = [
+  { label: "Projects Limit (−1 = ∞)", key: "projects_limit" },
+  { label: "Storage (GB)",             key: "storage_limit_gb" },
+  { label: "AI Messages/mo (−1 = ∞)", key: "ai_messages_limit" },
+  { label: "PDF Exports (−1 = ∞)",    key: "pdf_exports_limit" },
+];
+
 function limitDisplay(v: number) { return v === -1 ? "∞" : v.toString(); }
+function numVal(v: unknown) { const n = v as number; return isNaN(n) ? "" : n; }
+
+const BLANK_TIER: Omit<Tier, "id" | "userCount"> = {
+  name: "", description: "", price_monthly: 0, price_yearly: 0,
+  projects_limit: 5, storage_limit_gb: 1, ai_messages_limit: 50, pdf_exports_limit: 5,
+  ai_chat_enabled: true, pdf_export_enabled: true, white_label_enabled: false,
+  priority_support: false, is_active: true,
+  razorpay_plan_id_monthly: "", razorpay_plan_id_yearly: "",
+};
 
 export default function AdminTiersPage() {
   const [tiers, setTiers]   = useState<Tier[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [editTier, setEditTier]   = useState<Tier | null>(null);
-  const [saving, setSaving]       = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [editTier, setEditTier]     = useState<Tier | null>(null);
+  const [newTier, setNewTier]       = useState<Omit<Tier, "id" | "userCount"> | null>(null);
+  const [saving, setSaving]         = useState(false);
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [bulkDialog, setBulkDialog] = useState<{ fromTier: string } | null>(null);
   const [bulkTarget, setBulkTarget] = useState("");
@@ -79,6 +96,19 @@ export default function AdminTiersPage() {
     });
     setSaving(false);
     setEditTier(null);
+    load();
+  };
+
+  const createTier = async () => {
+    if (!newTier || !newTier.name.trim()) return;
+    setSaving(true);
+    await fetch("/api/admin/tiers", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newTier),
+    });
+    setSaving(false);
+    setNewTier(null);
     load();
   };
 
@@ -130,6 +160,10 @@ export default function AdminTiersPage() {
           <h1 className="font-serif text-[22px] font-semibold text-gold-2">Tiers & Pricing</h1>
           <p className="text-[11px] text-vastu-text-3 mt-[2px]">Manage plan configurations and promo codes</p>
         </div>
+        <button onClick={() => setNewTier({ ...BLANK_TIER })}
+          className="text-[11px] px-4 py-[7px] bg-gold-2 text-[#faf7f0] rounded-[7px] hover:bg-gold transition-all cursor-pointer font-medium">
+          + New Tier
+        </button>
       </div>
 
       <div className="p-8 flex flex-col gap-8">
@@ -212,13 +246,8 @@ export default function AdminTiersPage() {
           <div className="bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[10px] overflow-hidden">
             <div className="grid text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] px-5 py-3 border-b border-[rgba(100,70,20,0.12)] bg-bg-3"
               style={{ gridTemplateColumns: "1fr 1fr 80px 80px 80px 80px 80px" }}>
-              <span>Code</span>
-              <span>Description</span>
-              <span>Discount</span>
-              <span>Uses</span>
-              <span>Expires</span>
-              <span>Status</span>
-              <span>Action</span>
+              <span>Code</span><span>Description</span><span>Discount</span>
+              <span>Uses</span><span>Expires</span><span>Status</span><span>Action</span>
             </div>
             {promos.length === 0 ? (
               <div className="px-5 py-8 text-center text-[11px] text-vastu-text-3">No promo codes yet</div>
@@ -244,95 +273,41 @@ export default function AdminTiersPage() {
 
       </div>
 
-      {/* Edit tier modal */}
+      {/* ── Edit tier modal ── */}
       {editTier && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setEditTier(null)}>
-          <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[500px] max-h-[80vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="font-serif text-[18px] text-gold-2 mb-1">Edit {editTier.name}</div>
-            <div className="text-[11px] text-vastu-text-3 mb-5">Changes apply to the plan definition, not existing subscribers.</div>
-
-            <div className="flex flex-col gap-4">
-              {/* Prices */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Monthly Price (₹)", key: "price_monthly" as keyof Tier },
-                  { label: "Yearly Price (₹)",  key: "price_yearly"  as keyof Tier },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">{label}</label>
-                    <input type="number" value={editTier[key] as number}
-                      onChange={(e) => setEditTier({ ...editTier, [key]: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
-                  </div>
-                ))}
-              </div>
-
-              {/* Limits */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Projects Limit (−1 = ∞)", key: "projects_limit" as keyof Tier },
-                  { label: "Storage (GB)",             key: "storage_limit_gb" as keyof Tier },
-                  { label: "AI Messages/mo (−1 = ∞)", key: "ai_messages_limit" as keyof Tier },
-                  { label: "PDF Exports (−1 = ∞)",    key: "pdf_exports_limit" as keyof Tier },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">{label}</label>
-                    <input type="number" value={editTier[key] as number}
-                      onChange={(e) => setEditTier({ ...editTier, [key]: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
-                  </div>
-                ))}
-              </div>
-
-              {/* Feature flags */}
-              <div>
-                <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-2">Features</div>
-                <div className="flex flex-col gap-2">
-                  {BOOL_FEATURES.map((f) => (
-                    <label key={f.key} className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={editTier[f.key] as boolean}
-                        onChange={(e) => setEditTier({ ...editTier, [f.key]: e.target.checked })}
-                        className="accent-gold-2" />
-                      <span className="text-[12px] text-vastu-text-2">{f.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Razorpay IDs */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Razorpay Plan ID (Monthly)", key: "razorpay_plan_id_monthly" as keyof Tier },
-                  { label: "Razorpay Plan ID (Yearly)",  key: "razorpay_plan_id_yearly"  as keyof Tier },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">{label}</label>
-                    <input value={(editTier[key] as string) ?? ""}
-                      onChange={(e) => setEditTier({ ...editTier, [key]: e.target.value })}
-                      placeholder="plan_XXXX"
-                      className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[11px] font-mono outline-none focus:border-gold-3" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[rgba(100,70,20,0.12)]">
-              <button onClick={() => setEditTier(null)} className="px-4 py-[6px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
-              <button onClick={saveTier} disabled={saving} className="px-4 py-[6px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold disabled:opacity-40 cursor-pointer font-medium">
-                {saving ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <TierModal
+          title={`Edit ${editTier.name}`}
+          subtitle="Changes apply to the plan definition. Use 'Sync to Subscribers' to push limit changes."
+          tier={editTier}
+          setTier={setEditTier as (t: Partial<Tier>) => void}
+          saving={saving}
+          onClose={() => setEditTier(null)}
+          onSave={saveTier}
+          showIdField
+        />
       )}
 
-      {/* Bulk move modal */}
+      {/* ── New tier modal ── */}
+      {newTier && (
+        <TierModal
+          title="New Tier"
+          subtitle="Create a custom plan. Users can be manually assigned to it."
+          tier={newTier as Tier}
+          setTier={setNewTier as (t: Partial<Tier>) => void}
+          saving={saving}
+          onClose={() => setNewTier(null)}
+          onSave={createTier}
+          showIdField={false}
+        />
+      )}
+
+      {/* ── Bulk move modal ── */}
       {bulkDialog && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setBulkDialog(null)}>
           <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[360px] shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="font-serif text-[16px] text-gold-2 mb-1">Bulk Move Users</div>
             <div className="text-[11px] text-vastu-text-3 mb-4">
-              Move <strong>all users</strong> on <span className="font-mono text-vastu-text-2">{bulkDialog.fromTier}</span> to a new plan. This affects every user on that tier.
+              Move <strong>all users</strong> on <span className="font-mono text-vastu-text-2">{bulkDialog.fromTier}</span> to a new plan.
             </div>
             <div className="mb-4">
               <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Move to</label>
@@ -343,7 +318,7 @@ export default function AdminTiersPage() {
               </select>
             </div>
             <div className="bg-[rgba(200,50,50,0.06)] border border-[rgba(200,50,50,0.15)] rounded-[6px] px-3 py-2 text-[10px] text-red-700 mb-4">
-              This cannot be undone automatically. Make sure you mean to move all {tiers.find((t) => t.id === bulkDialog.fromTier)?.userCount ?? 0} users.
+              This cannot be undone automatically. This will move all {tiers.find((t) => t.id === bulkDialog.fromTier)?.userCount ?? 0} users.
             </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setBulkDialog(null)} className="px-4 py-[6px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
@@ -353,7 +328,7 @@ export default function AdminTiersPage() {
         </div>
       )}
 
-      {/* New promo modal */}
+      {/* ── New promo modal ── */}
       {showPromoForm && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowPromoForm(false)}>
           <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[380px] shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -394,6 +369,134 @@ export default function AdminTiersPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Shared tier form modal ──────────────────────────────────────────────────
+function TierModal({
+  title, subtitle, tier, setTier, saving, onClose, onSave, showIdField,
+}: {
+  title: string;
+  subtitle: string;
+  tier: Tier;
+  setTier: (t: Partial<Tier>) => void;
+  saving: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  showIdField: boolean;
+}) {
+  const update = (key: keyof Tier, value: unknown) => setTier({ ...tier, [key]: value });
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[520px] max-h-[85vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="font-serif text-[18px] text-gold-2 mb-1">{title}</div>
+        <div className="text-[11px] text-vastu-text-3 mb-5">{subtitle}</div>
+
+        <div className="flex flex-col gap-4">
+
+          {/* Name & Description */}
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Tier Name</label>
+              <input value={tier.name}
+                onChange={(e) => update("name", e.target.value)}
+                placeholder="e.g. Enterprise"
+                className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+            </div>
+            <div>
+              <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Description</label>
+              <input value={tier.description}
+                onChange={(e) => update("description", e.target.value)}
+                placeholder="Short description shown on pricing cards"
+                className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+            </div>
+          </div>
+
+          {/* Tier ID (read-only for existing tiers) */}
+          {showIdField && (
+            <div>
+              <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Tier ID (used in subscriptions)</label>
+              <input value={tier.id} readOnly
+                className="w-full px-3 py-[6px] bg-bg-4 border border-[rgba(100,70,20,0.10)] rounded-[5px] text-vastu-text-3 text-[11px] font-mono outline-none cursor-not-allowed" />
+            </div>
+          )}
+
+          {/* Prices */}
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { label: "Monthly Price (₹)", key: "price_monthly" as keyof Tier },
+              { label: "Yearly Price (₹)",  key: "price_yearly"  as keyof Tier },
+            ] as const).map(({ label, key }) => (
+              <div key={key}>
+                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">{label}</label>
+                <input type="number" value={numVal(tier[key])}
+                  onChange={(e) => update(key, e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+              </div>
+            ))}
+          </div>
+
+          {/* Limits */}
+          <div className="grid grid-cols-2 gap-3">
+            {NUM_FIELDS.map(({ label, key }) => (
+              <div key={key}>
+                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">{label}</label>
+                <input type="number" value={numVal(tier[key])}
+                  onChange={(e) => update(key, e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+              </div>
+            ))}
+          </div>
+
+          {/* Feature flags */}
+          <div>
+            <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-2">Features</div>
+            <div className="flex flex-col gap-2">
+              {BOOL_FEATURES.map((f) => (
+                <label key={f.key} className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={tier[f.key] as boolean}
+                    onChange={(e) => update(f.key, e.target.checked)}
+                    className="accent-gold-2" />
+                  <span className="text-[12px] text-vastu-text-2">{f.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Active toggle */}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={tier.is_active}
+              onChange={(e) => update("is_active", e.target.checked)}
+              className="accent-gold-2" />
+            <span className="text-[12px] text-vastu-text-2">Tier is active (visible to users)</span>
+          </label>
+
+          {/* Razorpay IDs */}
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { label: "Razorpay Plan ID (Monthly)", key: "razorpay_plan_id_monthly" as keyof Tier },
+              { label: "Razorpay Plan ID (Yearly)",  key: "razorpay_plan_id_yearly"  as keyof Tier },
+            ] as const).map(({ label, key }) => (
+              <div key={key}>
+                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">{label}</label>
+                <input value={(tier[key] as string) ?? ""}
+                  onChange={(e) => update(key, e.target.value)}
+                  placeholder="plan_XXXX"
+                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[11px] font-mono outline-none focus:border-gold-3" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[rgba(100,70,20,0.12)]">
+          <button onClick={onClose} className="px-4 py-[6px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
+          <button onClick={onSave} disabled={saving} className="px-4 py-[6px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold disabled:opacity-40 cursor-pointer font-medium">
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
