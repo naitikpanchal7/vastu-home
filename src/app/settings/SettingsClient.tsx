@@ -447,20 +447,26 @@ export default function SettingsClient({ profile }: Props) {
                 { label: "Projects", used: subscription?.projects_used ?? 0, limit: subscription?.projects_limit ?? -1 },
                 { label: "Reports",  used: subscription?.reports_used  ?? 0, limit: subscription?.reports_limit  ?? -1 },
               ].map(({ label, used, limit }) => {
+                const isReports = label === "Reports";
+                const pdfDisabled = isReports && !planFeatures.pdf_export_enabled;
                 const unlimited = limit === -1;
                 const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
                 return (
                   <div key={label}>
                     <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[5px]">
                       <span>{label}</span>
-                      <span className="font-mono text-vastu-text-2">{unlimited ? `${used} used` : `${used} / ${limit}`}</span>
+                      <span className={`font-mono ${pdfDisabled ? "italic text-vastu-text-3" : "text-vastu-text-2"}`}>
+                        {pdfDisabled ? "Not included" : unlimited ? `${used} used` : `${used} / ${limit}`}
+                      </span>
                     </div>
-                    <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-[#b43218]" : pct >= 80 ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"}`}
-                        style={{ width: unlimited ? "100%" : `${pct}%`, opacity: unlimited ? 0.25 : 1 }}
-                      />
-                    </div>
+                    {!pdfDisabled && (
+                      <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-[#b43218]" : pct >= 80 ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"}`}
+                          style={{ width: unlimited ? "100%" : `${pct}%`, opacity: unlimited ? 0.25 : 1 }}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}

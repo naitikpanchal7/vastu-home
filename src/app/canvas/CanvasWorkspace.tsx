@@ -792,7 +792,7 @@ export default function CanvasWorkspace() {
         </ErrorBoundary>
 
         {/* Right panel */}
-        <RightPanel onExport={() => setExportModal({ open: true })} />
+        <RightPanel onExport={() => planFeatures.pdf_export_enabled ? setExportModal({ open: true }) : setShowUpgradeModal(true)} />
 
         {/* Full-view Analysis / AI drawer — opened via sidebar panel buttons */}
         {fullPanel !== null && (
@@ -858,7 +858,7 @@ export default function CanvasWorkspace() {
               {/* Drawer content */}
               <div className={`flex-1 overflow-hidden ${fullPanel === "ai" ? "flex flex-col" : "overflow-y-auto"}`}>
                 <div className={`p-[14px] h-full ${fullPanel === "ai" ? "flex flex-col" : ""}`}>
-                  {fullPanel === "analysis" && <AnalysisPanel onExport={() => setExportModal({ open: true })} />}
+                  {fullPanel === "analysis" && <AnalysisPanel onExport={() => planFeatures.pdf_export_enabled ? setExportModal({ open: true }) : setShowUpgradeModal(true)} />}
                   {fullPanel === "ai" && <ErrorBoundary><ChatPanel /></ErrorBoundary>}
                 </div>
               </div>
@@ -872,6 +872,8 @@ export default function CanvasWorkspace() {
         open={exportModal.open}
         onClose={() => setExportModal({ open: false })}
       />
+
+
     </div>
   );
 }

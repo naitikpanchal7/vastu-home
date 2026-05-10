@@ -46,7 +46,7 @@ export default function Sidebar() {
   const pathname     = usePathname();
   const searchParams = useSearchParams();
   const router       = useRouter();
-  const { user, profile, subscription, loading } = useUser();
+  const { user, profile, subscription, planFeatures, loading } = useUser();
 
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Consultant";
   const planLabel   = subscription?.plan
@@ -146,11 +146,18 @@ export default function Sidebar() {
             limit={subscription.projects_limit}
             label="Projects"
           />
-          <UsageBar
-            used={subscription.reports_used}
-            limit={subscription.reports_limit}
-            label="Reports"
-          />
+          {planFeatures.pdf_export_enabled ? (
+            <UsageBar
+              used={subscription.reports_used}
+              limit={subscription.reports_limit}
+              label="Reports"
+            />
+          ) : (
+            <div className="flex justify-between text-[9px] mb-[8px]">
+              <span className="text-vastu-text-3">Reports</span>
+              <span className="text-vastu-text-3 italic">Not included</span>
+            </div>
+          )}
         </div>
       )}
 

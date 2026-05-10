@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { projects, createProject } = useProjects();
   const { reportCount } = useReports();
-  const { subscription } = useUser();
+  const { subscription, planFeatures } = useUser();
   const [showNewProject, setShowNewProject] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -124,6 +124,8 @@ export default function DashboardPage() {
                     limit: subscription?.reports_limit ?? -1,
                   },
                 ].map(({ label, used, limit }) => {
+                  const isReports = label === "Reports";
+                  const pdfDisabled = isReports && !planFeatures.pdf_export_enabled;
                   const unlimited = limit === -1;
                   const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
                   const nearLimit = !unlimited && pct >= 80;
@@ -131,16 +133,18 @@ export default function DashboardPage() {
                     <div key={label}>
                       <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
                         <span>{label}</span>
-                        <span className={`font-mono ${nearLimit ? "text-saffron" : "text-vastu-text-2"}`}>
-                          {unlimited ? used : `${used} / ${limit}`}
+                        <span className={`font-mono ${pdfDisabled ? "italic" : nearLimit ? "text-saffron" : "text-vastu-text-2"}`}>
+                          {pdfDisabled ? "Not included" : unlimited ? used : `${used} / ${limit}`}
                         </span>
                       </div>
-                      <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? "bg-[#b43218]" : nearLimit ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"}`}
-                          style={{ width: unlimited ? "30%" : `${pct}%`, opacity: unlimited ? 0.4 : 1 }}
-                        />
-                      </div>
+                      {!pdfDisabled && (
+                        <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? "bg-[#b43218]" : nearLimit ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"}`}
+                            style={{ width: unlimited ? "30%" : `${pct}%`, opacity: unlimited ? 0.4 : 1 }}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}

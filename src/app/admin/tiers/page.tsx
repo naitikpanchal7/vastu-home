@@ -206,7 +206,7 @@ export default function AdminTiersPage() {
                   <div className="flex justify-between"><span className="text-vastu-text-3">Projects</span><span className="font-mono text-vastu-text-2">{limitDisplay(tier.projects_limit)}</span></div>
                   <div className="flex justify-between"><span className="text-vastu-text-3">Storage</span><span className="font-mono text-vastu-text-2">{tier.storage_limit_gb} GB</span></div>
                   <div className="flex justify-between"><span className="text-vastu-text-3">AI Messages</span><span className="font-mono text-vastu-text-2">{limitDisplay(tier.ai_messages_limit)}/mo</span></div>
-                  <div className="flex justify-between"><span className="text-vastu-text-3">PDF Exports</span><span className="font-mono text-vastu-text-2">{limitDisplay(tier.pdf_exports_limit)}</span></div>
+                  <div className="flex justify-between"><span className="text-vastu-text-3">PDF Exports</span><span className="font-mono text-vastu-text-2">{tier.pdf_export_enabled ? limitDisplay(tier.pdf_exports_limit) : "Not included"}</span></div>
                 </div>
 
                 <div className="flex flex-wrap gap-[5px]">

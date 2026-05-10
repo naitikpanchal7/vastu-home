@@ -95,7 +95,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
-  const { user, profile } = useUser();
+  const { user, profile, planFeatures } = useUser();
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -687,19 +687,36 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         </button>
 
         {/* Generate & Download PDF */}
-        <button
-          onClick={handleGenerate}
-          disabled={!!validationError || generating}
-          className={cn(
-            "text-[10px] px-4 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer",
-            validationError || generating
-              ? "bg-[rgba(100,70,20,0.15)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.1)]"
-              : "bg-gold text-bg hover:bg-gold-2 border border-transparent"
-          )}
-          title={validationError ?? undefined}
-        >
-          {generating ? "⏳ Generating…" : "⎙ Generate & Download"}
-        </button>
+        {planFeatures.pdf_export_enabled === false ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-vastu-text-3">
+              PDF export not on your plan.{" "}
+              <a href="/settings" className="text-gold-2 underline underline-offset-2 hover:text-gold transition-colors">
+                Upgrade →
+              </a>
+            </span>
+            <button
+              disabled
+              className="text-[10px] px-4 py-[5px] rounded-md font-sans font-medium bg-[rgba(100,70,20,0.10)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.10)]"
+            >
+              ⎙ Generate & Download
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleGenerate}
+            disabled={!!validationError || generating}
+            className={cn(
+              "text-[10px] px-4 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer",
+              validationError || generating
+                ? "bg-[rgba(100,70,20,0.15)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.1)]"
+                : "bg-gold text-bg hover:bg-gold-2 border border-transparent"
+            )}
+            title={validationError ?? undefined}
+          >
+            {generating ? "⏳ Generating…" : "⎙ Generate & Download"}
+          </button>
+        )}
       </div>
 
       {/* ── Body ── */}

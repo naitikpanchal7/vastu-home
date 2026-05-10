@@ -262,6 +262,11 @@ export default function ReportsPage() {
                         >
                           ↓ Download
                         </button>
+                      ) : planFeatures.pdf_export_enabled === false ? (
+                        <a href="/settings"
+                          className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md font-sans hover:border-gold-3 hover:text-gold-2 transition-colors cursor-pointer">
+                          Upgrade to generate
+                        </a>
                       ) : (
                         <button
                           onClick={() => { setEditReport(report); setBuilderOpen(true); }}
