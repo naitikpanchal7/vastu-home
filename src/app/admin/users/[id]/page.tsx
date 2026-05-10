@@ -12,21 +12,32 @@ interface UserDetail {
   aiUsage: { totalInput: number; totalOutput: number };
 }
 
-const PLANS = ["starter", "professional", "firm"];
-const PLAN_COLORS: Record<string, string> = {
+const DEFAULT_PLAN_COLORS: Record<string, string> = {
   starter: "bg-bg-4 text-vastu-text-3",
   professional: "bg-amber-100 text-amber-800",
   firm: "bg-[rgba(154,120,32,0.15)] text-gold-2",
 };
+function planColor(plan: string) {
+  return DEFAULT_PLAN_COLORS[plan] ?? "bg-bg-4 text-vastu-text-3";
+}
+
+interface Tier { id: string; name: string; }
 
 export default function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const [data, setData] = useState<UserDetail | null>(null);
+  const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/tiers")
+      .then((r) => r.json())
+      .then((r) => setTiers((r.data ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/admin/users/${id}`)
@@ -69,7 +80,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
           <h1 className="font-serif text-[20px] font-semibold text-gold-2">{(profile.full_name as string) || "Unnamed User"}</h1>
           <p className="text-[11px] text-vastu-text-3 font-mono">{profile.email as string}</p>
         </div>
-        <span className={cn("ml-auto text-[9px] px-2 py-[3px] rounded-full font-medium uppercase tracking-[0.5px]", PLAN_COLORS[plan])}>
+        <span className={cn("ml-auto text-[9px] px-2 py-[3px] rounded-full font-medium uppercase tracking-[0.5px]", planColor(plan))}>
           {plan}
         </span>
       </div>
@@ -115,7 +126,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
               onChange={(e) => setSelectedPlan(e.target.value)}
               className="flex-1 px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[6px] text-[11px] text-vastu-text outline-none focus:border-gold-3"
             >
-              {PLANS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              {tiers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
             <button
               onClick={applyPlan}

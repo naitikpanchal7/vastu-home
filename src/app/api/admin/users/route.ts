@@ -33,8 +33,14 @@ export async function GET(req: NextRequest) {
   if (search) {
     query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
   }
+
+  // Filter by plan: get matching user IDs from subscriptions first, then restrict the main query
   if (plan) {
-    query = query.eq("subscriptions.plan", plan);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: subsOnPlan } = await (admin as any).from("subscriptions").select("user_id").eq("plan", plan);
+    const userIds = (subsOnPlan ?? []).map((s: { user_id: string }) => s.user_id);
+    if (userIds.length === 0) return NextResponse.json({ data: [], status: "ok" });
+    query = query.in("id", userIds);
   }
 
   const { data, error } = await query;

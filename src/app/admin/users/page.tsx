@@ -22,22 +22,33 @@ interface UserRow {
   } | null;
 }
 
-const PLAN_COLORS: Record<string, string> = {
+const DEFAULT_PLAN_COLORS: Record<string, string> = {
   starter:      "bg-bg-4 text-vastu-text-3",
   professional: "bg-amber-100 text-amber-800",
   firm:         "bg-[rgba(154,120,32,0.15)] text-gold-2",
 };
 
-const PLANS = ["starter", "professional", "firm"];
+function planColor(plan: string) {
+  return DEFAULT_PLAN_COLORS[plan] ?? "bg-bg-4 text-vastu-text-3";
+}
+
+interface Tier { id: string; name: string; }
 
 export default function AdminUsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("");
   const [changingPlan, setChangingPlan] = useState<{ userId: string; current: string } | null>(null);
   const [newPlan, setNewPlan] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/tiers")
+      .then((r) => r.json())
+      .then((r) => setTiers((r.data ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))));
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -97,7 +108,7 @@ export default function AdminUsersPage() {
             className="px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[6px] text-[12px] text-vastu-text font-sans outline-none focus:border-gold-3"
           >
             <option value="">All plans</option>
-            {PLANS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+            {tiers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
       </div>
@@ -143,8 +154,8 @@ export default function AdminUsersPage() {
 
                 {/* Plan badge */}
                 <div>
-                  <span className={cn("text-[9px] px-2 py-[3px] rounded-full font-medium uppercase tracking-[0.5px]", PLAN_COLORS[u.subscriptions?.plan ?? "starter"] ?? PLAN_COLORS.starter)}>
-                    {u.subscriptions?.plan ?? "starter"}
+                  <span className={cn("text-[9px] px-2 py-[3px] rounded-full font-medium uppercase tracking-[0.5px]", planColor(u.subscriptions?.plan ?? "starter"))}>
+                    {tiers.find(t => t.id === (u.subscriptions?.plan ?? "starter"))?.name ?? (u.subscriptions?.plan ?? "starter")}
                   </span>
                 </div>
 
@@ -199,7 +210,7 @@ export default function AdminUsersPage() {
               onChange={(e) => setNewPlan(e.target.value)}
               className="w-full px-3 py-2 bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[6px] text-[12px] text-vastu-text outline-none focus:border-gold-3 mb-4"
             >
-              {PLANS.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              {tiers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setChangingPlan(null)} className="px-4 py-[6px] text-[11px] text-vastu-text-2 border border-[rgba(100,70,20,0.20)] rounded-[6px] hover:border-gold-3 transition-all cursor-pointer">Cancel</button>
