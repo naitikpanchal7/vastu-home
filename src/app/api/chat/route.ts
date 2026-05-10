@@ -36,6 +36,49 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // ── AI chat limit check ────────────────────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: sub } = await (supabase as any)
+      .from("subscriptions")
+      .select("plan")
+      .eq("user_id", user.id)
+      .single();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: tier } = await (supabase as any)
+      .from("plan_tiers")
+      .select("ai_messages_limit, ai_chat_enabled")
+      .eq("id", sub?.plan ?? "starter")
+      .single();
+
+    if (tier?.ai_chat_enabled === false) {
+      return NextResponse.json(
+        { error: "AI chat is not available on your current plan. Upgrade to access Vastu AI.", limitReached: true },
+        { status: 402 }
+      );
+    }
+
+    if (tier?.ai_messages_limit !== -1 && tier?.ai_messages_limit != null) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count } = await (supabase as any)
+        .from("ai_usage_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", startOfMonth.toISOString());
+
+      if ((count ?? 0) >= tier.ai_messages_limit) {
+        return NextResponse.json(
+          { error: `Monthly AI message limit reached (${tier.ai_messages_limit} messages). Resets next month or upgrade your plan.`, limitReached: true },
+          { status: 402 }
+        );
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     const body = await req.json();
     const {
       messages,
@@ -44,6 +87,7 @@ export async function POST(req: NextRequest) {
       zoneAnalysis,
       cutsCount,
       areaSqFt,
+      projectId,
     }: {
       messages: ChatMessage[];
       northDeg: number;
@@ -51,9 +95,9 @@ export async function POST(req: NextRequest) {
       zoneAnalysis: ZoneAnalysis[];
       cutsCount: number;
       areaSqFt?: number;
+      projectId?: string;
     } = body;
 
-    // Build zone context string
     const zoneContext = zoneAnalysis.length > 0
       ? VASTU_ZONES.map((zone) => {
           const analysis = zoneAnalysis.find((z) => z.zoneName === zone.shortName);
@@ -74,20 +118,17 @@ ${zoneContext}
 
 Instructions: Use the above data to give specific, accurate analysis. If zone data shows "not yet calculated", tell the user to draw the floor plan perimeter first.`;
 
-    // Convert chat history for Anthropic API (multi-turn)
     const apiMessages: Anthropic.MessageParam[] = messages.map((m) => ({
       role: m.role === "user" ? "user" : "assistant",
       content: m.content,
     }));
 
-    // Inject context as first user message if no history yet
     if (apiMessages.length === 1) {
       apiMessages[0] = {
         role: "user",
         content: `${contextPrompt}\n\nUser question: ${messages[0].content}`,
       };
     } else {
-      // Prepend context to the latest user message
       const last = apiMessages[apiMessages.length - 1];
       if (last.role === "user") {
         apiMessages[apiMessages.length - 1] = {
@@ -109,9 +150,18 @@ Instructions: Use the above data to give specific, accurate analysis. If zone da
       .map((b) => b.text)
       .join("");
 
-    // Extract citation if the response mentions classical texts
-    const hasCite =
-      /vishwakarma|mayamatam|brihat|shastra|classical/i.test(text);
+    // ── Log AI token usage ─────────────────────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("ai_usage_logs").insert({
+      user_id:       user.id,
+      project_id:    projectId ?? null,
+      input_tokens:  response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      model:         "claude-sonnet-4-20250514",
+    });
+    // ──────────────────────────────────────────────────────────────────────────
+
+    const hasCite = /vishwakarma|mayamatam|brihat|shastra|classical/i.test(text);
 
     return NextResponse.json({
       content: text,

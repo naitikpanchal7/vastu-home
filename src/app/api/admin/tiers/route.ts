@@ -1,0 +1,137 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+
+async function assertAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any).from("profiles").select("is_admin").eq("id", user.id).single();
+  return profile?.is_admin ? user : null;
+}
+
+// GET /api/admin/tiers — list all tiers with user counts
+export async function GET() {
+  const adminUser = await assertAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const admin = createAdminClient();
+
+  const [{ data: tiers }, { data: subs }] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (admin as any).from("plan_tiers").select("*").order("price_monthly"),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (admin as any).from("subscriptions").select("plan"),
+  ]);
+
+  const countMap: Record<string, number> = {};
+  (subs ?? []).forEach((s: { plan: string }) => {
+    countMap[s.plan] = (countMap[s.plan] ?? 0) + 1;
+  });
+
+  const enriched = (tiers ?? []).map((t: Record<string, unknown>) => ({
+    ...t,
+    userCount: countMap[t.id as string] ?? 0,
+  }));
+
+  return NextResponse.json({ data: enriched, status: "ok" });
+}
+
+// PATCH /api/admin/tiers — update a tier AND sync limits to all existing subscribers on that tier
+export async function PATCH(req: NextRequest) {
+  const adminUser = await assertAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json() as { id: string; [key: string]: unknown };
+  const { id, ...updates } = body;
+
+  const admin = createAdminClient();
+
+  // Save tier definition
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any).from("plan_tiers").update(updates).eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ── Sync subscription limits to all users on this tier ──────────────────────
+  const subUpdates: Record<string, unknown> = {};
+  if (updates.projects_limit !== undefined)  subUpdates.projects_limit = updates.projects_limit;
+  if (updates.pdf_exports_limit !== undefined) subUpdates.reports_limit = updates.pdf_exports_limit;
+
+  if (Object.keys(subUpdates).length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("subscriptions").update(subUpdates).eq("plan", id);
+  }
+
+  // ── Sync white_label_enabled → report_show_branding on profiles ─────────────
+  // When admin enables white_label for a tier, users on that tier get white-label
+  // (report_show_branding = false means "hide vastu@home branding" = white-label)
+  if (updates.white_label_enabled !== undefined) {
+    // Get all user_ids on this plan
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: subsOnTier } = await (admin as any)
+      .from("subscriptions")
+      .select("user_id")
+      .eq("plan", id);
+
+    if (subsOnTier && subsOnTier.length > 0) {
+      const userIds = subsOnTier.map((s: { user_id: string }) => s.user_id);
+      // white_label_enabled = true → report_show_branding = false (hide our branding)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin as any)
+        .from("profiles")
+        .update({ report_show_branding: !updates.white_label_enabled })
+        .in("id", userIds);
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
+  return NextResponse.json({ status: "ok" });
+}
+
+// POST /api/admin/tiers — bulk-upgrade all users from one tier to another
+export async function POST(req: NextRequest) {
+  const adminUser = await assertAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json() as { fromTier: string; toTier: string };
+  const admin = createAdminClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tier } = await (admin as any)
+    .from("plan_tiers")
+    .select("projects_limit, pdf_exports_limit, white_label_enabled")
+    .eq("id", body.toTier)
+    .single();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any).from("subscriptions").update({
+    plan:           body.toTier,
+    projects_limit: tier?.projects_limit ?? 5,
+    reports_limit:  tier?.pdf_exports_limit ?? 5,
+  }).eq("plan", body.fromTier);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Sync white_label for all moved users
+  if (tier?.white_label_enabled !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: movedSubs } = await (admin as any)
+      .from("subscriptions").select("user_id").eq("plan", body.toTier);
+    if (movedSubs?.length) {
+      const ids = movedSubs.map((s: { user_id: string }) => s.user_id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin as any).from("profiles")
+        .update({ report_show_branding: !tier.white_label_enabled })
+        .in("id", ids);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("activity_logs").insert({
+    consultant_id: adminUser.id,
+    action:        "admin_bulk_upgrade",
+    label:         `Admin bulk-upgraded all ${body.fromTier} users to ${body.toTier}`,
+  });
+
+  return NextResponse.json({ status: "ok" });
+}

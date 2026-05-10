@@ -37,6 +37,31 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // ── Subscription limit check ─────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: sub } = await (supabase as any)
+    .from("subscriptions")
+    .select("projects_limit")
+    .eq("user_id", user.id)
+    .single();
+
+  if (sub && sub.projects_limit !== -1) {
+    // Count actual DB rows (projects_used counter may be stale for pre-existing users)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { count } = await (supabase as any)
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("consultant_id", user.id)
+      .is("deleted_at", null);
+    if ((count ?? 0) >= sub.projects_limit) {
+      return NextResponse.json(
+        { error: `Project limit reached. Your plan allows ${sub.projects_limit} projects. Upgrade to create more.`, limitReached: true },
+        { status: 402 }
+      );
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   const body = await req.json() as Partial<Project>;
 
   const invalid = validationFail([
@@ -86,6 +111,20 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (floorErr) return NextResponse.json({ error: floorErr.message }, { status: 500 });
+
+  // ── Increment projects_used counter ──────────────────────────────────────────
+  // Read current value then increment (soft limit; minor race condition is acceptable)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: subCurrent } = await (supabase as any)
+    .from("subscriptions").select("projects_used").eq("user_id", user.id).single();
+  if (subCurrent) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from("subscriptions")
+      .update({ projects_used: (subCurrent.projects_used ?? 0) + 1 })
+      .eq("user_id", user.id);
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   return NextResponse.json({ data: { ...project, floors: [floor] }, status: "ok" }, { status: 201 });
 }

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { calculateZoneAreas } from "@/lib/vastu/geometry";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
+import { useUser } from "@/hooks/useUser";
 import type { ChatMessage } from "@/lib/types";
 
 const QUICK_CHIPS = [
@@ -17,6 +18,7 @@ let msgIdCounter = 0;
 
 export default function ChatPanel() {
   const store = useCanvasStore();
+  const { planFeatures } = useUser();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init",
@@ -122,6 +124,7 @@ export default function ChatPanel() {
         body: JSON.stringify({
           messages: [...history, { role: "user", content: text.trim() }],
           northDeg: store.northDeg,
+          projectId: store.projectId,
           projectName: store.projectName,
           zoneAnalysis,
           cutsCount: store.cuts.length,
@@ -177,6 +180,23 @@ export default function ChatPanel() {
       setLoading(false);
     }
   };
+
+  // ── AI chat feature gate ────────────────────────────────────────────────────
+  if (planFeatures.ai_chat_enabled === false) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center gap-3 text-center px-4">
+        <span className="text-[24px]">◈</span>
+        <div className="text-[12px] text-vastu-text font-medium">AI Chat not available</div>
+        <div className="text-[11px] text-vastu-text-3 leading-relaxed">
+          Vastu AI is included in the Professional and Firm plans.
+        </div>
+        <a href="/settings" className="text-[10px] px-3 py-[5px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold transition-all font-medium">
+          Upgrade Plan →
+        </a>
+      </div>
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full gap-[6px]">

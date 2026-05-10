@@ -40,6 +40,22 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // ── Subscription limit check ─────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: sub } = await (supabase as any)
+    .from("subscriptions")
+    .select("reports_used, reports_limit")
+    .eq("user_id", user.id)
+    .single();
+
+  if (sub && sub.reports_limit !== -1 && sub.reports_used >= sub.reports_limit) {
+    return NextResponse.json(
+      { error: `Report limit reached. Your plan allows ${sub.reports_limit} reports. Upgrade to create more.`, limitReached: true },
+      { status: 402 }
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   const body = await req.json() as Partial<Report>;
 
   const invalid = validationFail([
@@ -58,7 +74,6 @@ export async function POST(req: NextRequest) {
     status:            body.status ?? "draft",
     pdf_storage_path:  (body as Record<string, unknown>).pdfStoragePath ?? null,
   };
-  // Use client-provided UUID if given (keeps store ID in sync with DB)
   if (body.id && typeof body.id === "string" && !body.id.startsWith("report-")) {
     insertRow.id = body.id;
   }
@@ -71,6 +86,14 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ── Increment reports_used counter ───────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any)
+    .from("subscriptions")
+    .update({ reports_used: (sub?.reports_used ?? 0) + 1 })
+    .eq("user_id", user.id);
+  // ────────────────────────────────────────────────────────────────────────────
 
   return NextResponse.json({ data, status: "ok" }, { status: 201 });
 }

@@ -13,11 +13,39 @@ const NAV_ITEMS = [
   { label: "Settings",  icon: "⚙", href: "/settings",  section: null,        panel: null },
 ];
 
+function UsageBar({ used, limit, label }: { used: number; limit: number; label: string }) {
+  const unlimited = limit === -1;
+  const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
+  const nearLimit = !unlimited && pct >= 80;
+
+  return (
+    <div className="mb-[7px]">
+      <div className="flex justify-between text-[8px] text-vastu-text-3 mb-[4px]">
+        <span>{label}</span>
+        <span className={cn("font-mono", nearLimit && "text-saffron")}>
+          {unlimited ? `${used}` : `${used}/${limit}`}
+        </span>
+      </div>
+      {!unlimited && (
+        <div className="h-[2px] bg-bg-4 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              pct >= 100 ? "bg-[#b43218]" : nearLimit ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const pathname    = usePathname();
+  const pathname     = usePathname();
   const searchParams = useSearchParams();
-  const router      = useRouter();
+  const router       = useRouter();
   const { user, profile, subscription, loading } = useUser();
 
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Consultant";
@@ -60,7 +88,6 @@ export default function Sidebar() {
         {NAV_ITEMS.map((item) => {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
-          // Panel items (Analysis/AI) are never auto-active — they open a drawer
           const isActive = item.panel
             ? searchParams.get("panel") === item.panel
             : item.href
@@ -69,14 +96,10 @@ export default function Sidebar() {
 
           const handleClick = () => {
             if (item.panel) {
-              // Toggle panel via URL param — canvas workspace reads this
               const current = searchParams.get("panel");
               const params = new URLSearchParams(searchParams.toString());
-              if (current === item.panel) {
-                params.delete("panel");
-              } else {
-                params.set("panel", item.panel);
-              }
+              if (current === item.panel) params.delete("panel");
+              else params.set("panel", item.panel);
               router.push(`${pathname}?${params.toString()}`);
             } else if (item.href && item.href !== "#settings") {
               router.push(item.href);
@@ -86,12 +109,10 @@ export default function Sidebar() {
           return (
             <div key={(item.href ?? item.panel ?? "") + item.label}>
               {showSection && (
-                <div
-                  className={cn(
-                    "px-[14px] py-[9px_14px_3px] text-[9px] tracking-[2px] text-vastu-text-3 uppercase whitespace-nowrap transition-[opacity,height,padding] duration-150",
-                    collapsed && "opacity-0 h-0 overflow-hidden py-0"
-                  )}
-                >
+                <div className={cn(
+                  "px-[14px] py-[9px_14px_3px] text-[9px] tracking-[2px] text-vastu-text-3 uppercase whitespace-nowrap transition-[opacity,height,padding] duration-150",
+                  collapsed && "opacity-0 h-0 overflow-hidden py-0"
+                )}>
                   {item.section}
                 </div>
               )}
@@ -112,6 +133,26 @@ export default function Sidebar() {
           );
         })}
       </div>
+
+      {/* Usage bars — only when expanded */}
+      {!collapsed && subscription && (
+        <div className={cn(
+          "px-[14px] pb-[8px] transition-[opacity] duration-[220ms]",
+          collapsed && "opacity-0"
+        )}>
+          <div className="text-[8px] text-vastu-text-3 uppercase tracking-[2px] mb-[7px]">Usage</div>
+          <UsageBar
+            used={subscription.projects_used}
+            limit={subscription.projects_limit}
+            label="Projects"
+          />
+          <UsageBar
+            used={subscription.reports_used}
+            limit={subscription.reports_limit}
+            label="Reports"
+          />
+        </div>
+      )}
 
       {/* User chip */}
       <div className="p-[9px] border-t border-[rgba(100,70,20,0.12)] flex-shrink-0 overflow-hidden">

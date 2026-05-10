@@ -11,6 +11,7 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useProjects } from "@/hooks/useProjects";
 import { useReports } from "@/hooks/useReports";
+import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
 import type { PropertyType } from "@/lib/types";
 
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { projects, createProject } = useProjects();
   const { reportCount } = useReports();
+  const { subscription } = useUser();
   const [showNewProject, setShowNewProject] = useState(false);
 
   // New project form state
@@ -88,28 +90,50 @@ export default function DashboardPage() {
               </div>
             </CollapsibleCard>
 
-            {/* Subscription card — Phase 2 */}
+            {/* Workspace usage card */}
             <CollapsibleCard title={<>◌ Workspace</>}>
               <div className="flex flex-col gap-[10px]">
-                <div>
-                  <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
-                    <span>Projects</span>
-                    <span className="font-mono text-vastu-text-2">{projects.length}</span>
+                {[
+                  {
+                    label: "Projects",
+                    used: subscription?.projects_used ?? projects.length,
+                    limit: subscription?.projects_limit ?? -1,
+                  },
+                  {
+                    label: "Reports",
+                    used: subscription?.reports_used ?? reportCount,
+                    limit: subscription?.reports_limit ?? -1,
+                  },
+                ].map(({ label, used, limit }) => {
+                  const unlimited = limit === -1;
+                  const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
+                  const nearLimit = !unlimited && pct >= 80;
+                  return (
+                    <div key={label}>
+                      <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
+                        <span>{label}</span>
+                        <span className={`font-mono ${nearLimit ? "text-saffron" : "text-vastu-text-2"}`}>
+                          {unlimited ? used : `${used} / ${limit}`}
+                        </span>
+                      </div>
+                      <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? "bg-[#b43218]" : nearLimit ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"}`}
+                          style={{ width: unlimited ? "30%" : `${pct}%`, opacity: unlimited ? 0.4 : 1 }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center justify-between pt-[2px]">
+                  <div className="text-[8px] text-gold-3 capitalize">
+                    {subscription?.plan ?? "starter"} plan
                   </div>
-                  <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-r from-gold-3 to-saffron rounded-full opacity-40" />
-                  </div>
+                  <button onClick={() => router.push("/settings")}
+                    className="text-[8px] text-vastu-text-3 hover:text-gold-3 transition-colors cursor-pointer">
+                    Manage →
+                  </button>
                 </div>
-                <div>
-                  <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
-                    <span>Reports</span>
-                    <span className="font-mono text-vastu-text-2">{reportCount}</span>
-                  </div>
-                  <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-r from-gold-3 to-saffron rounded-full opacity-40" />
-                  </div>
-                </div>
-                <div className="text-[8px] text-vastu-text-3 italic pt-[2px]">Subscription tiers in Phase 2</div>
               </div>
             </CollapsibleCard>
           </div>
