@@ -138,7 +138,7 @@ export default function ReportsPage() {
                 Upgrade →
               </a>
             </div>
-          ) : subscription && subscription.reports_limit !== -1 && subscription.reports_used >= subscription.reports_limit ? (
+          ) : subscription && subscription.reports_limit >= 0 && subscription.reports_used >= subscription.reports_limit ? (
             <div className="text-right">
               <div className="text-[10px] text-saffron mb-1">Report limit reached ({subscription.reports_used}/{subscription.reports_limit})</div>
               <a href="/settings" className="text-[11px] px-4 py-[7px] bg-gold-2 text-[#faf7f0] rounded-md font-sans font-medium hover:bg-gold transition-colors cursor-pointer inline-block">

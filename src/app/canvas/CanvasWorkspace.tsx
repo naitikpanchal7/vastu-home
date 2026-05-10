@@ -779,7 +779,7 @@ export default function CanvasWorkspace() {
 
         {/* Main canvas */}
         {/* Block canvas when no project open and limit reached */}
-        {!projectId && subscription && subscription.projects_limit !== -1 && subscription.projects_used >= subscription.projects_limit && (
+        {!projectId && subscription && subscription.projects_limit >= 0 && subscription.projects_used >= subscription.projects_limit && (
           <div className="absolute inset-0 z-30 bg-bg/80 backdrop-blur-[2px] flex items-center justify-center">
             <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[360px] shadow-xl text-center">
               <div className="text-[28px] mb-3">◫</div>

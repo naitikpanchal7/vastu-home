@@ -37,12 +37,12 @@ export default function DashboardPage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const projectsAtLimit = subscription && subscription.projects_limit !== -1 && subscription.projects_used >= subscription.projects_limit;
+  const projectsAtLimit = subscription && subscription.projects_limit >= 0 && subscription.projects_used >= subscription.projects_limit;
 
   const openNewProject = () => {
     if (projectsAtLimit) { setShowLimitModal(true); return; }
     setCreateError(null);
-    openNewProject();
+    setShowNewProject(true);
   };
 
   const handleCreateProject = async () => {
@@ -126,7 +126,7 @@ export default function DashboardPage() {
                 ].map(({ label, used, limit }) => {
                   const isReports = label === "Reports";
                   const pdfDisabled = isReports && !planFeatures.pdf_export_enabled;
-                  const unlimited = limit === -1;
+                  const unlimited = limit < 0;
                   const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
                   const nearLimit = !unlimited && pct >= 80;
                   return (
@@ -134,7 +134,7 @@ export default function DashboardPage() {
                       <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[6px]">
                         <span>{label}</span>
                         <span className={`font-mono ${pdfDisabled ? "italic" : nearLimit ? "text-saffron" : "text-vastu-text-2"}`}>
-                          {pdfDisabled ? "Not included" : unlimited ? used : `${used} / ${limit}`}
+                          {pdfDisabled ? "Not included" : unlimited ? `${used} / ∞` : `${used} / ${limit}`}
                         </span>
                       </div>
                       {!pdfDisabled && (

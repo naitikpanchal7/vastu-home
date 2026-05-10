@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     .eq("user_id", user.id)
     .single();
 
-  if (sub && sub.projects_limit !== -1) {
+  if (sub && sub.projects_limit >= 0) {
     // Count actual DB rows (projects_used counter may be stale for pre-existing users)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { count } = await (supabase as any)
