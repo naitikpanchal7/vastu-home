@@ -19,6 +19,7 @@ export default function AdminSettingsPage() {
   });
   const [loading, setSaving] = useState(false);
   const [saved, setSaved]    = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
@@ -42,19 +43,29 @@ export default function AdminSettingsPage() {
     const merged = { ...settings, ...patch };
     setSettings(merged);
     setSaving(true);
-    await fetch("/api/admin/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        maintenance_mode:    merged.maintenance_mode,
-        maintenance_message: merged.maintenance_message,
-        ai_daily_cap:        merged.ai_daily_cap,
-        ai_monthly_cap:      merged.ai_monthly_cap,
-      }),
-    });
+    setSaveError("");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maintenance_mode:    merged.maintenance_mode,
+          maintenance_message: merged.maintenance_message,
+          ai_daily_cap:        merged.ai_daily_cap,
+          ai_monthly_cap:      merged.ai_monthly_cap,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setSaveError(j.error ?? `Error ${res.status}`);
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch {
+      setSaveError("Network error — changes not saved.");
+    }
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   if (fetching) return <div className="flex-1 flex items-center justify-center text-vastu-text-3 text-[12px]">Loading…</div>;
@@ -68,6 +79,7 @@ export default function AdminSettingsPage() {
           <p className="text-[11px] text-vastu-text-3 mt-[2px]">Platform configuration and controls</p>
         </div>
         {saved && <span className="text-[11px] text-green-700 font-medium">Saved ✓</span>}
+        {saveError && <span className="text-[11px] text-red-500 font-medium">{saveError}</span>}
       </div>
 
       <div className="p-8 flex flex-col gap-6 max-w-[680px]">
