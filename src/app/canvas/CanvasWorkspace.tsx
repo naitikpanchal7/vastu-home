@@ -15,6 +15,7 @@ import type { CanvasTool } from "@/store/canvasStore";
 import type { Floor, Project, Report } from "@/lib/types";
 import ReportBuilder from "@/components/reports/ReportBuilder";
 import { useReportStore } from "@/store/reportStore";
+import { useUser } from "@/hooks/useUser";
 
 interface ExportModalState { open: boolean }
 
@@ -26,6 +27,7 @@ export default function CanvasWorkspace() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { subscription } = useUser();
   const [exportModal, setExportModal] = useState<ExportModalState>({ open: false });
   const fullPanel = (searchParams.get("panel") as "analysis" | "ai" | null) ?? null;
   const [leftExpanded, setLeftExpanded] = useState(false);
@@ -776,6 +778,23 @@ export default function CanvasWorkspace() {
         </div>
 
         {/* Main canvas */}
+        {/* Block canvas when no project open and limit reached */}
+        {!projectId && subscription && subscription.projects_limit !== -1 && subscription.projects_used >= subscription.projects_limit && (
+          <div className="absolute inset-0 z-30 bg-bg/80 backdrop-blur-[2px] flex items-center justify-center">
+            <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[360px] shadow-xl text-center">
+              <div className="text-[28px] mb-3">◫</div>
+              <div className="font-serif text-[18px] text-gold-2 mb-2">Project Limit Reached</div>
+              <div className="text-[12px] text-vastu-text-2 leading-relaxed mb-1">
+                You&apos;ve used <span className="font-mono text-vastu-text">{subscription.projects_used}/{subscription.projects_limit}</span> projects on your current plan.
+              </div>
+              <div className="text-[11px] text-vastu-text-3 mb-5">Upgrade your plan to create more projects.</div>
+              <div className="flex gap-2 justify-center">
+                <button onClick={() => router.back()} className="px-4 py-[7px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[7px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Go Back</button>
+                <a href="/settings" className="px-4 py-[7px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[7px] hover:bg-gold transition-colors font-medium">Upgrade Plan →</a>
+              </div>
+            </div>
+          </div>
+        )}
         <ErrorBoundary>
           <VastuCanvas
             onImageFile={(file) => {
@@ -872,6 +891,9 @@ export default function CanvasWorkspace() {
         open={exportModal.open}
         onClose={() => setExportModal({ open: false })}
       />
+
+
+
     </div>
   );
 }

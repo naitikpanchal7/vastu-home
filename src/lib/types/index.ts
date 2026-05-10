@@ -134,7 +134,7 @@ export interface ChatMessage {
 }
 
 // ── Subscription ─────────────────────────────────────────────────────────────
-export type PlanTier = "starter" | "professional" | "firm";
+export type PlanTier = string;
 
 export interface Subscription {
   userId: string;

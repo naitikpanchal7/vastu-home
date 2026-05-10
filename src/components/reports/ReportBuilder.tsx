@@ -95,7 +95,8 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
   const canvasStore = useCanvasStore();
   const projectStore = useProjectStore();
   const reportStore = useReportStore();
-  const { user, profile } = useUser();
+  const { user, profile, planFeatures, subscription } = useUser();
+  const reportsAtLimit = subscription && subscription.reports_limit !== -1 && subscription.reports_used >= subscription.reports_limit;
 
   // Gather all floors with current floor's live state merged in
   const allFloors = useMemo(() => canvasStore.getProjectFloors(), [
@@ -525,6 +526,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         floors: floorPDFDataArray,
         totalProjectFloors: allFloors.length,
         attachments: selectedFloors.flatMap((f) => floorAttachments[f.id] ?? []),
+        showBranding: profile?.report_show_branding !== false,
       };
 
       // Generate PDF data URL (used for immediate download + storage upload)
@@ -687,19 +689,45 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         </button>
 
         {/* Generate & Download PDF */}
-        <button
-          onClick={handleGenerate}
-          disabled={!!validationError || generating}
-          className={cn(
-            "text-[10px] px-4 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer",
-            validationError || generating
-              ? "bg-[rgba(100,70,20,0.15)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.1)]"
-              : "bg-gold text-bg hover:bg-gold-2 border border-transparent"
-          )}
-          title={validationError ?? undefined}
-        >
-          {generating ? "⏳ Generating…" : "⎙ Generate & Download"}
-        </button>
+        {planFeatures.pdf_export_enabled === false ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-vastu-text-3">
+              PDF export not on your plan.{" "}
+              <a href="/settings" className="text-gold-2 underline underline-offset-2 hover:text-gold transition-colors">
+                Upgrade →
+              </a>
+            </span>
+            <button disabled className="text-[10px] px-4 py-[5px] rounded-md font-sans font-medium bg-[rgba(100,70,20,0.10)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.10)]">
+              ⎙ Generate & Download
+            </button>
+          </div>
+        ) : reportsAtLimit ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-vastu-text-3">
+              Report limit reached ({subscription?.reports_used}/{subscription?.reports_limit}).{" "}
+              <a href="/settings" className="text-gold-2 underline underline-offset-2 hover:text-gold transition-colors">
+                Upgrade →
+              </a>
+            </span>
+            <button disabled className="text-[10px] px-4 py-[5px] rounded-md font-sans font-medium bg-[rgba(100,70,20,0.10)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.10)]">
+              ⎙ Generate & Download
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleGenerate}
+            disabled={!!validationError || generating}
+            className={cn(
+              "text-[10px] px-4 py-[5px] rounded-md font-sans font-medium transition-all cursor-pointer",
+              validationError || generating
+                ? "bg-[rgba(100,70,20,0.15)] text-vastu-text-3 cursor-not-allowed border border-[rgba(100,70,20,0.1)]"
+                : "bg-gold text-bg hover:bg-gold-2 border border-transparent"
+            )}
+            title={validationError ?? undefined}
+          >
+            {generating ? "⏳ Generating…" : "⎙ Generate & Download"}
+          </button>
+        )}
       </div>
 
       {/* ── Body ── */}
@@ -874,6 +902,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                   totalPageCount={totalPageCount}
                   reportPagePlan={reportPagePlan}
                   activeFloor={activeFloor}
+                  showBranding={profile?.report_show_branding !== false}
                 />
               )
             ) : (
@@ -1203,7 +1232,7 @@ const SNAPSHOT_KEY_MAP: Partial<Record<ReportPageType, keyof FloorSnapshots>> = 
 
 function VisualPageGrid({
   reportName, projectName, clientName, consultantName, northDeg,
-  totalPageCount, reportPagePlan, activeFloor,
+  totalPageCount, reportPagePlan, activeFloor, showBranding,
 }: {
   reportName: string;
   projectName: string;
@@ -1213,6 +1242,7 @@ function VisualPageGrid({
   totalPageCount: number;
   reportPagePlan: PagePlanEntry[];
   activeFloor: Floor | null;
+  showBranding: boolean;
 }) {
   const [snapshots, setSnapshots] = useState<FloorSnapshots | null>(null);
   const [snapsLoading, setSnapsLoading] = useState(false);
@@ -1245,7 +1275,7 @@ function VisualPageGrid({
       )}
       <div className="grid grid-cols-2 gap-5">
         {/* Cover */}
-        <PageThumbnailShell pageNum={1} label="Cover Page">
+        <PageThumbnailShell pageNum={1} label="Cover Page" showBranding={showBranding}>
           <CoverPageContent
             reportName={reportName} projectName={projectName}
             clientName={clientName} consultantName={consultantName}
@@ -1254,7 +1284,7 @@ function VisualPageGrid({
         </PageThumbnailShell>
 
         {/* TOC */}
-        <PageThumbnailShell pageNum={2} label="Table of Contents">
+        <PageThumbnailShell pageNum={2} label="Table of Contents" showBranding={showBranding}>
           <TOCPageContent reportPagePlan={reportPagePlan} />
         </PageThumbnailShell>
 
@@ -1262,7 +1292,7 @@ function VisualPageGrid({
         {reportPagePlan.map((entry) => {
           if (entry.kind === "attachment") {
             return (
-              <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={entry.name}>
+              <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={entry.name} showBranding={showBranding}>
                 <AttachmentPageContent name={entry.name} />
               </PageThumbnailShell>
             );
@@ -1270,7 +1300,7 @@ function VisualPageGrid({
           const snapKey = SNAPSHOT_KEY_MAP[entry.pageType];
           const snapshotUrl = snapKey && snapshots ? snapshots[snapKey] : null;
           return (
-            <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={REPORT_PAGE_META[entry.pageType].label}>
+            <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={REPORT_PAGE_META[entry.pageType].label} showBranding={showBranding}>
               <FloorPageContent pageType={entry.pageType} floor={activeFloor} snapshotUrl={snapshotUrl ?? null} />
             </PageThumbnailShell>
           );
@@ -1281,7 +1311,7 @@ function VisualPageGrid({
 }
 
 // ── A4-proportioned thumbnail shell ──────────────────────────────────────────
-function PageThumbnailShell({ pageNum, label, children }: { pageNum: number; label: string; children: React.ReactNode }) {
+function PageThumbnailShell({ pageNum, label, children, showBranding }: { pageNum: number; label: string; children: React.ReactNode; showBranding: boolean }) {
   return (
     <div className="flex flex-col gap-2">
       {/* A4 aspect ratio (210:297 ≈ 1:1.414) */}
@@ -1306,7 +1336,7 @@ function PageThumbnailShell({ pageNum, label, children }: { pageNum: number; lab
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "0 9px", background: PDF.bg,
           }}>
-            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>vastu@home</span>
+            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>{showBranding ? "vastu@home" : ""}</span>
             <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "monospace" }}>{pageNum}</span>
           </div>
         </div>

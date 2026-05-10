@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useReportStore } from "@/store/reportStore";
 import { useCanvasStore } from "@/store/canvasStore";
+import { useUser } from "@/hooks/useUser";
 import ReportBuilder from "@/components/reports/ReportBuilder";
 import type { Report, ReportStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ export default function ReportsPage() {
   const router = useRouter();
   const reportStore = useReportStore();
   const canvasStore = useCanvasStore();
+  const { planFeatures, subscription } = useUser();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
@@ -129,13 +131,29 @@ export default function ReportsPage() {
               Download and manage all generated Vastu analysis reports.
             </p>
           </div>
-          <button
-            onClick={() => setBuilderOpen(true)}
-            className="flex items-center gap-2 text-[11px] px-4 py-[7px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
-          >
-            <span>⎙</span>
-            New Report
-          </button>
+          {planFeatures.pdf_export_enabled === false ? (
+            <div className="text-right">
+              <div className="text-[10px] text-vastu-text-3 mb-1">PDF export not on your plan</div>
+              <a href="/settings" className="text-[11px] px-4 py-[7px] bg-gold-2 text-[#faf7f0] rounded-md font-sans font-medium hover:bg-gold transition-colors cursor-pointer inline-block">
+                Upgrade →
+              </a>
+            </div>
+          ) : subscription && subscription.reports_limit !== -1 && subscription.reports_used >= subscription.reports_limit ? (
+            <div className="text-right">
+              <div className="text-[10px] text-saffron mb-1">Report limit reached ({subscription.reports_used}/{subscription.reports_limit})</div>
+              <a href="/settings" className="text-[11px] px-4 py-[7px] bg-gold-2 text-[#faf7f0] rounded-md font-sans font-medium hover:bg-gold transition-colors cursor-pointer inline-block">
+                Upgrade →
+              </a>
+            </div>
+          ) : (
+            <button
+              onClick={() => setBuilderOpen(true)}
+              className="flex items-center gap-2 text-[11px] px-4 py-[7px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors cursor-pointer"
+            >
+              <span>⎙</span>
+              New Report
+            </button>
+          )}
         </div>
 
         {/* Filters */}
@@ -244,6 +262,11 @@ export default function ReportsPage() {
                         >
                           ↓ Download
                         </button>
+                      ) : planFeatures.pdf_export_enabled === false ? (
+                        <a href="/settings"
+                          className="text-[9px] px-2 py-[4px] bg-transparent border border-[rgba(100,70,20,0.2)] text-vastu-text-3 rounded-md font-sans hover:border-gold-3 hover:text-gold-2 transition-colors cursor-pointer">
+                          Upgrade to generate
+                        </a>
                       ) : (
                         <button
                           onClick={() => { setEditReport(report); setBuilderOpen(true); }}

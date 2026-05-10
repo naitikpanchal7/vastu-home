@@ -2,7 +2,7 @@
 // @react-pdf/renderer document — client-side only (dynamic import, no SSR)
 "use client";
 
-import React from "react";
+import React, { createContext, useContext } from "react";
 import {
   Document,
   Page,
@@ -19,6 +19,8 @@ import type { ReportPageType, ReportAttachment } from "@/lib/types";
 import { REPORT_PAGE_META } from "@/lib/types";
 import type { ZoneAreaResult, CutAnalysisResult } from "@/lib/vastu/geometry";
 import type { VastuZone } from "@/lib/vastu/zones";
+
+const BrandingContext = createContext(true);
 
 // ── Colour palette (light/print-friendly) ─────────────────────────────────────
 const C = {
@@ -100,6 +102,7 @@ export interface ReportDocumentData {
   floors: FloorPDFData[];
   totalProjectFloors: number;
   attachments: ReportAttachment[];
+  showBranding: boolean;
 }
 
 type ReportPageEntry =
@@ -195,9 +198,10 @@ function getSnapshotForPageType(
 
 // ── Page footer ───────────────────────────────────────────────────────────────
 function PageFooter({ label, page, total }: { label: string; page: number; total: number }) {
+  const showBranding = useContext(BrandingContext);
   return (
     <View style={styles.footer} fixed>
-      <Text style={styles.footerText}>vastu@home — Vastu Shastra Analysis</Text>
+      <Text style={styles.footerText}>{showBranding ? "vastu@home — Vastu Shastra Analysis" : "Vastu Shastra Analysis"}</Text>
       <Text style={styles.footerText}>{label}</Text>
       <Text style={styles.footerText}>Page {page} of {total}</Text>
     </View>
@@ -335,14 +339,16 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
 
       <View style={{ padding: 44, flex: 1 }}>
         {/* Logo area */}
-        <View style={{ marginBottom: 32 }}>
-          <Text style={{ fontSize: 11, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 2, textTransform: "uppercase" }}>
-            vastu@home
-          </Text>
-          <Text style={{ fontSize: 8, color: C.text3, fontFamily: "Helvetica", letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>
-            Vastu Shastra Analysis Platform
-          </Text>
-        </View>
+        {data.showBranding && (
+          <View style={{ marginBottom: 32 }}>
+            <Text style={{ fontSize: 11, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 2, textTransform: "uppercase" }}>
+              vastu@home
+            </Text>
+            <Text style={{ fontSize: 8, color: C.text3, fontFamily: "Helvetica", letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>
+              Vastu Shastra Analysis Platform
+            </Text>
+          </View>
+        )}
 
         {/* Report title */}
         <View style={{ marginBottom: 28 }}>
@@ -1144,11 +1150,12 @@ export function VastuReportDocument({ data }: { data: ReportDocumentData }) {
   const total = totalPages(pageEntries);
 
   return (
+    <BrandingContext.Provider value={data.showBranding}>
     <Document
       title={data.reportName}
       author={data.consultantName}
       subject="Vastu Shastra Analysis Report"
-      creator="vastu@home"
+      creator={data.showBranding ? "vastu@home" : data.consultantName}
     >
       {/* Page 1: Cover */}
       <CoverPage data={data} />
@@ -1216,6 +1223,7 @@ export function VastuReportDocument({ data }: { data: ReportDocumentData }) {
         }
       })}
     </Document>
+    </BrandingContext.Provider>
   );
 }
 

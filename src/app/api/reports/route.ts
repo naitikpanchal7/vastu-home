@@ -40,6 +40,37 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // ── Suspension + plan feature + limit checks ────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from("profiles").select("suspended_at").eq("id", user.id).single();
+  if (profile?.suspended_at)
+    return NextResponse.json({ error: "Your account has been suspended. Contact support." }, { status: 403 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: sub } = await (supabase as any)
+    .from("subscriptions")
+    .select("plan, reports_used, reports_limit")
+    .eq("user_id", user.id)
+    .single();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tier } = await (supabase as any)
+    .from("plan_tiers").select("pdf_export_enabled")
+    .eq("id", sub?.plan ?? "starter").single();
+  if (tier?.pdf_export_enabled === false)
+    return NextResponse.json(
+      { error: "PDF export is not available on your current plan. Upgrade to generate reports.", limitReached: true },
+      { status: 402 }
+    );
+
+  if (sub && sub.reports_limit !== -1 && sub.reports_used >= sub.reports_limit)
+    return NextResponse.json(
+      { error: `Report limit reached. Your plan allows ${sub.reports_limit} reports. Upgrade to create more.`, limitReached: true },
+      { status: 402 }
+    );
+  // ────────────────────────────────────────────────────────────────────────────
+
   const body = await req.json() as Partial<Report>;
 
   const invalid = validationFail([
@@ -58,7 +89,6 @@ export async function POST(req: NextRequest) {
     status:            body.status ?? "draft",
     pdf_storage_path:  (body as Record<string, unknown>).pdfStoragePath ?? null,
   };
-  // Use client-provided UUID if given (keeps store ID in sync with DB)
   if (body.id && typeof body.id === "string" && !body.id.startsWith("report-")) {
     insertRow.id = body.id;
   }
@@ -71,6 +101,14 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ── Increment reports_used counter ───────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any)
+    .from("subscriptions")
+    .update({ reports_used: (sub?.reports_used ?? 0) + 1 })
+    .eq("user_id", user.id);
+  // ────────────────────────────────────────────────────────────────────────────
 
   return NextResponse.json({ data, status: "ok" }, { status: 201 });
 }

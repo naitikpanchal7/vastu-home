@@ -69,13 +69,22 @@ export function useProjects() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        const { data: row } = await res.json();
-        if (row) {
-          const project = dbRowToProject(row);
+        const json = await res.json();
+        if (res.status === 402) {
+          // Limit reached — surface the error, do NOT fall back to local project
+          throw new Error(json.error ?? "Project limit reached. Upgrade your plan to create more.");
+        }
+        if (res.ok && json.data) {
+          const project = dbRowToProject(json.data);
           store.addProject(project);
           return project;
         }
-      } catch { /* fall through to local */ }
+        if (!res.ok) throw new Error(json.error ?? "Failed to create project");
+      } catch (err) {
+        // Re-throw limit errors so the UI can show them
+        if (err instanceof Error && (err.message.includes("limit") || err.message.includes("Upgrade"))) throw err;
+        /* other errors — fall through to local */
+      }
 
       // Fallback: local-only project (unauthenticated or offline)
       const now = new Date().toISOString();
