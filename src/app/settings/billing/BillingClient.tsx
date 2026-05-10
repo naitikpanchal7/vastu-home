@@ -40,7 +40,7 @@ function UsageRow({
 }: {
   label: string; used: number; limit: number; unit?: string;
 }) {
-  const unlimited = limit === -1;
+  const unlimited = limit < 0;
   const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
   const color = pct >= 100 ? "bg-[#b43218]" : pct >= 80 ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron";
 
@@ -49,7 +49,7 @@ function UsageRow({
       <div className="flex justify-between text-[11px] mb-[5px]">
         <span className="text-vastu-text-2">{label}</span>
         <span className={cn("font-mono", pct >= 80 && !unlimited ? "text-saffron" : "text-vastu-text-3")}>
-          {unlimited ? `${used}${unit} used` : `${used}${unit} / ${limit}${unit}`}
+          {unlimited ? `${used}${unit} / ∞` : `${used}${unit} / ${limit}${unit}`}
         </span>
       </div>
       {!unlimited && (
@@ -229,9 +229,9 @@ export default function BillingClient() {
                 <div className="bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[10px] p-5">
                   <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] mb-3">Included in Your Plan</div>
                   <div className="flex flex-col">
-                    <FeatureRow label="Projects"            enabled={true}                       value={tier.projects_limit === -1 ? "Unlimited" : `Up to ${tier.projects_limit}`} />
-                    <FeatureRow label="AI Messages/month"   enabled={tier.ai_chat_enabled}        value={tier.ai_messages_limit === -1 ? "Unlimited" : `${tier.ai_messages_limit}`} />
-                    <FeatureRow label="PDF Exports/month"   enabled={tier.pdf_export_enabled}     value={tier.pdf_exports_limit === -1 ? "Unlimited" : tier.pdf_export_enabled ? `${tier.pdf_exports_limit}` : undefined} />
+                    <FeatureRow label="Projects"            enabled={true}                       value={tier.projects_limit < 0 ? "Unlimited" : `Up to ${tier.projects_limit}`} />
+                    <FeatureRow label="AI Messages/month"   enabled={tier.ai_chat_enabled}        value={tier.ai_messages_limit < 0 ? "Unlimited" : `${tier.ai_messages_limit}`} />
+                    <FeatureRow label="PDF Exports/month"   enabled={tier.pdf_export_enabled}     value={tier.pdf_exports_limit < 0 ? "Unlimited" : tier.pdf_export_enabled ? `${tier.pdf_exports_limit}` : undefined} />
                     <FeatureRow label="Vastu AI Chat"       enabled={tier.ai_chat_enabled} />
                     <FeatureRow label="White-label Reports" enabled={tier.white_label_enabled} />
                     <FeatureRow label="Priority Support"    enabled={tier.priority_support} />

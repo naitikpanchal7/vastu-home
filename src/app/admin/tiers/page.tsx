@@ -49,7 +49,7 @@ const NUM_FIELDS: Array<{ label: string; key: keyof Tier }> = [
   { label: "PDF Exports (−1 = ∞)",    key: "pdf_exports_limit" },
 ];
 
-function limitDisplay(v: number) { return v === -1 ? "∞" : v.toString(); }
+function limitDisplay(v: number) { return v < 0 ? "∞" : v.toString(); }
 function numVal(v: unknown) { const n = v as number; return isNaN(n) ? "" : n; }
 
 const BLANK_TIER: Omit<Tier, "id" | "userCount"> = {

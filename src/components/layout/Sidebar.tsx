@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 ];
 
 function UsageBar({ used, limit, label }: { used: number; limit: number; label: string }) {
-  const unlimited = limit === -1;
+  const unlimited = limit < 0;
   const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
   const nearLimit = !unlimited && pct >= 80;
 
@@ -24,7 +24,7 @@ function UsageBar({ used, limit, label }: { used: number; limit: number; label: 
       <div className="flex justify-between text-[8px] text-vastu-text-3 mb-[4px]">
         <span>{label}</span>
         <span className={cn("font-mono", nearLimit && "text-saffron")}>
-          {unlimited ? `${used}` : `${used}/${limit}`}
+          {unlimited ? `${used} / ∞` : `${used}/${limit}`}
         </span>
       </div>
       {!unlimited && (
