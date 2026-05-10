@@ -209,7 +209,7 @@ export default function ProjectsPage() {
           <div className="mb-3 px-3 py-2 bg-[rgba(200,60,40,0.08)] border border-[rgba(200,60,40,0.25)] rounded-[6px] text-[11px] text-red-400 flex items-center justify-between gap-3">
             <span>{createError}</span>
             {createError.toLowerCase().includes("limit") && (
-              <a href="/settings" className="text-[10px] px-2 py-1 bg-gold-2 text-[#faf7f0] rounded-[4px] hover:bg-gold transition-colors whitespace-nowrap flex-shrink-0">Upgrade →</a>
+              <a href="/settings/billing?reason=projects_limit" className="text-[10px] px-2 py-1 bg-gold-2 text-[#faf7f0] rounded-[4px] hover:bg-gold transition-colors whitespace-nowrap flex-shrink-0">Upgrade →</a>
             )}
           </div>
         )}
@@ -266,7 +266,7 @@ export default function ProjectsPage() {
             <div className="text-[11px] text-vastu-text-3 mb-5">Upgrade your plan to create more projects.</div>
             <div className="flex gap-2 justify-center">
               <button onClick={() => setShowLimitModal(false)} className="px-4 py-[7px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[7px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>
-              <a href="/settings" className="px-4 py-[7px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[7px] hover:bg-gold transition-colors font-medium">Upgrade Plan →</a>
+              <a href="/settings/billing?reason=projects_limit" className="px-4 py-[7px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[7px] hover:bg-gold transition-colors font-medium">Upgrade Plan →</a>
             </div>
           </div>
         </div>

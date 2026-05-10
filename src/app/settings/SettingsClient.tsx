@@ -432,80 +432,24 @@ export default function SettingsClient({ profile }: Props) {
           </Section>
 
           {/* ── Plan & Billing ── */}
-          <Section title="Plan & Billing" icon="◌">
-            <div className="flex flex-col gap-[10px]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[13px] text-vastu-text font-medium capitalize">
-                    {subscription?.plan ?? "Starter"} Plan
-                  </div>
-                  <div className="text-[10px] text-vastu-text-3 mt-[2px]">
-                    {subscription?.renews_at
-                      ? `Renews ${new Date(subscription.renews_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`
-                      : "Free plan — no billing"}
-                  </div>
+          <Section title="Plan & Billing" icon="◎">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[13px] text-vastu-text font-medium capitalize mb-[2px]">
+                  {subscription?.plan ?? "Starter"} Plan
                 </div>
-                <span className="text-[9px] px-2 py-[4px] bg-[rgba(154,120,32,0.15)] text-gold-2 rounded-full font-medium uppercase tracking-[0.5px]">
-                  {subscription?.plan ?? "starter"}
-                </span>
+                <div className="text-[10px] text-vastu-text-3">
+                  {subscription?.renews_at
+                    ? `Renews ${new Date(subscription.renews_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`
+                    : "No active subscription"}
+                </div>
               </div>
-
-              <div className="h-px bg-[rgba(100,70,20,0.10)]" />
-
-              {/* Usage meters */}
-              {[
-                { label: "Projects", used: subscription?.projects_used ?? 0, limit: subscription?.projects_limit ?? -1 },
-                { label: "Reports",  used: subscription?.reports_used  ?? 0, limit: subscription?.reports_limit  ?? -1 },
-              ].map(({ label, used, limit }) => {
-                const isReports = label === "Reports";
-                const pdfDisabled = isReports && !planFeatures.pdf_export_enabled;
-                const unlimited = limit === -1;
-                const pct = unlimited ? 0 : Math.min((used / limit) * 100, 100);
-                return (
-                  <div key={label}>
-                    <div className="flex justify-between text-[9px] text-vastu-text-3 mb-[5px]">
-                      <span>{label}</span>
-                      <span className={`font-mono ${pdfDisabled ? "italic text-vastu-text-3" : "text-vastu-text-2"}`}>
-                        {pdfDisabled ? "Not included" : unlimited ? `${used} used` : `${used} / ${limit}`}
-                      </span>
-                    </div>
-                    {!pdfDisabled && (
-                      <div className="h-[3px] bg-bg-4 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-[#b43218]" : pct >= 80 ? "bg-saffron" : "bg-gradient-to-r from-gold-3 to-saffron"}`}
-                          style={{ width: unlimited ? "100%" : `${pct}%`, opacity: unlimited ? 0.25 : 1 }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Feature flags */}
-              <div className="h-px bg-[rgba(100,70,20,0.10)]" />
-              <div className="flex flex-col gap-[6px]">
-                <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-[2px]">Included features</div>
-                {[
-                  { label: "Vastu AI Chat",           enabled: planFeatures.ai_chat_enabled },
-                  { label: "PDF Report Export",        enabled: planFeatures.pdf_export_enabled },
-                  { label: "White-label Reports",      enabled: planFeatures.white_label_enabled },
-                  { label: "Priority Support",         enabled: planFeatures.priority_support },
-                ].map(({ label, enabled }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <span className={`text-[11px] ${enabled ? "text-green-700" : "text-vastu-text-3"}`}>
-                      {enabled ? "✓" : "—"}
-                    </span>
-                    <span className={`text-[11px] ${enabled ? "text-vastu-text" : "text-vastu-text-3 line-through"}`}>
-                      {label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="h-px bg-[rgba(100,70,20,0.10)]" />
-              <div className="text-[10px] text-vastu-text-3">
-                To upgrade your plan or apply a promo code, contact us or wait for the in-app billing flow (coming soon).
-              </div>
+              <button
+                onClick={() => router.push("/settings/billing")}
+                className="px-3 py-[7px] bg-gold text-bg rounded-[8px] text-[11px] font-medium hover:bg-gold-2 transition-colors cursor-pointer flex-shrink-0"
+              >
+                Manage Billing →
+              </button>
             </div>
           </Section>
 

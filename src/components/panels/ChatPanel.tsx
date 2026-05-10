@@ -190,7 +190,7 @@ export default function ChatPanel() {
         <div className="text-[11px] text-vastu-text-3 leading-relaxed">
           Vastu AI is included in the Professional and Firm plans.
         </div>
-        <a href="/settings" className="text-[10px] px-3 py-[5px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold transition-all font-medium">
+        <a href="/settings/billing?reason=ai_disabled" className="text-[10px] px-3 py-[5px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold transition-all font-medium">
           Upgrade Plan →
         </a>
       </div>

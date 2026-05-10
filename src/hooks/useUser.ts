@@ -18,7 +18,7 @@ interface Profile {
 }
 
 interface Subscription {
-  plan: "starter" | "professional" | "firm";
+  plan: string;
   projects_used: number;
   projects_limit: number;
   reports_used: number;

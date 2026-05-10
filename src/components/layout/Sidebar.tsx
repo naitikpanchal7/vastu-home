@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: "⊞", href: "/dashboard", section: "Workspace", panel: null },
-  { label: "Projects",  icon: "◫", href: "/projects",  section: null,        panel: null },
-  { label: "Canvas",    icon: "◈", href: "/canvas",    section: null,        panel: null },
-  { label: "Reports",   icon: "◌", href: "/reports",   section: "Account",   panel: null },
-  { label: "Settings",  icon: "⚙", href: "/settings",  section: null,        panel: null },
+  { label: "Dashboard", icon: "⊞", href: "/dashboard",        section: "Workspace", panel: null, exact: false },
+  { label: "Projects",  icon: "◫", href: "/projects",          section: null,        panel: null, exact: false },
+  { label: "Canvas",    icon: "◈", href: "/canvas",            section: null,        panel: null, exact: false },
+  { label: "Reports",   icon: "◌", href: "/reports",           section: "Account",   panel: null, exact: false },
+  { label: "Settings",  icon: "⚙", href: "/settings",          section: null,        panel: null, exact: true  },
+  { label: "Billing",   icon: "◎", href: "/settings/billing",  section: null,        panel: null, exact: false },
 ];
 
 function UsageBar({ used, limit, label }: { used: number; limit: number; label: string }) {
@@ -91,7 +92,9 @@ export default function Sidebar() {
           const isActive = item.panel
             ? searchParams.get("panel") === item.panel
             : item.href
-            ? pathname === item.href || (item.href !== "/" && item.href !== "#settings" && pathname.startsWith(item.href))
+            ? item.exact
+              ? pathname === item.href
+              : pathname === item.href || (item.href !== "/" && item.href !== "#settings" && pathname.startsWith(item.href))
             : false;
 
           const handleClick = () => {
