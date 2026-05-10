@@ -40,20 +40,35 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ── Subscription limit check ─────────────────────────────────────────────────
+  // ── Suspension + plan feature + limit checks ────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from("profiles").select("suspended_at").eq("id", user.id).single();
+  if (profile?.suspended_at)
+    return NextResponse.json({ error: "Your account has been suspended. Contact support." }, { status: 403 });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: sub } = await (supabase as any)
     .from("subscriptions")
-    .select("reports_used, reports_limit")
+    .select("plan, reports_used, reports_limit")
     .eq("user_id", user.id)
     .single();
 
-  if (sub && sub.reports_limit !== -1 && sub.reports_used >= sub.reports_limit) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tier } = await (supabase as any)
+    .from("plan_tiers").select("pdf_export_enabled")
+    .eq("id", sub?.plan ?? "starter").single();
+  if (tier?.pdf_export_enabled === false)
+    return NextResponse.json(
+      { error: "PDF export is not available on your current plan. Upgrade to generate reports.", limitReached: true },
+      { status: 402 }
+    );
+
+  if (sub && sub.reports_limit !== -1 && sub.reports_used >= sub.reports_limit)
     return NextResponse.json(
       { error: `Report limit reached. Your plan allows ${sub.reports_limit} reports. Upgrade to create more.`, limitReached: true },
       { status: 402 }
     );
-  }
   // ────────────────────────────────────────────────────────────────────────────
 
   const body = await req.json() as Partial<Report>;

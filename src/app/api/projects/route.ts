@@ -37,7 +37,13 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ── Subscription limit check ─────────────────────────────────────────────────
+  // ── Suspension + limit check ─────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
+    .from("profiles").select("suspended_at").eq("id", user.id).single();
+  if (profile?.suspended_at)
+    return NextResponse.json({ error: "Your account has been suspended. Contact support." }, { status: 403 });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: sub } = await (supabase as any)
     .from("subscriptions")

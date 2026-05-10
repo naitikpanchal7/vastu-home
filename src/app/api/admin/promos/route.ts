@@ -41,6 +41,14 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("activity_logs").insert({
+    consultant_id: adminUser.id,
+    action: "admin_promo_create",
+    label: `Admin created promo code: ${body.code?.toUpperCase()} (${body.discountPct}% off)`,
+  });
+
   return NextResponse.json({ data, status: "ok" }, { status: 201 });
 }
 
@@ -54,6 +62,13 @@ export async function PATCH(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (admin as any).from("promo_codes").update({ is_active: body.is_active }).eq("id", body.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("activity_logs").insert({
+    consultant_id: adminUser.id,
+    action: "admin_promo_toggle",
+    label: `Admin ${body.is_active ? "activated" : "deactivated"} promo code ${body.id}`,
+  });
 
   return NextResponse.json({ status: "ok" });
 }

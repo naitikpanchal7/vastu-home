@@ -72,13 +72,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (body.plan !== undefined) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: tier } = await (admin as any).from("plan_tiers").select("projects_limit, pdf_exports_limit").eq("id", body.plan).single();
+    const { data: tier } = await (admin as any)
+      .from("plan_tiers")
+      .select("projects_limit, pdf_exports_limit, white_label_enabled")
+      .eq("id", body.plan).single();
+
+    // Recalculate actual used counts from DB so counters are accurate after plan change
+    const [{ count: actualProjects }, { count: actualReports }] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from("projects").select("id", { count: "exact", head: true }).eq("consultant_id", id).is("deleted_at", null),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from("reports").select("id", { count: "exact", head: true }).eq("consultant_id", id).is("deleted_at", null),
+    ]);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin as any).from("subscriptions").update({
       plan:           body.plan,
       projects_limit: tier?.projects_limit ?? 5,
       reports_limit:  tier?.pdf_exports_limit ?? 5,
+      projects_used:  actualProjects ?? 0,
+      reports_used:   actualReports ?? 0,
     }).eq("user_id", id);
+
+    // Sync white_label_enabled → report_show_branding on profile
+    if (tier?.white_label_enabled !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin as any).from("profiles")
+        .update({ report_show_branding: !tier.white_label_enabled })
+        .eq("id", id);
+    }
   }
 
   if (body.isAdmin !== undefined) {

@@ -36,7 +36,13 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // ── AI chat limit check ────────────────────────────────────────────────────
+    // ── Suspension + AI chat limit check ─────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
+      .from("profiles").select("suspended_at").eq("id", user.id).single();
+    if (profile?.suspended_at)
+      return NextResponse.json({ error: "Your account has been suspended. Contact support." }, { status: 403 });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: sub } = await (supabase as any)
       .from("subscriptions")
@@ -45,11 +51,18 @@ export async function POST(req: NextRequest) {
       .single();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: tier } = await (supabase as any)
+    let { data: tier } = await (supabase as any)
       .from("plan_tiers")
       .select("ai_messages_limit, ai_chat_enabled")
       .eq("id", sub?.plan ?? "starter")
       .single();
+    // If tier not found (deleted tier), fall back to starter limits
+    if (!tier && sub?.plan !== "starter") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: starterTier } = await (supabase as any)
+        .from("plan_tiers").select("ai_messages_limit, ai_chat_enabled").eq("id", "starter").single();
+      tier = starterTier;
+    }
 
     if (tier?.ai_chat_enabled === false) {
       return NextResponse.json(

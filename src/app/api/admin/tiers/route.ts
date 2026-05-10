@@ -52,6 +52,13 @@ export async function PATCH(req: NextRequest) {
   const { error } = await (admin as any).from("plan_tiers").update(updates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("activity_logs").insert({
+    consultant_id: adminUser.id,
+    action: "admin_tier_update",
+    label: `Admin updated tier ${id}: ${Object.keys(updates).join(", ")}`,
+  });
+
   // ── Sync subscription limits to all users on this tier ──────────────────────
   const subUpdates: Record<string, unknown> = {};
   if (updates.projects_limit !== undefined)  subUpdates.projects_limit = updates.projects_limit;
@@ -122,6 +129,14 @@ export async function PUT(req: NextRequest) {
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("activity_logs").insert({
+    consultant_id: adminUser.id,
+    action: "admin_tier_create",
+    label: `Admin created new tier: ${body.name} (id: ${id})`,
+  });
+
   return NextResponse.json({ status: "ok", id }, { status: 201 });
 }
 
