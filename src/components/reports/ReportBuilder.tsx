@@ -526,6 +526,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
         floors: floorPDFDataArray,
         totalProjectFloors: allFloors.length,
         attachments: selectedFloors.flatMap((f) => floorAttachments[f.id] ?? []),
+        showBranding: profile?.report_show_branding !== false,
       };
 
       // Generate PDF data URL (used for immediate download + storage upload)
@@ -901,6 +902,7 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
                   totalPageCount={totalPageCount}
                   reportPagePlan={reportPagePlan}
                   activeFloor={activeFloor}
+                  showBranding={profile?.report_show_branding !== false}
                 />
               )
             ) : (
@@ -1230,7 +1232,7 @@ const SNAPSHOT_KEY_MAP: Partial<Record<ReportPageType, keyof FloorSnapshots>> = 
 
 function VisualPageGrid({
   reportName, projectName, clientName, consultantName, northDeg,
-  totalPageCount, reportPagePlan, activeFloor,
+  totalPageCount, reportPagePlan, activeFloor, showBranding,
 }: {
   reportName: string;
   projectName: string;
@@ -1240,6 +1242,7 @@ function VisualPageGrid({
   totalPageCount: number;
   reportPagePlan: PagePlanEntry[];
   activeFloor: Floor | null;
+  showBranding: boolean;
 }) {
   const [snapshots, setSnapshots] = useState<FloorSnapshots | null>(null);
   const [snapsLoading, setSnapsLoading] = useState(false);
@@ -1272,7 +1275,7 @@ function VisualPageGrid({
       )}
       <div className="grid grid-cols-2 gap-5">
         {/* Cover */}
-        <PageThumbnailShell pageNum={1} label="Cover Page">
+        <PageThumbnailShell pageNum={1} label="Cover Page" showBranding={showBranding}>
           <CoverPageContent
             reportName={reportName} projectName={projectName}
             clientName={clientName} consultantName={consultantName}
@@ -1281,7 +1284,7 @@ function VisualPageGrid({
         </PageThumbnailShell>
 
         {/* TOC */}
-        <PageThumbnailShell pageNum={2} label="Table of Contents">
+        <PageThumbnailShell pageNum={2} label="Table of Contents" showBranding={showBranding}>
           <TOCPageContent reportPagePlan={reportPagePlan} />
         </PageThumbnailShell>
 
@@ -1289,7 +1292,7 @@ function VisualPageGrid({
         {reportPagePlan.map((entry) => {
           if (entry.kind === "attachment") {
             return (
-              <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={entry.name}>
+              <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={entry.name} showBranding={showBranding}>
                 <AttachmentPageContent name={entry.name} />
               </PageThumbnailShell>
             );
@@ -1297,7 +1300,7 @@ function VisualPageGrid({
           const snapKey = SNAPSHOT_KEY_MAP[entry.pageType];
           const snapshotUrl = snapKey && snapshots ? snapshots[snapKey] : null;
           return (
-            <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={REPORT_PAGE_META[entry.pageType].label}>
+            <PageThumbnailShell key={entry.id} pageNum={entry.pageNum} label={REPORT_PAGE_META[entry.pageType].label} showBranding={showBranding}>
               <FloorPageContent pageType={entry.pageType} floor={activeFloor} snapshotUrl={snapshotUrl ?? null} />
             </PageThumbnailShell>
           );
@@ -1308,7 +1311,7 @@ function VisualPageGrid({
 }
 
 // ── A4-proportioned thumbnail shell ──────────────────────────────────────────
-function PageThumbnailShell({ pageNum, label, children }: { pageNum: number; label: string; children: React.ReactNode }) {
+function PageThumbnailShell({ pageNum, label, children, showBranding }: { pageNum: number; label: string; children: React.ReactNode; showBranding: boolean }) {
   return (
     <div className="flex flex-col gap-2">
       {/* A4 aspect ratio (210:297 ≈ 1:1.414) */}
@@ -1333,7 +1336,7 @@ function PageThumbnailShell({ pageNum, label, children }: { pageNum: number; lab
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "0 9px", background: PDF.bg,
           }}>
-            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>vastu@home</span>
+            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>{showBranding ? "vastu@home" : ""}</span>
             <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "monospace" }}>{pageNum}</span>
           </div>
         </div>

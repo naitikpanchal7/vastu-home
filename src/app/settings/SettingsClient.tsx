@@ -398,26 +398,36 @@ export default function SettingsClient({ profile }: Props) {
                 <div>
                   <div className="text-[11px] text-vastu-text font-medium">Show vastu@home branding</div>
                   <div className="text-[10px] text-vastu-text-3 mt-[2px]">
-                    Adds &quot;Prepared using vastu@home&quot; to PDF reports
+                    {planFeatures.white_label_enabled
+                      ? "Toggle vastu@home branding in PDF reports"
+                      : "Upgrade to a white-label plan to remove vastu@home branding"}
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowBranding((v) => !v)}
-                  className={`w-[38px] h-[20px] rounded-full transition-colors duration-150 flex items-center px-[2px] ${
-                    showBranding ? "bg-gold" : "bg-bg-4"
-                  }`}
-                >
-                  <span
-                    className={`w-[16px] h-[16px] rounded-full bg-[#faf7f0] shadow transition-transform duration-150 ${
-                      showBranding ? "translate-x-[18px]" : "translate-x-0"
+                {planFeatures.white_label_enabled ? (
+                  <button
+                    onClick={() => setShowBranding((v) => !v)}
+                    className={`w-[38px] h-[20px] rounded-full transition-colors duration-150 flex items-center px-[2px] ${
+                      showBranding ? "bg-gold" : "bg-bg-4"
                     }`}
-                  />
-                </button>
+                  >
+                    <span
+                      className={`w-[16px] h-[16px] rounded-full bg-[#faf7f0] shadow transition-transform duration-150 ${
+                        showBranding ? "translate-x-[18px]" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                ) : (
+                  <a href="/settings#plan" className="text-[9px] px-2 py-[3px] bg-gold text-bg rounded-md font-sans font-medium hover:bg-gold-2 transition-colors">
+                    Upgrade
+                  </a>
+                )}
               </div>
 
-              <div className="flex justify-end pt-[4px]">
-                <SaveButton onClick={handleBrandingSave} saving={brandingSaving} saved={brandingSaved} />
-              </div>
+              {planFeatures.white_label_enabled && (
+                <div className="flex justify-end pt-[4px]">
+                  <SaveButton onClick={handleBrandingSave} saving={brandingSaving} saved={brandingSaved} />
+                </div>
+              )}
             </div>
           </Section>
 
