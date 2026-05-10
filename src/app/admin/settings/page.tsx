@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
+type PurgeAction = "purge_projects" | "clear_ai_logs";
+interface PurgeState { running: boolean; result: string; error: string; }
+const initPurge: PurgeState = { running: false, result: "", error: "" };
+
 interface Settings {
   maintenance_mode: boolean;
   maintenance_message: string;
@@ -21,6 +25,11 @@ export default function AdminSettingsPage() {
   const [saved, setSaved]    = useState(false);
   const [saveError, setSaveError] = useState("");
   const [fetching, setFetching] = useState(true);
+  const [purgeStates, setPurgeStates] = useState<Record<PurgeAction, PurgeState>>({
+    purge_projects: initPurge,
+    clear_ai_logs: initPurge,
+  });
+  const [confirmAction, setConfirmAction] = useState<PurgeAction | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -66,6 +75,30 @@ export default function AdminSettingsPage() {
       setSaveError("Network error — changes not saved.");
     }
     setSaving(false);
+  };
+
+  const runPurge = async (action: PurgeAction) => {
+    setConfirmAction(null);
+    setPurgeStates((s) => ({ ...s, [action]: { running: true, result: "", error: "" } }));
+    try {
+      const res = await fetch("/api/admin/purge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        setPurgeStates((s) => ({ ...s, [action]: { running: false, result: "", error: j.error ?? `Error ${res.status}` } }));
+      } else {
+        const label = action === "purge_projects"
+          ? `Purged ${j.count} project${j.count !== 1 ? "s" : ""}`
+          : `Cleared ${j.count.toLocaleString()} log entr${j.count !== 1 ? "ies" : "y"}`;
+        setPurgeStates((s) => ({ ...s, [action]: { running: false, result: label, error: "" } }));
+        setTimeout(() => setPurgeStates((s) => ({ ...s, [action]: initPurge })), 5000);
+      }
+    } catch {
+      setPurgeStates((s) => ({ ...s, [action]: { running: false, result: "", error: "Network error" } }));
+    }
   };
 
   if (fetching) return <div className="flex-1 flex items-center justify-center text-vastu-text-3 text-[12px]">Loading…</div>;
@@ -157,22 +190,44 @@ export default function AdminSettingsPage() {
           <div className="text-[13px] text-red-800 font-medium font-sans mb-1">Danger Zone</div>
           <div className="text-[10px] text-red-600 mb-4">These actions are irreversible. Proceed with extreme care.</div>
           <div className="flex flex-col gap-2">
-            {[
-              { label: "Purge Soft-Deleted Projects", desc: "Permanently remove all soft-deleted projects from the database." },
-              { label: "Clear AI Usage Logs",          desc: "Delete all AI usage tracking data. Cannot be recovered." },
-            ].map((action) => (
-              <div key={action.label} className="flex items-center justify-between py-3 border-b border-[rgba(200,50,50,0.10)] last:border-0">
-                <div>
-                  <div className="text-[11px] text-red-800 font-medium">{action.label}</div>
-                  <div className="text-[10px] text-red-500 mt-[1px]">{action.desc}</div>
+            {([
+              { key: "purge_projects" as PurgeAction, label: "Purge Soft-Deleted Projects", desc: "Permanently remove all soft-deleted projects from the database.", confirm: "This will permanently delete all soft-deleted projects. This cannot be undone." },
+              { key: "clear_ai_logs" as PurgeAction,  label: "Clear AI Usage Logs",          desc: "Delete all AI usage tracking data. Cannot be recovered.",                 confirm: "This will delete all AI usage log entries permanently." },
+            ]).map(({ key, label, desc, confirm }) => {
+              const ps = purgeStates[key];
+              return (
+                <div key={key} className="flex items-center justify-between py-3 border-b border-[rgba(200,50,50,0.10)] last:border-0">
+                  <div>
+                    <div className="text-[11px] text-red-800 font-medium">{label}</div>
+                    <div className="text-[10px] text-red-500 mt-[1px]">{desc}</div>
+                    {ps.result && <div className="text-[10px] text-green-600 mt-1 font-medium">✓ {ps.result}</div>}
+                    {ps.error  && <div className="text-[10px] text-red-500 mt-1">{ps.error}</div>}
+                  </div>
+                  {confirmAction === key ? (
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                      <span className="text-[9px] text-red-600 max-w-[140px] text-right leading-tight">{confirm}</span>
+                      <button
+                        onClick={() => runPurge(key)}
+                        className="text-[10px] px-3 py-[5px] bg-red-700 text-white rounded-[6px] hover:bg-red-600 transition-all cursor-pointer">
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmAction(null)}
+                        className="text-[10px] px-3 py-[5px] border border-[rgba(200,50,50,0.30)] text-red-700 rounded-[6px] hover:bg-[rgba(200,50,50,0.08)] transition-all cursor-pointer">
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmAction(key)}
+                      disabled={ps.running}
+                      className="text-[10px] px-3 py-[5px] border border-[rgba(200,50,50,0.30)] text-red-700 rounded-[6px] hover:bg-[rgba(200,50,50,0.08)] transition-all cursor-pointer flex-shrink-0 ml-4 disabled:opacity-50">
+                      {ps.running ? "Running…" : "Run"}
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={() => alert("This would require a dedicated API endpoint. Contact your DB admin or run via Supabase dashboard.")}
-                  className="text-[10px] px-3 py-[5px] border border-[rgba(200,50,50,0.30)] text-red-700 rounded-[6px] hover:bg-[rgba(200,50,50,0.08)] transition-all cursor-pointer flex-shrink-0 ml-4">
-                  Run
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
