@@ -74,11 +74,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="px-3 py-[15px] border-b border-[rgba(100,70,20,0.12)] flex items-center gap-[9px] flex-shrink-0 min-h-[54px] overflow-hidden whitespace-nowrap">
         <div className="w-[28px] h-[28px] bg-gradient-to-br from-gold-3 to-saffron rounded-[7px] flex items-center justify-center font-serif text-[15px] font-semibold text-[#faf7f0] flex-shrink-0">
-          V
+          A
         </div>
         <div className={cn("overflow-hidden transition-[opacity,width] duration-[220ms]", collapsed && "opacity-0 w-0")}>
           <div className="font-serif text-[18px] font-semibold text-gold-2">
-            vastu<span className="text-gold-3">@home</span>
+            Astraa Vastu
           </div>
           <div className="text-[9px] text-vastu-text-3 tracking-[2px] uppercase mt-[1px]">Consultant</div>
         </div>

@@ -396,11 +396,11 @@ export default function SettingsClient({ profile }: Props) {
 
               <div className="flex items-center justify-between py-[4px]">
                 <div>
-                  <div className="text-[11px] text-vastu-text font-medium">Show vastu@home branding</div>
+                  <div className="text-[11px] text-vastu-text font-medium">Show Astraa Vastu branding</div>
                   <div className="text-[10px] text-vastu-text-3 mt-[2px]">
                     {planFeatures.white_label_enabled
-                      ? "Toggle vastu@home branding in PDF reports"
-                      : "Upgrade to a white-label plan to remove vastu@home branding"}
+                      ? "Toggle Astraa Vastu branding in PDF reports"
+                      : "Upgrade to a white-label plan to remove Astraa Vastu branding"}
                   </div>
                 </div>
                 {planFeatures.white_label_enabled ? (

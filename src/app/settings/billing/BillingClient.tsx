@@ -253,7 +253,7 @@ export default function BillingClient() {
                     Compare Plans
                   </button>
                   <a
-                    href="mailto:support@vastuhome.in?subject=Plan Upgrade Request"
+                    href="mailto:support@astraavastu.com?subject=Plan Upgrade Request"
                     className="px-4 py-[8px] border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-[8px] text-[11px] hover:border-gold-3 hover:text-vastu-text transition-colors"
                   >
                     Contact Support

@@ -198,8 +198,8 @@ export default function PricingPage() {
             </div>
             <div className="bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[8px] p-4 mb-5 flex flex-col gap-2">
               <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px]">Contact to Upgrade</div>
-              <a href="mailto:support@vastuhome.in" className="text-[13px] text-gold hover:text-gold-2 transition-colors font-mono">
-                support@vastuhome.in
+              <a href="mailto:support@astraavastu.com" className="text-[13px] text-gold hover:text-gold-2 transition-colors font-mono">
+                support@astraavastu.com
               </a>
               <div className="text-[10px] text-vastu-text-3">Mention: upgrade to <strong className="text-vastu-text-2">{upgradeModal.name}</strong></div>
             </div>

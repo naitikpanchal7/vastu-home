@@ -21,11 +21,11 @@ export default function AdminSidebar() {
       {/* Logo */}
       <div className="px-4 py-[15px] border-b border-[rgba(100,70,20,0.12)] flex items-center gap-[9px]">
         <div className="w-[28px] h-[28px] bg-gradient-to-br from-gold-3 to-saffron rounded-[7px] flex items-center justify-center font-serif text-[15px] font-semibold text-[#faf7f0] flex-shrink-0">
-          V
+          A
         </div>
         <div>
           <div className="font-serif text-[16px] font-semibold text-gold-2 leading-tight">
-            vastu<span className="text-gold-3">@home</span>
+            Astraa Vastu
           </div>
           <div className="text-[8px] text-vastu-text-3 tracking-[2px] uppercase">Admin</div>
         </div>

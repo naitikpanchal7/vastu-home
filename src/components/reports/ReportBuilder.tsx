@@ -541,7 +541,9 @@ export default function ReportBuilder({ open, onClose, initialReport }: ReportBu
       if (user?.id) {
         const supabase = createSupabaseClient();
         const path = `${user.id}/${reportId}.pdf`;
-        const pdfBlob = await fetch(pdfDataUrl).then((r) => r.blob());
+        const base64 = pdfDataUrl.split(",")[1];
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const pdfBlob = new Blob([bytes], { type: "application/pdf" });
         const { error: uploadErr } = await supabase.storage
           .from("report-exports")
           .upload(path, pdfBlob, { contentType: "application/pdf", upsert: true });
@@ -1336,7 +1338,7 @@ function PageThumbnailShell({ pageNum, label, children, showBranding }: { pageNu
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "0 9px", background: PDF.bg,
           }}>
-            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>{showBranding ? "vastu@home" : ""}</span>
+            <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "sans-serif" }}>{showBranding ? "Astraa Vastu" : ""}</span>
             <span style={{ fontSize: 5, color: PDF.text3, fontFamily: "monospace" }}>{pageNum}</span>
           </div>
         </div>

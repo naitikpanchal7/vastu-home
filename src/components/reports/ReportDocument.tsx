@@ -201,7 +201,7 @@ function PageFooter({ label, page, total }: { label: string; page: number; total
   const showBranding = useContext(BrandingContext);
   return (
     <View style={styles.footer} fixed>
-      <Text style={styles.footerText}>{showBranding ? "vastu@home — Vastu Shastra Analysis" : "Vastu Shastra Analysis"}</Text>
+      <Text style={styles.footerText}>{showBranding ? "Astraa Vastu — Vastu Shastra Analysis" : "Vastu Shastra Analysis"}</Text>
       <Text style={styles.footerText}>{label}</Text>
       <Text style={styles.footerText}>Page {page} of {total}</Text>
     </View>
@@ -342,7 +342,7 @@ function CoverPage({ data }: { data: ReportDocumentData }) {
         {data.showBranding && (
           <View style={{ marginBottom: 32 }}>
             <Text style={{ fontSize: 11, color: C.gold, fontFamily: "Helvetica-Bold", letterSpacing: 2, textTransform: "uppercase" }}>
-              vastu@home
+              Astraa Vastu
             </Text>
             <Text style={{ fontSize: 8, color: C.text3, fontFamily: "Helvetica", letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 }}>
               Vastu Shastra Analysis Platform
@@ -1155,7 +1155,7 @@ export function VastuReportDocument({ data }: { data: ReportDocumentData }) {
       title={data.reportName}
       author={data.consultantName}
       subject="Vastu Shastra Analysis Report"
-      creator={data.showBranding ? "vastu@home" : data.consultantName}
+      creator={data.showBranding ? "Astraa Vastu" : data.consultantName}
     >
       {/* Page 1: Cover */}
       <CoverPage data={data} />

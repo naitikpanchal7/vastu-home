@@ -23,7 +23,7 @@ export default async function MaintenancePage() {
           Under Maintenance
         </h1>
         <p className="text-[13px] text-vastu-text-2 leading-relaxed mb-6">{message}</p>
-        <div className="text-[10px] text-vastu-text-3 tracking-[2px] uppercase">vastu@home</div>
+        <div className="text-[10px] text-vastu-text-3 tracking-[2px] uppercase">Astraa Vastu</div>
       </div>
     </div>
   );
