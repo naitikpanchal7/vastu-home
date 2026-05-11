@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest) {
 
   // ── Sync white_label_enabled → report_show_branding on profiles ─────────────
   // When admin enables white_label for a tier, users on that tier get white-label
-  // (report_show_branding = false means "hide vastu@home branding" = white-label)
+  // (report_show_branding = false means "hide Astraa Vastu branding" = white-label)
   if (updates.white_label_enabled !== undefined) {
     // Get all user_ids on this plan
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

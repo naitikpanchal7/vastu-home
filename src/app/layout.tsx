@@ -23,7 +23,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "vastu@home — Professional Vastu Consultant Platform",
+  title: "Astraa Vastu — Professional Vastu Consultant Platform",
   description:
     "AI-powered Vastu Shastra mapping platform for professional consultants. Authentic Shakti Chakra overlay, zone analysis, cut detection, and classical text-grounded AI advisor.",
   keywords: ["vastu", "vastu shastra", "floor plan", "vastu consultant", "shakti chakra"],

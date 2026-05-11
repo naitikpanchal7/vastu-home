@@ -287,7 +287,7 @@ export default function HomePage() {
         <div style={{ maxWidth: "1080px", margin: "0 auto", padding: "0 24px", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Logo */}
           <button onClick={() => smoothTo("hero")} style={{ fontFamily: "var(--font-cormorant)", fontSize: "20px", color: T.gold2, background: "none", border: "none", cursor: "pointer", letterSpacing: "-0.3px" }}>
-            vastu<span style={{ color: "#c46c0e" }}>@</span>home
+            Astraa Vastu
           </button>
 
           {/* Desktop links */}
@@ -613,19 +613,19 @@ export default function HomePage() {
           </div>
 
           <h2 style={{ fontFamily: "var(--font-cormorant)", fontSize: "26px", color: T.text, marginBottom: "4px" }}>Naitik Panchal</h2>
-          <p style={{ fontSize: "11px", color: T.text3, marginBottom: "20px" }}>Builder · vastu@home</p>
+          <p style={{ fontSize: "11px", color: T.text3, marginBottom: "20px" }}>Builder · Astraa Vastu</p>
 
           <p style={{ fontSize: "14px", lineHeight: 1.75, color: T.text2, maxWidth: "520px", margin: "0 auto 20px" }}>
-            I&apos;m Naitik Panchal, the founder of vastu@home — and I&apos;m 15. My passion for Vastu
+            I&apos;m Naitik Panchal, the founder of Astraa Vastu — and I&apos;m 15. My passion for Vastu
             started at home, watching my mother struggle to accurately map out floor plans by hand.
             That frustration stayed with me, and I decided I was going to fix it for her.
-            vastu@home is what that decision became.
+            Astraa Vastu is what that decision became.
           </p>
           <p style={{ fontSize: "14px", lineHeight: 1.75, color: T.text2, maxWidth: "520px", margin: "0 auto" }}>
             I built it for her first, and now I&apos;m building it for every consultant and family
             who deserves better tools. I believe Vastu — a Vedic science rooted in thousands of
             years of knowledge — is a powerful tool that, when applied with precision, can genuinely
-            enhance the quality of our lives. Through vastu@home, I hope to bring that precision
+            enhance the quality of our lives. Through Astraa Vastu, I hope to bring that precision
             to everyone, and make a meaningful impact on the world — one floor plan at a time.
           </p>
         </div>
@@ -651,7 +651,7 @@ export default function HomePage() {
       <footer style={{ background: T.bg3, borderTop: `1px solid ${T.border}`, padding: "32px 24px" }}>
         <div style={{ maxWidth: "1080px", margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
           <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "18px", color: T.gold2 }}>
-            vastu<span style={{ color: "#c46c0e" }}>@</span>home
+            Astraa Vastu
           </div>
 
           <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
@@ -672,7 +672,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div style={{ fontSize: "10px", color: T.text3 }}>© 2026 vastu@home · Phase 1 Beta</div>
+          <div style={{ fontSize: "10px", color: T.text3 }}>© 2026 Astraa Vastu · Phase 1 Beta</div>
         </div>
       </footer>
 

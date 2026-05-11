@@ -10,7 +10,7 @@ validateEnv();
 
 const client = new Anthropic();
 
-const VASTU_SYSTEM_PROMPT = `You are a professional Vastu Shastra advisor with deep expertise in classical texts — primarily Vishwakarma Prakash, Mayamatam, and Brihat Samhita. You are integrated into vastu@home, a professional consultant platform.
+const VASTU_SYSTEM_PROMPT = `You are a professional Vastu Shastra advisor with deep expertise in classical texts — primarily Vishwakarma Prakash, Mayamatam, and Brihat Samhita. You are integrated into Astraa Vastu, a professional consultant platform.
 
 Your role:
 - Provide accurate, text-grounded Vastu analysis for the current floor plan

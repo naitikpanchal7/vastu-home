@@ -160,7 +160,7 @@ export interface ConsultantProfile {
   avatarUrl?: string;
   firmName?: string;
   reportAccentColor?: string;     // hex color for PDF reports
-  reportShowBranding?: boolean;   // Show "Prepared using vastu@home" in report
+  reportShowBranding?: boolean;   // Show "Prepared using Astraa Vastu" in report
 }
 
 // ── Report Builder ────────────────────────────────────────────────────────────
