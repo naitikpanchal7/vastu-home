@@ -109,7 +109,7 @@ function LoginForm() {
             onClick={() => router.push("/")}
             style={{ fontFamily: "var(--font-cormorant)", fontSize: "28px", color: T.gold2, background: "none", border: "none", cursor: "pointer", letterSpacing: "-0.3px" }}
           >
-            vastu<span style={{ color: "#c46c0e" }}>@</span>home
+            Astraa Vastu
           </button>
           <p style={{ fontSize: "12px", color: T.text3, marginTop: "6px" }}>
             {mode === "login" ? "Welcome back" : "Create your account"}
