@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const T = {
   bg:      "#f7f3ed",
   bg2:     "#f0ebe2",
   border:  "rgba(100,70,20,0.13)",
-  text:    "#1c1710",
   text2:   "#5c4730",
   text3:   "#9a8060",
   gold:    "#9a7820",
@@ -35,15 +34,24 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function ResetPasswordPage() {
-  const router   = useRouter();
-  const supabase = createClient();
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
 
-  const [password, setPassword]   = useState("");
-  const [confirm, setConfirm]     = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [ready, setReady]         = useState(false);
-  const [done, setDone]           = useState(false);
+function ResetPasswordForm() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const supabase     = createClient();
+
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm]   = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [ready, setReady]       = useState(false);
+  const [done, setDone]         = useState(false);
 
   useEffect(() => {
     document.body.classList.add("public-page");
@@ -51,13 +59,29 @@ export default function ResetPasswordPage() {
     return () => document.body.classList.remove("public-page");
   }, []);
 
-  // Supabase fires PASSWORD_RECOVERY when it detects the recovery token in the URL hash.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+    async function verify() {
+      const token_hash = searchParams.get("token_hash");
+      const type       = searchParams.get("type");
+
+      if (!token_hash || type !== "recovery") {
+        setError("Invalid or expired reset link.");
+        setReady(false);
+        return;
+      }
+
+      const { error: err } = await supabase.auth.verifyOtp({ token_hash, type: "recovery" });
+
+      if (err) {
+        setError(err.message);
+      } else {
+        setReady(true);
+      }
+    }
+
+    verify();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,20 +130,27 @@ export default function ResetPasswordPage() {
             <div style={{ background: T.tealBg, border: `1px solid ${T.tealBd}`, borderRadius: "8px", padding: "14px 16px", fontSize: "13px", color: T.teal, lineHeight: "1.5", textAlign: "center" }}>
               Password updated! Redirecting you to your dashboard…
             </div>
-          ) : !ready ? (
+
+          ) : !ready && !error ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <p style={{ fontSize: "13px", color: T.text3 }}>Verifying your reset link…</p>
-              <p style={{ fontSize: "12px", color: T.text3, marginTop: "12px" }}>
-                If nothing happens,{" "}
+            </div>
+
+          ) : error && !ready ? (
+            <div>
+              <div style={{ background: T.error, border: `1px solid ${T.errorBd}`, borderRadius: "8px", padding: "14px 16px", fontSize: "13px", color: T.errorTx, marginBottom: "20px" }}>
+                {error}
+              </div>
+              <p style={{ fontSize: "12px", color: T.text3, textAlign: "center" }}>
                 <button
                   onClick={() => router.push("/auth/forgot-password")}
                   style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: "12px", textDecoration: "underline", padding: 0 }}
                 >
-                  request a new link
+                  Request a new reset link
                 </button>
-                .
               </p>
             </div>
+
           ) : (
             <>
               {error && (
