@@ -270,6 +270,7 @@ export default function HomePage() {
     { label: "Demo",      action: () => smoothTo("demo") },
     { label: "Gratitude", action: () => smoothTo("gratitude") },
     { label: "Founder",   action: () => smoothTo("founder") },
+    { label: "Pricing",   action: () => router.push("/pricing") },
   ];
 
   return (
@@ -661,6 +662,7 @@ export default function HomePage() {
               { label: "Demo",      fn: () => smoothTo("demo") },
               { label: "Gratitude", fn: () => smoothTo("gratitude") },
               { label: "Founder",   fn: () => smoothTo("founder") },
+              { label: "Pricing",   fn: () => router.push("/pricing") },
               { label: "Log In",    fn: goLogin },
               { label: "Sign Up",   fn: goSignUp },
             ].map((l) => (
