@@ -30,8 +30,10 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/tiers")
@@ -60,6 +62,18 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const resetUsage = async () => {
+    setResetting(true);
+    await fetch(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resetUsage: true }),
+    });
+    setResetting(false);
+    setResetDone(true);
+    setTimeout(() => { setResetDone(false); window.location.reload(); }, 1500);
   };
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -134,6 +148,16 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
               className="px-3 py-[6px] text-[11px] bg-gold-2 text-[#faf7f0] rounded-[6px] hover:bg-gold disabled:opacity-40 transition-all cursor-pointer font-medium"
             >
               {saved ? "Saved ✓" : saving ? "Saving…" : "Apply"}
+            </button>
+          </div>
+          {/* Reset usage */}
+          <div className="mt-3 pt-3 border-t border-[rgba(100,70,20,0.08)]">
+            <button
+              onClick={resetUsage}
+              disabled={resetting}
+              className="w-full py-[6px] text-[11px] bg-bg-3 border border-[rgba(200,50,50,0.25)] rounded-[6px] text-red-700 hover:bg-[rgba(200,50,50,0.05)] hover:border-[rgba(200,50,50,0.40)] disabled:opacity-40 transition-all cursor-pointer"
+            >
+              {resetDone ? "Reset ✓" : resetting ? "Resetting…" : "Reset Usage to 0"}
             </button>
           </div>
         </div>

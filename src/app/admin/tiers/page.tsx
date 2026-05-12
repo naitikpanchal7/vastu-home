@@ -18,6 +18,8 @@ interface Tier {
   white_label_enabled: boolean;
   priority_support: boolean;
   is_active: boolean;
+  is_base_tier: boolean;
+  sort_order: number;
   razorpay_plan_id_monthly?: string;
   razorpay_plan_id_yearly?: string;
   userCount: number;
@@ -50,13 +52,13 @@ const NUM_FIELDS: Array<{ label: string; key: keyof Tier }> = [
 ];
 
 function limitDisplay(v: number) { return v < 0 ? "∞" : v.toString(); }
-function numVal(v: unknown) { const n = v as number; return isNaN(n) ? "" : n; }
+function numVal(v: unknown): string | number { if (v == null) return ""; const n = Number(v); return Number.isNaN(n) ? "" : n; }
 
 const BLANK_TIER: Omit<Tier, "id" | "userCount"> = {
   name: "", description: "", price_monthly: 0, price_yearly: 0,
   projects_limit: 5, storage_limit_gb: 1, ai_messages_limit: 50, pdf_exports_limit: 5,
   ai_chat_enabled: true, pdf_export_enabled: true, white_label_enabled: false,
-  priority_support: false, is_active: true,
+  priority_support: false, is_active: true, is_base_tier: false, sort_order: 0,
   razorpay_plan_id_monthly: "", razorpay_plan_id_yearly: "",
 };
 
@@ -81,7 +83,7 @@ export default function AdminTiersPage() {
       fetch("/api/admin/tiers").then((r) => r.json()),
       fetch("/api/admin/promos").then((r) => r.json()),
     ]).then(([tiersRes, promosRes]) => {
-      setTiers(tiersRes.data ?? []);
+      setTiers((tiersRes.data ?? []).map((t: Tier) => ({ ...t, sort_order: t.sort_order ?? 0 })));
       setPromos(promosRes.data ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -190,14 +192,19 @@ export default function AdminTiersPage() {
         <div>
           <div className="text-[9px] text-vastu-text-3 uppercase tracking-[2px] mb-4">Plans</div>
           <div className="grid grid-cols-3 gap-4">
-            {tiers.map((tier) => (
+            {[...tiers].sort((a, b) => a.sort_order - b.sort_order).map((tier) => (
               <div key={tier.id} className={cn(
                 "bg-bg-2 border rounded-[12px] p-5 flex flex-col gap-3",
                 tier.is_active ? "border-[rgba(100,70,20,0.20)]" : "border-[rgba(100,70,20,0.10)] opacity-60"
               )}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-serif text-[17px] text-gold-2 font-semibold">{tier.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-serif text-[17px] text-gold-2 font-semibold">{tier.name}</div>
+                      {tier.is_base_tier && (
+                        <span className="text-[8px] px-[6px] py-[2px] rounded-full bg-[rgba(42,122,114,0.15)] text-teal-700 font-medium uppercase tracking-[0.5px]">Default</span>
+                      )}
+                    </div>
                     <div className="text-[10px] text-vastu-text-3 mt-[2px]">{tier.description}</div>
                   </div>
                   <span className="text-[10px] px-2 py-1 bg-bg-3 rounded-[5px] text-vastu-text-2 font-mono">
@@ -530,12 +537,28 @@ function TierModal({
             </div>
           </div>
 
+          {/* Sort order */}
+          <div>
+            <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Sort Order (lower = cheaper, shown left to right)</label>
+            <input type="number" value={numVal(tier.sort_order)}
+              onChange={(e) => update("sort_order", e.target.value === "" ? 0 : parseInt(e.target.value))}
+              className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+          </div>
+
           {/* Active toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={tier.is_active}
               onChange={(e) => update("is_active", e.target.checked)}
               className="accent-gold-2" />
             <span className="text-[12px] text-vastu-text-2">Tier is active (visible to users)</span>
+          </label>
+
+          {/* Base tier toggle */}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={tier.is_base_tier}
+              onChange={(e) => update("is_base_tier", e.target.checked)}
+              className="accent-gold-2" />
+            <span className="text-[12px] text-vastu-text-2">Default signup tier <span className="text-vastu-text-3">(new users get this plan)</span></span>
           </label>
 
           {/* Razorpay IDs */}

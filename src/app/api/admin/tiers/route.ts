@@ -19,7 +19,7 @@ export async function GET() {
 
   const [{ data: tiers }, { data: subs }] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (admin as any).from("plan_tiers").select("*").order("price_monthly"),
+    (admin as any).from("plan_tiers").select("*").order("sort_order"),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (admin as any).from("subscriptions").select("plan"),
   ]);
@@ -46,6 +46,12 @@ export async function PATCH(req: NextRequest) {
   const { id, userCount: _uc, ...updates } = body;
 
   const admin = createAdminClient();
+
+  // If setting this tier as base, unset all others first
+  if (updates.is_base_tier === true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("plan_tiers").update({ is_base_tier: false }).neq("id", id);
+  }
 
   // Save tier definition
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
