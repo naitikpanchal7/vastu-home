@@ -57,7 +57,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     suspended?: boolean;
     prioritySupport?: boolean;
     isAdmin?: boolean;
-    bulkTier?: boolean; // if true, apply plan change to all users on target tier
+    bulkTier?: boolean;
+    resetUsage?: boolean;
   };
 
   const admin = createAdminClient();
@@ -106,6 +107,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.isAdmin !== undefined) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (admin as any).from("profiles").update({ is_admin: body.isAdmin }).eq("id", id);
+  }
+
+  if (body.resetUsage === true) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("subscriptions").update({ projects_used: 0, reports_used: 0 }).eq("user_id", id);
   }
 
   return NextResponse.json({ status: "ok" });

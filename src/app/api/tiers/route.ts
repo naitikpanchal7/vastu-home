@@ -9,7 +9,7 @@ export async function GET() {
     .from("plan_tiers")
     .select("*")
     .eq("is_active", true)
-    .order("price_monthly", { ascending: true });
+    .order("sort_order", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data, status: "ok" });
