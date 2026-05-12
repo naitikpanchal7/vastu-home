@@ -270,6 +270,7 @@ export default function HomePage() {
     { label: "Demo",      action: () => smoothTo("demo") },
     { label: "Gratitude", action: () => smoothTo("gratitude") },
     { label: "Founder",   action: () => smoothTo("founder") },
+    { label: "Pricing",   action: () => router.push("/pricing") },
   ];
 
   return (
@@ -661,6 +662,7 @@ export default function HomePage() {
               { label: "Demo",      fn: () => smoothTo("demo") },
               { label: "Gratitude", fn: () => smoothTo("gratitude") },
               { label: "Founder",   fn: () => smoothTo("founder") },
+              { label: "Pricing",   fn: () => router.push("/pricing") },
               { label: "Log In",    fn: goLogin },
               { label: "Sign Up",   fn: goSignUp },
             ].map((l) => (
@@ -672,7 +674,17 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div style={{ fontSize: "10px", color: T.text3 }}>© 2026 Astraa Vastu · Phase 1 Beta</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <a href="mailto:astraavastu@gmail.com" style={{ fontSize: "11px", color: T.text3, textDecoration: "none", transition: "color 0.15s" }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = T.text2)}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = T.text3)}
+            >astraavastu@gmail.com</a>
+            <a href="https://instagram.com/astraavastu" target="_blank" rel="noopener noreferrer" style={{ fontSize: "11px", color: T.text3, textDecoration: "none", transition: "color 0.15s" }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = T.text2)}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = T.text3)}
+            >@astraavastu</a>
+            <span style={{ fontSize: "10px", color: T.text3 }}>© 2026 Astraa Vastu · Phase 1 Beta</span>
+          </div>
         </div>
       </footer>
 
