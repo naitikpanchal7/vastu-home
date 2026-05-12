@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { VASTU_ZONES } from "@/lib/vastu/zones";
 import type { ChatMessage, ZoneAnalysis } from "@/lib/types";
 import { validateEnv } from "@/lib/env";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
+
+const MAX_BODY_BYTES = 50_000; // 50 KB
 
 validateEnv();
 
@@ -35,6 +38,8 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (!rateLimit(user.id + ":chat", 20, 60_000)) return rateLimitResponse();
 
     // ── Suspension + AI chat limit check ─────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,7 +97,10 @@ export async function POST(req: NextRequest) {
     }
     // ──────────────────────────────────────────────────────────────────────────
 
-    const body = await req.json();
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_BYTES)
+      return NextResponse.json({ error: "Message payload too large." }, { status: 413 });
+    const body = JSON.parse(rawBody);
     const {
       messages,
       northDeg,
