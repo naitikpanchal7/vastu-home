@@ -46,9 +46,18 @@ export default function SuspendedPage() {
             {reason}
           </div>
         )}
-        <p className="text-[11px] text-vastu-text-3 mb-6">
+        <p className="text-[11px] text-vastu-text-3 mb-3">
           If you believe this is a mistake, please contact support.
         </p>
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <a href="mailto:astraavastu@gmail.com" className="text-[11px] text-gold hover:text-gold-2 transition-colors font-mono">
+            astraavastu@gmail.com
+          </a>
+          <span className="text-vastu-text-3 text-[10px]">·</span>
+          <a href="https://instagram.com/astraavastu" target="_blank" rel="noopener noreferrer" className="text-[11px] text-vastu-text-2 hover:text-gold transition-colors">
+            @astraavastu
+          </a>
+        </div>
         <button
           onClick={handleSignOut}
           className="px-5 py-2 border border-[rgba(100,70,20,0.20)] rounded-[7px] text-[12px] text-vastu-text-2 hover:border-gold-3 hover:text-vastu-text transition-all cursor-pointer"
