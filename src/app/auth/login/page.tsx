@@ -183,7 +183,18 @@ function LoginForm() {
             </div>
 
             <div>
-              <label style={{ fontSize: "11px", fontWeight: 600, color: T.text2, display: "block", marginBottom: "5px" }}>Password</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: T.text2 }}>Password</label>
+                {mode === "login" && (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/auth/forgot-password")}
+                    style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: "11px", textDecoration: "underline", padding: 0 }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <input
                 type="password"
                 value={password}
