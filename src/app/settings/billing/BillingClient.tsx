@@ -81,9 +81,13 @@ export default function BillingClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason");
+  const upgraded = searchParams.get("upgraded");
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelDone, setCancelDone] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
   useEffect(() => {
     if (reason) {
@@ -102,6 +106,19 @@ export default function BillingClient() {
       .catch(() => { setError("Failed to load billing info"); setLoading(false); });
   }, []);
 
+  async function handleCancel() {
+    if (!confirm("Are you sure you want to cancel? You'll keep access until your billing period ends.")) return;
+    setCancelling(true);
+    setCancelError("");
+    try {
+      const res = await fetch("/api/billing/cancel", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setCancelError(data.error ?? "Failed to cancel"); }
+      else { setCancelDone(true); setStatus((s) => s ? { ...s, subscription: s.subscription ? { ...s.subscription, renews_at: s.subscription.renews_at } : null } : s); }
+    } catch { setCancelError("Something went wrong. Please try again."); }
+    setCancelling(false);
+  }
+
   const reasonMessages: Record<string, string> = {
     projects_limit:  "You've reached your project limit. Upgrade to create more projects.",
     ai_limit:        "You've reached your monthly AI message limit. Upgrade for more.",
@@ -118,6 +135,13 @@ export default function BillingClient() {
 
       <div className="flex-1 overflow-y-auto p-[18px]">
         <div className="max-w-[640px] flex flex-col gap-[14px]">
+
+          {/* Upgraded success banner */}
+          {upgraded && (
+            <div className="bg-[rgba(42,122,114,0.08)] border border-[rgba(42,122,114,0.25)] rounded-[9px] px-4 py-3 text-[11px] text-teal-600 leading-relaxed">
+              Payment successful! Your plan has been upgraded. It may take a moment to reflect.
+            </div>
+          )}
 
           {/* Limit reason banner */}
           {reason && reasonMessages[reason] && (
@@ -239,34 +263,49 @@ export default function BillingClient() {
                 </div>
               )}
 
-              {/* Upgrade / contact section */}
+              {/* Upgrade / manage section */}
               <div className="bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[10px] p-5">
-                <div className="text-[13px] text-vastu-text font-medium mb-1">Want to upgrade or change your plan?</div>
+                <div className="text-[13px] text-vastu-text font-medium mb-1">Manage your plan</div>
                 <div className="text-[10px] text-vastu-text-3 mb-4 leading-relaxed">
-                  Online billing is coming soon. Until then, upgrades are activated manually within 24 hours.
+                  {sub?.renews_at
+                    ? `Your plan renews on ${new Date(sub.renews_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`
+                    : "You are on the free plan."}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => router.push("/pricing")}
                     className="px-4 py-[8px] bg-gold text-bg rounded-[8px] text-[11px] font-medium hover:bg-gold-2 transition-colors cursor-pointer"
                   >
-                    Compare Plans
+                    {tier && tier.price_yearly > 0 ? "Change Plan" : "Upgrade Plan"}
                   </button>
                   <a
-                    href="mailto:astraavastu@gmail.com?subject=Plan Upgrade Request"
+                    href="mailto:astraavastu@gmail.com?subject=Billing Support"
                     className="px-4 py-[8px] border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-[8px] text-[11px] hover:border-gold-3 hover:text-vastu-text transition-colors"
                   >
                     Contact Support
                   </a>
-                  <a
-                    href="https://instagram.com/astraavastu"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-[8px] border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-[8px] text-[11px] hover:border-gold-3 hover:text-vastu-text transition-colors"
-                  >
-                    Instagram
-                  </a>
                 </div>
+
+                {/* Cancel subscription */}
+                {sub?.renews_at && !cancelDone && (
+                  <div className="mt-4 pt-4 border-t border-[rgba(100,70,20,0.10)]">
+                    {cancelError && (
+                      <div className="text-[10px] text-red-400 mb-2">{cancelError}</div>
+                    )}
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelling}
+                      className="text-[10px] text-vastu-text-3 hover:text-red-400 transition-colors underline cursor-pointer disabled:opacity-40"
+                    >
+                      {cancelling ? "Cancelling…" : "Cancel subscription"}
+                    </button>
+                  </div>
+                )}
+                {cancelDone && (
+                  <div className="mt-4 pt-4 border-t border-[rgba(100,70,20,0.10)] text-[10px] text-vastu-text-3">
+                    Subscription cancelled. You&apos;ll keep access until your billing period ends.
+                  </div>
+                )}
               </div>
             </>
           )}

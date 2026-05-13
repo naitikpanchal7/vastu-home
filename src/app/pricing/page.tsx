@@ -40,8 +40,10 @@ export default function PricingPage() {
   const { subscription, loading: userLoading } = useUser();
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
+  const [billing, setBilling] = useState<"monthly" | "yearly">("yearly");
   const [upgradeModal, setUpgradeModal] = useState<Tier | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/tiers")
@@ -51,6 +53,71 @@ export default function PricingPage() {
   }, []);
 
   const currentPlan = subscription?.plan ?? "starter";
+
+  async function handleUpgrade(tier: Tier) {
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tierId: tier.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCheckoutError(data.error ?? "Something went wrong");
+        setCheckoutLoading(false);
+        return;
+      }
+      const { subscriptionId, keyId, tierName, amount, prefill } = data.data;
+
+      // Load Razorpay checkout script dynamically
+      await loadRazorpayScript();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rzp = new (window as any).Razorpay({
+        key:          keyId,
+        subscription_id: subscriptionId,
+        name:         "Astraa Vastu",
+        description:  `${tierName} — Yearly Plan`,
+        amount:       amount * 100, // paise
+        currency:     "INR",
+        prefill: {
+          name:  prefill.name,
+          email: prefill.email,
+        },
+        theme: { color: "#9a7820" },
+        modal: {
+          ondismiss: () => {
+            setCheckoutLoading(false);
+            setUpgradeModal(null);
+          },
+        },
+        handler: () => {
+          // Payment successful — Razorpay webhook will activate the subscription
+          setUpgradeModal(null);
+          setCheckoutLoading(false);
+          router.push("/settings/billing?upgraded=1");
+        },
+      });
+      rzp.open();
+      setUpgradeModal(null);
+    } catch {
+      setCheckoutError("Failed to load payment. Please try again.");
+      setCheckoutLoading(false);
+    }
+  }
+
+  function loadRazorpayScript(): Promise<void> {
+    return new Promise((resolve) => {
+      if (document.getElementById("razorpay-script")) { resolve(); return; }
+      const script = document.createElement("script");
+      script.id  = "razorpay-script";
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve();
+      document.body.appendChild(script);
+    });
+  }
 
   const FEATURES = [
     { key: "projects_limit",    label: "Projects",          format: (t: Tier) => fmtLimit(t.projects_limit) },
@@ -161,10 +228,15 @@ export default function PricingPage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => setUpgradeModal(tier)}
+                          onClick={() => price === 0
+                            ? window.location.href = "mailto:astraavastu@gmail.com?subject=Plan Downgrade Request"
+                            : setUpgradeModal(tier)
+                          }
                           className={cn(
                             "w-full py-[9px] rounded-[8px] text-[12px] font-medium font-sans transition-all cursor-pointer",
-                            "bg-gold text-bg hover:bg-gold-2"
+                            price === 0
+                              ? "bg-transparent border border-[rgba(100,70,20,0.20)] text-vastu-text-3 hover:border-gold-3 hover:text-vastu-text-2"
+                              : "bg-gold text-bg hover:bg-gold-2"
                           )}
                         >
                           {price === 0 ? "Downgrade" : "Upgrade →"}
@@ -190,35 +262,46 @@ export default function PricingPage() {
 
       {/* Upgrade modal */}
       {upgradeModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setUpgradeModal(null)}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => { if (!checkoutLoading) setUpgradeModal(null); }}>
           <div className="bg-bg-2 border border-[rgba(100,70,20,0.25)] rounded-[14px] p-7 max-w-[400px] w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="font-serif text-[20px] text-gold-2 mb-2">Upgrade to {upgradeModal.name}</div>
-            <div className="text-[12px] text-vastu-text-2 leading-relaxed mb-5">
-              Online payment is being set up. To upgrade your plan right now, reach out and we&apos;ll activate it manually within 24 hours.
+            <div className="font-serif text-[20px] text-gold-2 mb-1">Upgrade to {upgradeModal.name}</div>
+            <div className="text-[11px] text-vastu-text-3 mb-5">Yearly plan · ₹{upgradeModal.price_yearly.toLocaleString("en-IN")}/yr</div>
+
+            {checkoutError && (
+              <div className="bg-[rgba(180,50,30,0.08)] border border-[rgba(180,50,30,0.25)] rounded-[8px] px-3 py-2 text-[11px] text-red-400 mb-4">
+                {checkoutError}
+              </div>
+            )}
+
+            <div className="bg-bg-3 border border-[rgba(100,70,20,0.15)] rounded-[8px] p-4 mb-5 flex flex-col gap-[6px]">
+              <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] mb-1">What you get</div>
+              {upgradeModal.pdf_export_enabled && <div className="text-[12px] text-vastu-text-2">✓ PDF Report Export</div>}
+              {upgradeModal.white_label_enabled && <div className="text-[12px] text-vastu-text-2">✓ White-label Reports</div>}
+              {upgradeModal.priority_support   && <div className="text-[12px] text-vastu-text-2">✓ Priority Support</div>}
+              {upgradeModal.ai_chat_enabled    && <div className="text-[12px] text-vastu-text-2">✓ Vastu AI Chat</div>}
+              <div className="text-[10px] text-vastu-text-3 mt-1">Billed yearly · Cancel anytime</div>
             </div>
-            <div className="bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[8px] p-4 mb-5 flex flex-col gap-2">
-              <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px]">Contact to Upgrade</div>
-              <a href="mailto:astraavastu@gmail.com" className="text-[13px] text-gold hover:text-gold-2 transition-colors font-mono">
-                astraavastu@gmail.com
-              </a>
-              <a href="https://instagram.com/astraavastu" target="_blank" rel="noopener noreferrer" className="text-[12px] text-vastu-text-2 hover:text-gold transition-colors">
-                @astraavastu on Instagram
-              </a>
-              <div className="text-[10px] text-vastu-text-3">Mention: upgrade to <strong className="text-vastu-text-2">{upgradeModal.name}</strong></div>
-            </div>
+
             <div className="flex gap-2">
               <button
-                onClick={() => setUpgradeModal(null)}
-                className="flex-1 py-[8px] border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-[8px] text-[11px] hover:border-gold-3 transition-colors cursor-pointer"
+                onClick={() => { setUpgradeModal(null); setCheckoutError(null); }}
+                disabled={checkoutLoading}
+                className="flex-1 py-[8px] border border-[rgba(100,70,20,0.20)] text-vastu-text-2 rounded-[8px] text-[11px] hover:border-gold-3 transition-colors cursor-pointer disabled:opacity-40"
               >
                 Cancel
               </button>
               <button
-                onClick={() => { router.push("/settings/billing"); setUpgradeModal(null); }}
-                className="flex-1 py-[8px] bg-gold text-bg rounded-[8px] text-[11px] font-medium hover:bg-gold-2 transition-colors cursor-pointer"
+                onClick={() => handleUpgrade(upgradeModal)}
+                disabled={checkoutLoading}
+                className="flex-1 py-[8px] bg-gold text-bg rounded-[8px] text-[11px] font-medium hover:bg-gold-2 transition-colors cursor-pointer disabled:opacity-60"
               >
-                View Billing →
+                {checkoutLoading ? "Loading…" : `Pay ₹${upgradeModal.price_yearly.toLocaleString("en-IN")} →`}
               </button>
+            </div>
+
+            <div className="text-[9px] text-vastu-text-3 text-center mt-3">
+              Secured by Razorpay · By paying you agree to our{" "}
+              <a href="/refund" target="_blank" className="underline">Refund Policy</a>
             </div>
           </div>
         </div>
