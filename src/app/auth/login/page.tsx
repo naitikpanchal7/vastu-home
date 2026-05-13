@@ -249,8 +249,18 @@ function LoginForm() {
 
         </div>
 
+        {/* Consent text */}
+        {mode === "signup" && (
+          <p style={{ textAlign: "center", marginTop: "16px", fontSize: "10px", color: T.text3, lineHeight: "1.6" }}>
+            By creating an account, you agree to our{" "}
+            <a href="/terms" style={{ color: T.text3, textDecoration: "underline" }}>Terms &amp; Conditions</a>
+            {" "}and{" "}
+            <a href="/privacy" style={{ color: T.text3, textDecoration: "underline" }}>Privacy Policy</a>.
+          </p>
+        )}
+
         {/* Back to home */}
-        <p style={{ textAlign: "center", marginTop: "20px", fontSize: "11px", color: T.text3 }}>
+        <p style={{ textAlign: "center", marginTop: "16px", fontSize: "11px", color: T.text3 }}>
           <button
             onClick={() => router.push("/")}
             style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: "11px", textDecoration: "underline" }}
