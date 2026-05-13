@@ -60,17 +60,25 @@ export async function POST(req: NextRequest) {
   }
 
   // Create Razorpay subscription
-  const subscription = await razorpay.subscriptions.create({
-    plan_id:         tier.razorpay_plan_id_yearly,
-    total_count:     120, // 120 years max — effectively perpetual
-    quantity:        1,
-    customer_notify: 1,
-    notes: {
-      user_id:  user.id,
-      tier_id:  tier.id,
-      tier_name: tier.name,
-    },
-  });
+  let subscription;
+  try {
+    subscription = await razorpay.subscriptions.create({
+      plan_id:         tier.razorpay_plan_id_yearly,
+      total_count:     10, // 10 yearly cycles max
+      quantity:        1,
+      customer_notify: 1,
+      notes: {
+        user_id:  user.id,
+        tier_id:  tier.id,
+        tier_name: tier.name,
+      },
+    });
+  } catch (err: unknown) {
+    const rzpErr = err as { error?: { description?: string; code?: string } };
+    const msg = rzpErr?.error?.description ?? (err instanceof Error ? err.message : "Razorpay error");
+    console.error("[checkout] Razorpay error:", JSON.stringify(rzpErr?.error ?? err));
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   return NextResponse.json({
     data: {
