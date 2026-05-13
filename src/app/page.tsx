@@ -686,6 +686,21 @@ export default function HomePage() {
             <span style={{ fontSize: "10px", color: T.text3 }}>© 2026 Astraa Vastu · Phase 1 Beta</span>
           </div>
         </div>
+
+        {/* Policy links */}
+        <div style={{ maxWidth: "1080px", margin: "16px auto 0", paddingTop: "16px", borderTop: `1px solid ${T.border2}`, display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+          {[
+            { label: "Privacy Policy", href: "/privacy" },
+            { label: "Terms & Conditions", href: "/terms" },
+            { label: "Refund Policy", href: "/refund" },
+          ].map((l) => (
+            <a key={l.label} href={l.href}
+              style={{ fontSize: "10px", color: T.text3, textDecoration: "none", transition: "color 0.15s" }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = T.text2)}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = T.text3)}
+            >{l.label}</a>
+          ))}
+        </div>
       </footer>
 
     </div>
