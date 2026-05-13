@@ -1,6 +1,9 @@
 // src/app/api/projects/[id]/chat/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
+
+const MAX_MESSAGE_LENGTH = 10_000;
 
 // GET /api/projects/:id/chat — load chat history for a project
 export async function GET(
@@ -40,6 +43,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rate limit: 20 messages per minute per IP
+  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!rateLimit(`chat:${ip}`, 20, 60_000)) return rateLimitResponse();
+
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -59,6 +66,13 @@ export async function POST(
   const messages: Array<{ role: string; content: string; cite?: string | null }> = body.messages ?? [];
 
   if (messages.length === 0) return NextResponse.json({ status: "ok" });
+
+  // Message size cap
+  for (const m of messages) {
+    if (typeof m.content === "string" && m.content.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json({ error: "Message too long" }, { status: 400 });
+    }
+  }
 
   const rows = messages.map((m) => ({
     project_id: id,
