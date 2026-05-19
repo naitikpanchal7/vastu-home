@@ -422,58 +422,24 @@ export default function HomePage() {
             A full walkthrough — from uploading a floor plan to a complete Vastu zone analysis.
           </p>
 
-          {/* Video placeholder */}
+          {/* YouTube embed */}
           <div style={{
             position: "relative",
-            background: T.bg,
-            border: `1px solid ${T.border}`,
             borderRadius: "16px",
             overflow: "hidden",
             aspectRatio: "16 / 9",
             maxWidth: "720px",
             margin: "0 auto",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "20px",
+            border: `1px solid ${T.border}`,
+            boxShadow: "0 8px 32px rgba(28,23,16,0.10)",
           }}>
-            {/* decorative grid lines */}
-            <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.04 }} xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke={T.gold} strokeWidth="0.8" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-
-            {/* subtle chakra watermark */}
-            <div style={{ position: "absolute", opacity: 0.04 }}>
-              <ChakraPreview />
-            </div>
-
-            {/* play icon */}
-            <div style={{
-              width: "64px", height: "64px", borderRadius: "50%",
-              background: `rgba(154,120,32,0.10)`,
-              border: `1.5px solid rgba(154,120,32,0.25)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              zIndex: 1,
-            }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <polygon points="8,5 19,12 8,19" fill={T.gold} opacity="0.7" />
-              </svg>
-            </div>
-
-            <div style={{ zIndex: 1, textAlign: "center" }}>
-              <div style={{ fontFamily: "var(--font-cormorant)", fontSize: "22px", color: T.text, marginBottom: "6px" }}>
-                Demo video coming soon
-              </div>
-              <div style={{ fontSize: "11px", color: T.text3, fontFamily: "var(--font-dm-mono)" }}>
-                We&apos;re recording a full walkthrough — check back shortly
-              </div>
-            </div>
+            <iframe
+              src="https://www.youtube.com/embed/2D1g1avaJkQ?rel=0&modestbranding=1"
+              title="Astraa Vastu — Platform Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+            />
           </div>
 
           <p style={{ fontSize: "11px", color: T.text3, marginTop: "20px" }}>
