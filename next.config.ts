@@ -20,7 +20,7 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://*.supabase.co",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.razorpay.com",
-      "frame-src https://api.razorpay.com",
+      "frame-src https://api.razorpay.com https://www.youtube.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; "),
