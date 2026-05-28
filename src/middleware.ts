@@ -18,22 +18,32 @@ export async function middleware(request: NextRequest) {
   if (!isProtected && !isAuth) return NextResponse.next();
   if (isMaintenance || isSuspended || isApi) return NextResponse.next();
 
-  // Build Supabase SSR client using request cookies
+  // Build Supabase SSR client — setAll writes refreshed tokens back to the response
+  let supabaseResponse = NextResponse.next({ request });
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() { return request.cookies.getAll(); },
-        setAll() {},
+        setAll(cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }>) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
+          );
+        },
       },
     }
   );
 
+  // getUser() validates the JWT server-side and refreshes if needed.
+  // When the refresh token is stale/invalid it returns null without throwing.
   let user = null;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    user = session?.user ?? null;
+    const { data: { user: u } } = await supabase.auth.getUser();
+    user = u;
   } catch { /* network issue — treat as unauthenticated */ }
 
   // Unauthenticated → redirect to login (skip for auth pages)
@@ -48,13 +58,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (!user) return NextResponse.next();
+  if (!user) return supabaseResponse;
 
   // ── Check maintenance mode (skip for admins) ──────────────────────────────
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
     // Service role key missing — skip maintenance/suspension checks rather than crashing
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
   const adminClient = createServerClient(
@@ -95,7 +105,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {

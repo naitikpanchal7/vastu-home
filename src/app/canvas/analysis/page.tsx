@@ -45,6 +45,11 @@ export default function AnalysisFullPage() {
   const maxPct = Math.max(...zoneRows.map(r => r.pct), IDEAL_PCT + 2);
   const maxCutPct = Math.max(...cutRows.map(r => r.pctOfCombined), 1);
 
+  const highestPct = Math.max(...zoneRows.map(r => r.pct));
+  const lowestPct  = Math.min(...zoneRows.map(r => r.pct));
+  const upperPct   = (IDEAL_PCT + highestPct) / 2;
+  const lowerPct   = (IDEAL_PCT + lowestPct) / 2;
+
   return (
     <div className="h-screen bg-bg text-vastu-text font-sans flex flex-col">
 
@@ -101,6 +106,19 @@ export default function AnalysisFullPage() {
               {/* Bars + ideal line */}
               <div className="flex-1">
                 <div className="relative" style={{ height: 200 }}>
+                  {/* Upper line: (avg + highest) / 2 */}
+                  <div
+                    className="absolute left-0 right-0 border-t border-dashed pointer-events-none z-10"
+                    style={{ bottom: `${(upperPct / maxPct) * 100}%`, borderColor: "rgba(232,145,42,0.55)" }}
+                  >
+                    <span
+                      className="absolute right-0 text-[7px] font-mono px-[4px] py-[1px] rounded"
+                      style={{ color: "rgba(232,145,42,0.7)", background: "var(--bg-2)", transform: "translateY(-50%)" }}
+                    >
+                      upper {upperPct.toFixed(2)}%
+                    </span>
+                  </div>
+
                   {/* Ideal 6.25% line */}
                   <div
                     className="absolute left-0 right-0 border-t border-dashed pointer-events-none z-10"
@@ -117,7 +135,20 @@ export default function AnalysisFullPage() {
                         transform: "translateY(-50%)",
                       }}
                     >
-                      ideal
+                      avg
+                    </span>
+                  </div>
+
+                  {/* Lower line: (avg + lowest) / 2 */}
+                  <div
+                    className="absolute left-0 right-0 border-t border-dashed pointer-events-none z-10"
+                    style={{ bottom: `${(lowerPct / maxPct) * 100}%`, borderColor: "rgba(110,198,232,0.55)" }}
+                  >
+                    <span
+                      className="absolute right-0 text-[7px] font-mono px-[4px] py-[1px] rounded"
+                      style={{ color: "rgba(110,198,232,0.7)", background: "var(--bg-2)", transform: "translateY(-50%)" }}
+                    >
+                      lower {lowerPct.toFixed(2)}%
                     </span>
                   </div>
 
