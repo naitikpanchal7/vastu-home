@@ -52,6 +52,11 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
   const maxPct    = Math.max(...zoneRows.map(r => r.pct), 10);
   const maxCutPct = Math.max(...cutRows.map(r => r.pctOfCombined), 1);
 
+  const highestPct = Math.max(...zoneRows.map(r => r.pct));
+  const lowestPct  = Math.min(...zoneRows.map(r => r.pct));
+  const upperPct   = (6.25 + highestPct) / 2;
+  const lowerPct   = (6.25 + lowestPct) / 2;
+
   return (
     <div className="flex flex-col h-full">
 
@@ -123,7 +128,13 @@ export default function AnalysisPanel({ onExport }: AnalysisPanelProps) {
       {/* ── Bar Chart ── */}
       <div className="mt-[8px] pt-[8px] border-t border-[rgba(100,70,20,0.12)]">
         <div className="text-[8px] text-vastu-text-3 mb-[4px]">Zone Distribution</div>
-        <div className="flex items-end gap-[2px] h-[44px]">
+        <div className="relative flex items-end gap-[2px] h-[44px]">
+          {/* Avg / Ideal line */}
+          <div className="absolute left-0 right-0 pointer-events-none z-10" style={{ bottom: `${(6.25 / maxPct) * 100}%`, borderTop: "1px dashed rgba(200,175,120,0.55)" }} />
+          {/* Upper line: (avg + highest) / 2 */}
+          <div className="absolute left-0 right-0 pointer-events-none z-10" style={{ bottom: `${(upperPct / maxPct) * 100}%`, borderTop: "1px dashed rgba(232,145,42,0.6)" }} />
+          {/* Lower line: (avg + lowest) / 2 */}
+          <div className="absolute left-0 right-0 pointer-events-none z-10" style={{ bottom: `${(lowerPct / maxPct) * 100}%`, borderTop: "1px dashed rgba(110,198,232,0.6)" }} />
           {zoneRows.map(({ zone, pct }) => (
             <div
               key={zone.shortName}

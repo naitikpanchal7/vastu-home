@@ -597,7 +597,14 @@ function BarGraph16Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNu
   const chartH = 160;
   const barW = chartW / rows.length;
   const maxPct = Math.max(...rows.map((r) => r.pct), 10);
-  const idealY = chartH - (6.25 / maxPct) * chartH;
+  const avgPct16 = 6.25;
+  const highestPct16 = Math.max(...rows.map((r) => r.pct));
+  const lowestPct16  = Math.min(...rows.map((r) => r.pct));
+  const upperPct16   = (avgPct16 + highestPct16) / 2;
+  const lowerPct16   = (avgPct16 + lowestPct16) / 2;
+  const idealY  = chartH - (avgPct16   / maxPct) * chartH;
+  const upperY  = chartH - (upperPct16 / maxPct) * chartH;
+  const lowerY  = chartH - (lowerPct16 / maxPct) * chartH;
   const notes = floor.pageNotes["bar-graph-16"];
 
   return (
@@ -631,6 +638,10 @@ function BarGraph16Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNu
 
           {/* Ideal dashed line at 6.25% */}
           <Line x1={0} y1={idealY} x2={chartW} y2={idealY} stroke={C.gold} strokeWidth={1.2} strokeDasharray="5 3" />
+          {/* Upper line: (avg + highest) / 2 */}
+          <Line x1={0} y1={upperY} x2={chartW} y2={upperY} stroke="#e8912a" strokeWidth={1} strokeDasharray="3 3" />
+          {/* Lower line: (avg + lowest) / 2 */}
+          <Line x1={0} y1={lowerY} x2={chartW} y2={lowerY} stroke="#6ec6e8" strokeWidth={1} strokeDasharray="3 3" />
         </Svg>
 
         {/* Zone label row */}
@@ -646,7 +657,15 @@ function BarGraph16Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNu
         <View style={[styles.row, { marginTop: 10, gap: 16, alignItems: "center" }]}>
           <View style={[styles.row, { alignItems: "center", gap: 4 }]}>
             <View style={{ width: 16, height: 2, backgroundColor: C.gold }} />
-            <Text style={styles.small}>Ideal 6.25%</Text>
+            <Text style={styles.small}>Avg 6.25%</Text>
+          </View>
+          <View style={[styles.row, { alignItems: "center", gap: 4 }]}>
+            <View style={{ width: 16, height: 2, backgroundColor: "#e8912a" }} />
+            <Text style={styles.small}>Upper {upperPct16.toFixed(2)}%</Text>
+          </View>
+          <View style={[styles.row, { alignItems: "center", gap: 4 }]}>
+            <View style={{ width: 16, height: 2, backgroundColor: "#6ec6e8" }} />
+            <Text style={styles.small}>Lower {lowerPct16.toFixed(2)}%</Text>
           </View>
         </View>
 
@@ -758,7 +777,14 @@ function BarGraph8Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNum
   const chartH = 160;
   const barW = chartW / aggregated.length;
   const maxPct = Math.max(...aggregated.map((r) => r.pct), 15);
-  const idealY = chartH - (12.5 / maxPct) * chartH;
+  const avgPct8 = 12.5;
+  const highestPct8 = Math.max(...aggregated.map((r) => r.pct));
+  const lowestPct8  = Math.min(...aggregated.map((r) => r.pct));
+  const upperPct8   = (avgPct8 + highestPct8) / 2;
+  const lowerPct8   = (avgPct8 + lowestPct8) / 2;
+  const idealY  = chartH - (avgPct8   / maxPct) * chartH;
+  const upperY  = chartH - (upperPct8 / maxPct) * chartH;
+  const lowerY  = chartH - (lowerPct8 / maxPct) * chartH;
   const notes = floor.pageNotes["bar-graph-8"];
 
   return (
@@ -792,6 +818,10 @@ function BarGraph8Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNum
 
           {/* Ideal dashed line at 12.5% */}
           <Line x1={0} y1={idealY} x2={chartW} y2={idealY} stroke={C.gold} strokeWidth={1.2} strokeDasharray="5 3" />
+          {/* Upper line: (avg + highest) / 2 */}
+          <Line x1={0} y1={upperY} x2={chartW} y2={upperY} stroke="#e8912a" strokeWidth={1} strokeDasharray="3 3" />
+          {/* Lower line: (avg + lowest) / 2 */}
+          <Line x1={0} y1={lowerY} x2={chartW} y2={lowerY} stroke="#6ec6e8" strokeWidth={1} strokeDasharray="3 3" />
         </Svg>
 
         {/* Direction labels */}
@@ -806,7 +836,15 @@ function BarGraph8Page({ floor, pageNum, total }: { floor: FloorPDFData; pageNum
         <View style={[styles.row, { marginTop: 10, gap: 16, alignItems: "center" }]}>
           <View style={[styles.row, { alignItems: "center", gap: 4 }]}>
             <View style={{ width: 16, height: 2, backgroundColor: C.gold }} />
-            <Text style={styles.small}>Ideal 12.5%</Text>
+            <Text style={styles.small}>Avg 12.5%</Text>
+          </View>
+          <View style={[styles.row, { alignItems: "center", gap: 4 }]}>
+            <View style={{ width: 16, height: 2, backgroundColor: "#e8912a" }} />
+            <Text style={styles.small}>Upper {upperPct8.toFixed(2)}%</Text>
+          </View>
+          <View style={[styles.row, { alignItems: "center", gap: 4 }]}>
+            <View style={{ width: 16, height: 2, backgroundColor: "#6ec6e8" }} />
+            <Text style={styles.small}>Lower {lowerPct8.toFixed(2)}%</Text>
           </View>
         </View>
 
