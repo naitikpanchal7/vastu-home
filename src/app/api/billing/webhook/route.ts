@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // ── Payment captured — log the transaction ──
+      // ── Payment captured — log the transaction + track referral commission ──
       case "payment.captured": {
         if (!paymentPayload) break;
         const notes = paymentPayload.notes as Record<string, string> | null;
@@ -182,16 +182,95 @@ export async function POST(req: NextRequest) {
         const tierId = notes?.tier_id;
         if (!userId || !tierId) break;
 
+        const amountPaise = paymentPayload.amount as number;
+        const razorpayPaymentId = paymentPayload.id as string;
+
+        // Resolve promo code from notes (set at checkout time)
+        const promoCode = notes?.promo_code ?? null;
+        const promoId   = notes?.promo_id   ?? null;
+        let resolvedPromoId: string | null = promoId ?? null;
+
+        // Log the transaction
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (admin as any).from("payment_transactions").insert({
-          user_id:            userId,
-          razorpay_payment_id: paymentPayload.id as string,
-          razorpay_order_id:  (paymentPayload.order_id as string) ?? null,
-          amount_paise:       paymentPayload.amount as number,
-          currency:           (paymentPayload.currency as string) ?? "INR",
-          status:             "captured",
-          plan:               tierId,
+          user_id:             userId,
+          razorpay_payment_id: razorpayPaymentId,
+          razorpay_order_id:   (paymentPayload.order_id as string) ?? null,
+          amount_paise:        amountPaise,
+          currency:            (paymentPayload.currency as string) ?? "INR",
+          status:              "captured",
+          plan:                tierId,
+          promo_code_id:       resolvedPromoId,
         });
+
+        // Track referral conversion — wrapped in try/catch so any failure here
+        // never breaks subscription activation or payment logging above
+        if (promoCode) {
+          try {
+            // Fetch promo details if we don't have the ID
+            if (!resolvedPromoId) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: promoRow } = await (admin as any)
+                .from("promo_codes")
+                .select("id, commission_pct")
+                .eq("code", promoCode)
+                .single();
+              if (promoRow) {
+                resolvedPromoId = promoRow.id;
+              }
+            }
+
+            if (resolvedPromoId) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: promoRow } = await (admin as any)
+                .from("promo_codes")
+                .select("commission_pct")
+                .eq("id", resolvedPromoId)
+                .single();
+
+              if (promoRow) {
+                const commissionPaise = Math.floor(amountPaise * (promoRow.commission_pct / 100));
+
+                // Insert referral conversion record
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (admin as any).from("referral_conversions").insert({
+                  promo_code_id:       resolvedPromoId,
+                  subscriber_user_id:  userId,
+                  razorpay_payment_id: razorpayPaymentId,
+                  amount_paise:        amountPaise,
+                  commission_paise:    commissionPaise,
+                  status:              "pending",
+                });
+
+                // Update commission on payment_transactions row
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (admin as any).from("payment_transactions")
+                  .update({ commission_paise: commissionPaise, promo_code_id: resolvedPromoId })
+                  .eq("razorpay_payment_id", razorpayPaymentId);
+
+                // Increment uses_count on promo code
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (admin as any).rpc("increment_promo_uses", { promo_id: resolvedPromoId });
+              }
+            }
+          } catch (referralErr) {
+            console.error("[webhook] referral tracking failed — payment still processed:", referralErr);
+            // Insert failed conversion record for admin visibility
+            if (resolvedPromoId) {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (admin as any).from("referral_conversions").insert({
+                  promo_code_id:       resolvedPromoId,
+                  subscriber_user_id:  userId,
+                  razorpay_payment_id: razorpayPaymentId,
+                  amount_paise:        amountPaise,
+                  commission_paise:    0,
+                  status:              "failed",
+                });
+              } catch { /* silent — already logged above */ }
+            }
+          }
+        }
 
         break;
       }

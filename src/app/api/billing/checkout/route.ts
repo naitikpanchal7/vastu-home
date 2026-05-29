@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { tierId } = body as { tierId?: string };
+  const { tierId, promoCode } = body as { tierId?: string; promoCode?: string };
   if (!tierId) return NextResponse.json({ error: "tierId is required" }, { status: 400 });
 
   const admin = createAdminClient();
@@ -47,6 +47,27 @@ export async function POST(req: NextRequest) {
     .eq("id", user.id)
     .single();
 
+  // Validate promo code if provided
+  let promoData: { id: string; razorpay_offer_id: string | null; commission_pct: number } | null = null;
+  if (promoCode) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: promo } = await (admin as any)
+      .from("promo_codes")
+      .select("id, razorpay_offer_id, commission_pct, is_active, valid_until, max_uses, uses_count, applies_to")
+      .eq("code", promoCode.toUpperCase().trim())
+      .single();
+
+    const now = new Date();
+    const isValid =
+      promo &&
+      promo.is_active &&
+      (!promo.valid_until || new Date(promo.valid_until) >= now) &&
+      (promo.max_uses === null || promo.uses_count < promo.max_uses) &&
+      (!promo.applies_to || promo.applies_to === tierId);
+
+    if (isValid) promoData = promo;
+  }
+
   // Check if user already has an active Razorpay subscription
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existingSub } = await (admin as any)
@@ -62,22 +83,39 @@ export async function POST(req: NextRequest) {
   // Create Razorpay subscription
   let subscription;
   try {
-    subscription = await razorpay.subscriptions.create({
+    const subscriptionParams: Record<string, unknown> = {
       plan_id:         tier.razorpay_plan_id_yearly,
-      total_count:     10, // 10 yearly cycles max
+      total_count:     10,
       quantity:        1,
       customer_notify: 1,
       notes: {
-        user_id:  user.id,
-        tier_id:  tier.id,
-        tier_name: tier.name,
+        user_id:    user.id,
+        tier_id:    tier.id,
+        tier_name:  tier.name,
+        promo_code: promoData ? promoCode!.toUpperCase().trim() : undefined,
+        promo_id:   promoData?.id ?? undefined,
       },
-    });
+    };
+
+    if (promoData?.razorpay_offer_id) {
+      subscriptionParams.offer_id = promoData.razorpay_offer_id;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subscription = await razorpay.subscriptions.create(subscriptionParams as any);
   } catch (err: unknown) {
     const rzpErr = err as { error?: { description?: string; code?: string } };
     const msg = rzpErr?.error?.description ?? (err instanceof Error ? err.message : "Razorpay error");
     console.error("[checkout] Razorpay error:", JSON.stringify(rzpErr?.error ?? err));
     return NextResponse.json({ error: msg }, { status: 500 });
+  }
+
+  // Save applied promo code on subscription row for webhook to pick up
+  if (promoData) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any).from("subscriptions")
+      .update({ applied_promo_code: promoCode!.toUpperCase().trim() })
+      .eq("user_id", user.id);
   }
 
   return NextResponse.json({

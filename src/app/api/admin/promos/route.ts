@@ -16,7 +16,10 @@ export async function GET() {
 
   const admin = createAdminClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (admin as any).from("promo_codes").select("*").order("created_at", { ascending: false });
+  const { data, error } = await (admin as any)
+    .from("promo_codes")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ data, status: "ok" });
@@ -31,13 +34,15 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (admin as any).from("promo_codes").insert({
-    code:         body.code?.toUpperCase(),
-    description:  body.description,
-    discount_pct: body.discountPct,
-    applies_to:   body.appliesTo ?? null,
-    max_uses:     body.maxUses ?? null,
-    valid_until:  body.validUntil ?? null,
-    is_active:    true,
+    code:                body.code?.toUpperCase(),
+    description:         body.description,
+    discount_pct:        body.discountPct,
+    applies_to:          body.appliesTo ?? null,
+    max_uses:            body.maxUses ?? null,
+    valid_until:         body.validUntil ?? null,
+    is_active:           true,
+    commission_pct:      body.commissionPct ?? 10,
+    razorpay_offer_id:   body.razorpayOfferId ?? null,
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
