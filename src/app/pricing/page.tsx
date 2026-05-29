@@ -44,6 +44,9 @@ export default function PricingPage() {
   const [upgradeModal, setUpgradeModal] = useState<Tier | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoStatus, setPromoStatus] = useState<{ valid: boolean; discountPct: number; error?: string } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/tiers")
@@ -54,14 +57,47 @@ export default function PricingPage() {
 
   const currentPlan = subscription?.plan ?? "starter";
 
+  function openUpgradeModal(tier: Tier) {
+    setCheckoutError(null);
+    setPromoStatus(null);
+    const saved = localStorage.getItem("pending_promo") ?? "";
+    setPromoInput(saved);
+    if (saved) validatePromo(saved, tier.id);
+    setUpgradeModal(tier);
+  }
+
+  async function validatePromo(code: string, tierId: string) {
+    if (!code.trim()) { setPromoStatus(null); return; }
+    setPromoLoading(true);
+    try {
+      const res = await fetch(`/api/promos/validate?code=${encodeURIComponent(code.trim())}&tierId=${tierId}`);
+      const data = await res.json();
+      setPromoStatus(data.valid
+        ? { valid: true, discountPct: data.discountPct }
+        : { valid: false, discountPct: 0, error: data.error }
+      );
+    } catch {
+      setPromoStatus({ valid: false, discountPct: 0, error: "Could not validate code" });
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  function clearPromo() {
+    setPromoInput("");
+    setPromoStatus(null);
+    localStorage.removeItem("pending_promo");
+  }
+
   async function handleUpgrade(tier: Tier) {
     setCheckoutError(null);
     setCheckoutLoading(true);
+    const appliedPromo = promoStatus?.valid ? promoInput.trim().toUpperCase() : undefined;
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tierId: tier.id }),
+        body: JSON.stringify({ tierId: tier.id, promoCode: appliedPromo }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -94,7 +130,7 @@ export default function PricingPage() {
           },
         },
         handler: () => {
-          // Payment successful — Razorpay webhook will activate the subscription
+          localStorage.removeItem("pending_promo");
           setUpgradeModal(null);
           setCheckoutLoading(false);
           router.push("/settings/billing?upgraded=1");
@@ -230,7 +266,7 @@ export default function PricingPage() {
                         <button
                           onClick={() => price === 0
                             ? window.location.href = "mailto:astraavastu@gmail.com?subject=Plan Downgrade Request"
-                            : setUpgradeModal(tier)
+                            : openUpgradeModal(tier)
                           }
                           className={cn(
                             "w-full py-[9px] rounded-[8px] text-[12px] font-medium font-sans transition-all cursor-pointer",
@@ -273,6 +309,38 @@ export default function PricingPage() {
               </div>
             )}
 
+            {/* Promo code input */}
+            <div className="mb-5">
+              <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] mb-2">Promo Code</div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={promoInput}
+                    onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoStatus(null); }}
+                    placeholder="Enter code"
+                    className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(200,175,120,0.15)] rounded-md text-vastu-text font-mono text-[12px] outline-none focus:border-gold-3 uppercase pr-7"
+                  />
+                  {promoInput && (
+                    <button onClick={clearPromo} className="absolute right-2 top-1/2 -translate-y-1/2 text-vastu-text-3 hover:text-vastu-text text-[14px] leading-none cursor-pointer">×</button>
+                  )}
+                </div>
+                <button
+                  onClick={() => upgradeModal && validatePromo(promoInput, upgradeModal.id)}
+                  disabled={!promoInput.trim() || promoLoading}
+                  className="px-3 py-[6px] bg-transparent border border-[rgba(200,175,120,0.15)] text-vastu-text-2 text-[11px] rounded-md hover:border-gold-3 hover:text-vastu-text transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {promoLoading ? "…" : "Apply"}
+                </button>
+              </div>
+              {promoStatus?.valid && (
+                <div className="mt-[6px] text-[11px] text-green-500">✓ {promoStatus.discountPct}% discount applied</div>
+              )}
+              {promoStatus && !promoStatus.valid && (
+                <div className="mt-[6px] text-[11px] text-red-400">{promoStatus.error}</div>
+              )}
+            </div>
+
             <div className="bg-bg-3 border border-[rgba(100,70,20,0.15)] rounded-[8px] p-4 mb-5 flex flex-col gap-[6px]">
               <div className="text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] mb-1">What you get</div>
               {upgradeModal.pdf_export_enabled && <div className="text-[12px] text-vastu-text-2">✓ PDF Report Export</div>}
@@ -295,7 +363,10 @@ export default function PricingPage() {
                 disabled={checkoutLoading}
                 className="flex-1 py-[8px] bg-gold text-bg rounded-[8px] text-[11px] font-medium hover:bg-gold-2 transition-colors cursor-pointer disabled:opacity-60"
               >
-                {checkoutLoading ? "Loading…" : `Pay ₹${upgradeModal.price_yearly.toLocaleString("en-IN")} →`}
+                {checkoutLoading ? "Loading…" : promoStatus?.valid
+                  ? `Pay ₹${Math.round(upgradeModal.price_yearly * (1 - promoStatus.discountPct / 100)).toLocaleString("en-IN")} →`
+                  : `Pay ₹${upgradeModal.price_yearly.toLocaleString("en-IN")} →`
+                }
               </button>
             </div>
 

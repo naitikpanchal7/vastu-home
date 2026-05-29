@@ -145,6 +145,38 @@ export interface Subscription {
   reportsLimit: number;           // 5 / unlimited / unlimited
   renewsAt: string;
   razorpaySubscriptionId?: string;
+  appliedPromoCode?: string;
+}
+
+// ── Promo Code ────────────────────────────────────────────────────────────────
+export interface PromoCode {
+  id: string;
+  code: string;
+  description?: string;
+  discountPct: number;
+  appliesTo?: string;             // plan tier id or null for all tiers
+  maxUses?: number;
+  usesCount: number;
+  validFrom: string;
+  validUntil?: string;
+  isActive: boolean;
+  createdBy?: string;             // consultant profile id
+  commissionPct: number;
+  razorpayOfferId?: string;
+  createdAt: string;
+}
+
+// ── Referral Conversion ───────────────────────────────────────────────────────
+export interface ReferralConversion {
+  id: string;
+  promoCodeId: string;
+  consultantId: string;
+  subscriberUserId: string;
+  razorpayPaymentId?: string;
+  amountPaise: number;
+  commissionPaise: number;
+  status: "pending" | "paid" | "failed";
+  createdAt: string;
 }
 
 // ── Consultant Profile ────────────────────────────────────────────────────────

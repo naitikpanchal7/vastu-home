@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
+const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+
 interface Tier {
   id: string;
   name: string;
@@ -35,6 +37,19 @@ interface Promo {
   uses_count: number;
   valid_until?: string;
   is_active: boolean;
+  commission_pct: number;
+  razorpay_offer_id?: string;
+}
+
+interface ReferralConversion {
+  id: string;
+  amount_paise: number;
+  commission_paise: number;
+  status: string;
+  created_at: string;
+  razorpay_payment_id?: string;
+  promo_codes?: { code: string; discount_pct: number; commission_pct: number };
+  profiles?: { id: string; full_name: string; email: string };
 }
 
 const BOOL_FEATURES: Array<{ key: keyof Tier; label: string }> = [
@@ -75,16 +90,20 @@ export default function AdminTiersPage() {
   const [deleteDialog, setDeleteDialog] = useState<{ tierId: string; tierName: string; userCount: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [newPromo, setNewPromo] = useState({ code: "", description: "", discountPct: 10, maxUses: "", validUntil: "" });
+  const [newPromo, setNewPromo] = useState({ code: "", description: "", discountPct: 10, commissionPct: 10, razorpayOfferId: "", appliesTo: "", maxUses: "", validUntil: "" });
+  const [referrals, setReferrals] = useState<ReferralConversion[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
       fetch("/api/admin/tiers").then((r) => r.json()),
       fetch("/api/admin/promos").then((r) => r.json()),
-    ]).then(([tiersRes, promosRes]) => {
+      fetch("/api/admin/referrals").then((r) => r.json()),
+    ]).then(([tiersRes, promosRes, referralsRes]) => {
       setTiers((tiersRes.data ?? []).map((t: Tier) => ({ ...t, sort_order: t.sort_order ?? 0 })));
       setPromos(promosRes.data ?? []);
+      setReferrals(referralsRes.data ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -149,16 +168,26 @@ export default function AdminTiersPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        code: newPromo.code,
-        description: newPromo.description,
-        discountPct: newPromo.discountPct,
-        maxUses: newPromo.maxUses ? parseInt(newPromo.maxUses) : null,
-        validUntil: newPromo.validUntil || null,
+        code:             newPromo.code,
+        description:      newPromo.description,
+        discountPct:      newPromo.discountPct,
+        commissionPct:    newPromo.commissionPct,
+        razorpayOfferId:  newPromo.razorpayOfferId || null,
+        appliesTo:        newPromo.appliesTo || null,
+        maxUses:          newPromo.maxUses ? parseInt(newPromo.maxUses) : null,
+        validUntil:       newPromo.validUntil || null,
       }),
     });
     setShowPromoForm(false);
-    setNewPromo({ code: "", description: "", discountPct: 10, maxUses: "", validUntil: "" });
+    setNewPromo({ code: "", description: "", discountPct: 10, commissionPct: 10, razorpayOfferId: "", appliesTo: "", maxUses: "", validUntil: "" });
     load();
+  };
+
+  const copyLink = (code: string) => {
+    const link = `${APP_URL}?promo=${code}`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(code);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const togglePromo = async (id: string, is_active: boolean) => {
@@ -274,27 +303,73 @@ export default function AdminTiersPage() {
 
           <div className="bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[10px] overflow-hidden">
             <div className="grid text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] px-5 py-3 border-b border-[rgba(100,70,20,0.12)] bg-bg-3"
-              style={{ gridTemplateColumns: "1fr 1fr 80px 80px 80px 80px 80px" }}>
-              <span>Code</span><span>Description</span><span>Discount</span>
-              <span>Uses</span><span>Expires</span><span>Status</span><span>Action</span>
+              style={{ gridTemplateColumns: "120px 1fr 70px 70px 60px 70px 90px 80px" }}>
+              <span>Code</span><span>Referral Link</span>
+              <span>Disc%</span><span>Comm%</span><span>Uses</span><span>Expires</span><span>Status</span><span>Action</span>
             </div>
             {promos.length === 0 ? (
               <div className="px-5 py-8 text-center text-[11px] text-vastu-text-3">No promo codes yet</div>
-            ) : promos.map((p) => (
-              <div key={p.id} className="grid items-center px-5 py-3 border-b border-[rgba(100,70,20,0.08)] last:border-0"
-                style={{ gridTemplateColumns: "1fr 1fr 80px 80px 80px 80px 80px" }}>
-                <span className="font-mono text-[12px] text-vastu-text font-medium">{p.code}</span>
-                <span className="text-[11px] text-vastu-text-2 truncate">{p.description || "—"}</span>
-                <span className="font-mono text-[11px] text-vastu-text-2">{p.discount_pct}%</span>
-                <span className="font-mono text-[11px] text-vastu-text-2">{p.uses_count}{p.max_uses ? `/${p.max_uses}` : ""}</span>
-                <span className="text-[10px] text-vastu-text-3">{p.valid_until ? new Date(p.valid_until).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}</span>
-                <span className={cn("text-[9px] px-[6px] py-[2px] rounded-full font-medium w-fit", p.is_active ? "bg-green-100 text-green-800" : "bg-bg-4 text-vastu-text-3")}>
-                  {p.is_active ? "Active" : "Off"}
+            ) : promos.map((p) => {
+              const link = `${APP_URL}?promo=${p.code}`;
+              return (
+                <div key={p.id} className="grid items-center px-5 py-3 border-b border-[rgba(100,70,20,0.08)] last:border-0"
+                  style={{ gridTemplateColumns: "120px 1fr 70px 70px 60px 70px 90px 80px" }}>
+                  <span className="font-mono text-[12px] text-vastu-text font-medium">{p.code}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] text-vastu-text-3 font-mono truncate">{link}</span>
+                    <button
+                      onClick={() => copyLink(p.code)}
+                      className="flex-shrink-0 text-[9px] px-2 py-[3px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[4px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      {copiedId === p.code ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                  <span className="font-mono text-[11px] text-vastu-text-2">{p.discount_pct}%</span>
+                  <span className="font-mono text-[11px] text-vastu-text-2">{p.commission_pct}%</span>
+                  <span className="font-mono text-[11px] text-vastu-text-2">{p.uses_count}{p.max_uses ? `/${p.max_uses}` : ""}</span>
+                  <span className="text-[10px] text-vastu-text-3">{p.valid_until ? new Date(p.valid_until).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}</span>
+                  <span className={cn("text-[9px] px-[6px] py-[2px] rounded-full font-medium w-fit", p.is_active ? "bg-green-100 text-green-800" : "bg-bg-4 text-vastu-text-3")}>
+                    {p.is_active ? "Active" : "Off"}
+                  </span>
+                  <button onClick={() => togglePromo(p.id, !p.is_active)}
+                    className="text-[10px] px-2 py-[4px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer">
+                    {p.is_active ? "Deactivate" : "Activate"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Referral Conversions */}
+        <div>
+          <div className="text-[9px] text-vastu-text-3 uppercase tracking-[2px] mb-4">Referral Conversions</div>
+          <div className="bg-bg-2 border border-[rgba(100,70,20,0.20)] rounded-[10px] overflow-hidden">
+            <div className="grid text-[9px] text-vastu-text-3 uppercase tracking-[1.5px] px-5 py-3 border-b border-[rgba(100,70,20,0.12)] bg-bg-3"
+              style={{ gridTemplateColumns: "100px 1fr 90px 90px 80px 80px" }}>
+              <span>Code</span><span>Subscriber</span>
+              <span>Amount</span><span>Commission</span><span>Status</span><span>Date</span>
+            </div>
+            {referrals.length === 0 ? (
+              <div className="px-5 py-8 text-center text-[11px] text-vastu-text-3">No referral conversions yet</div>
+            ) : referrals.map((r) => (
+              <div key={r.id} className="grid items-center px-5 py-3 border-b border-[rgba(100,70,20,0.08)] last:border-0"
+                style={{ gridTemplateColumns: "100px 1fr 90px 90px 80px 80px" }}>
+                <span className="font-mono text-[11px] text-vastu-text font-medium">{r.promo_codes?.code ?? "—"}</span>
+                <span className="text-[11px] text-vastu-text-2 truncate">{r.profiles?.full_name ?? "—"}</span>
+                <span className="font-mono text-[11px] text-vastu-text-2">₹{(r.amount_paise / 100).toLocaleString("en-IN")}</span>
+                <span className="font-mono text-[11px] text-green-600">₹{(r.commission_paise / 100).toLocaleString("en-IN")}</span>
+                <span className={cn(
+                  "text-[9px] px-[6px] py-[2px] rounded-full font-medium w-fit",
+                  r.status === "pending" ? "bg-amber-900/30 text-amber-400" :
+                  r.status === "paid"    ? "bg-green-900/30 text-green-400" :
+                                           "bg-red-900/30 text-red-400"
+                )}>
+                  {r.status}
                 </span>
-                <button onClick={() => togglePromo(p.id, !p.is_active)}
-                  className="text-[10px] px-2 py-[4px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text-2 hover:border-gold-3 hover:text-gold-2 transition-all cursor-pointer">
-                  {p.is_active ? "Deactivate" : "Activate"}
-                </button>
+                <span className="text-[10px] text-vastu-text-3">
+                  {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                </span>
               </div>
             ))}
           </div>
@@ -403,36 +478,64 @@ export default function AdminTiersPage() {
       {/* ── New promo modal ── */}
       {showPromoForm && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowPromoForm(false)}>
-          <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[380px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-bg border border-[rgba(100,70,20,0.20)] rounded-[12px] p-6 w-[420px] max-h-[90vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="font-serif text-[16px] text-gold-2 mb-4">New Promo Code</div>
             <div className="flex flex-col gap-3">
               <div>
                 <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Code</label>
                 <input value={newPromo.code} onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value.toUpperCase() })}
-                  placeholder="LAUNCH30" className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-mono text-[12px] outline-none focus:border-gold-3 uppercase" />
+                  placeholder="NAITIK10" className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-mono text-[12px] outline-none focus:border-gold-3 uppercase" />
               </div>
               <div>
                 <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Description</label>
                 <input value={newPromo.description} onChange={(e) => setNewPromo({ ...newPromo, description: e.target.value })}
-                  placeholder="Launch offer — 30% off" className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+                  placeholder="Referral code for Naitik" className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+              </div>
+              <div>
+                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Applicable On</label>
+                <select value={newPromo.appliesTo} onChange={(e) => setNewPromo({ ...newPromo, appliesTo: e.target.value })}
+                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3">
+                  <option value="">All Plans</option>
+                  {tiers.filter(t => t.is_active && t.price_yearly > 0).map((t) => (
+                    <option key={t.id} value={t.id}>{t.name} (₹{t.price_yearly}/yr)</option>
+                  ))}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Discount %</label>
+                  <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Discount % (user gets)</label>
                   <input type="number" min={1} max={100} value={newPromo.discountPct} onChange={(e) => setNewPromo({ ...newPromo, discountPct: parseInt(e.target.value) })}
                     className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
                 </div>
+                <div>
+                  <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Commission % (consultant gets)</label>
+                  <input type="number" min={0} max={100} value={newPromo.commissionPct} onChange={(e) => setNewPromo({ ...newPromo, commissionPct: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Razorpay Offer ID</label>
+                <input value={newPromo.razorpayOfferId} onChange={(e) => setNewPromo({ ...newPromo, razorpayOfferId: e.target.value })}
+                  placeholder="offer_XXXXXXXXXX" className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text font-mono text-[11px] outline-none focus:border-gold-3" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Max Uses (blank = ∞)</label>
                   <input type="number" value={newPromo.maxUses} onChange={(e) => setNewPromo({ ...newPromo, maxUses: e.target.value })}
                     placeholder="∞" className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
                 </div>
+                <div>
+                  <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Expires (blank = never)</label>
+                  <input type="date" value={newPromo.validUntil} onChange={(e) => setNewPromo({ ...newPromo, validUntil: e.target.value })}
+                    className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
+                </div>
               </div>
-              <div>
-                <label className="block text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Expires (blank = never)</label>
-                <input type="date" value={newPromo.validUntil} onChange={(e) => setNewPromo({ ...newPromo, validUntil: e.target.value })}
-                  className="w-full px-3 py-[6px] bg-bg-3 border border-[rgba(100,70,20,0.20)] rounded-[5px] text-vastu-text text-[12px] outline-none focus:border-gold-3" />
-              </div>
+              {newPromo.code && (
+                <div className="bg-bg-3 border border-[rgba(100,70,20,0.15)] rounded-[6px] px-3 py-2">
+                  <div className="text-[8px] text-vastu-text-3 uppercase tracking-[1px] mb-1">Referral link preview</div>
+                  <div className="font-mono text-[10px] text-gold-3 break-all">{APP_URL}?promo={newPromo.code}</div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 justify-end mt-5 pt-4 border-t border-[rgba(100,70,20,0.12)]">
               <button onClick={() => setShowPromoForm(false)} className="px-4 py-[6px] text-[11px] border border-[rgba(100,70,20,0.20)] rounded-[6px] text-vastu-text-2 hover:border-gold-3 cursor-pointer">Cancel</button>

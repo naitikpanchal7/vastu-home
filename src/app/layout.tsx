@@ -1,6 +1,8 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans, DM_Mono } from "next/font/google";
+import { Suspense } from "react";
+import PromoTracker from "@/components/PromoTracker";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -37,7 +39,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable}`}>
-      <body className="bg-bg text-vastu-text font-sans antialiased" suppressHydrationWarning>{children}</body>
+      <body className="bg-bg text-vastu-text font-sans antialiased" suppressHydrationWarning>
+        <Suspense fallback={null}><PromoTracker /></Suspense>
+        {children}
+      </body>
     </html>
   );
 }
